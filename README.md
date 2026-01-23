@@ -10,6 +10,10 @@ This repository demonstrates the steering capability through an interactive web 
 
 ## Key Features
 
+![c4-level-2](images/c4-level-2.png)
+![dual-model-data-flow](images/dual-model-data-flow.png)
+![ui-mockup-sample](images/ui-mockup-sample.png)
+
 The [sae_steering](./server/plugins/sae_steering/) plugin provides:
 
 - **Slider steering** - continuous adjustment of individual SAE neurons
