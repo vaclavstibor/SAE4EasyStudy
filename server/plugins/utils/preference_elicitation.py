@@ -12,9 +12,12 @@ import numpy as np
 import pickle
 
 
-import tensorflow as tf
-tf.get_logger().setLevel('ERROR')
-tf.config.set_visible_devices([], 'GPU') # Disable GPU because of adagrad issues
+try:
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+    tf.config.set_visible_devices([], 'GPU') # Disable GPU because of adagrad issues
+except Exception:
+    tf = None
 # tf.random.set_seed(42)
 # np.random.seed(42)
 # random.seed(42)
@@ -88,6 +91,8 @@ def compute_once(func):
 
 @compute_once
 def prepare_tf_data(loader):
+    if tf is None:
+        raise RuntimeError("TensorFlow is required for prepare_tf_data but is not installed.")
     ratings_df = loader.ratings_df.copy()
 
     # Add item_title
@@ -123,6 +128,8 @@ def prepare_tf_data(loader):
     return unique_user_ids, unique_movie_titles, movies, cached_train, train
 
 def prepare_tf_model(loader):
+    if tf is None:
+        raise RuntimeError("TensorFlow is required for prepare_tf_model but is not installed.")
 
     unique_user_ids, unique_movie_titles, movies, cached_train, train = prepare_tf_data(loader)
     model = get_model_mf(unique_user_ids, unique_movie_titles, movies)

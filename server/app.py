@@ -13,7 +13,10 @@ import random
 import sys
 from urllib.parse import urlparse
 import numpy as np
-import tensorflow as tf
+try:
+    import tensorflow as tf
+except Exception:
+    tf = None
 
 import redis
 
@@ -155,7 +158,8 @@ def create_app():
     seed = os.getpid() + time_int
     random.seed(seed)
     np.random.seed(seed)
-    tf.random.set_seed(seed)
+    if tf is not None:
+        tf.random.set_seed(seed)
     print(f"Seeding with: {seed} ({time_int}, {os.getpid()})", file=sys.stderr)
 
     return app

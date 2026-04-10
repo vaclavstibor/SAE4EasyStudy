@@ -1,0 +1,15 @@
+numpy
+Flask-PluginKit
+Flask-Session
+Flask-Migrate
+polars
+is-safe-url
+python3-discogs-client
+redis
+BeautifulSoup4
+cachelib
+Flask-WTF
+cinemagoer
+cachetools
+sentence-transformers
+gunicorn

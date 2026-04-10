@@ -1,8 +1,13 @@
 import numpy as np
-import tensorflow as tf
-tf.get_logger().setLevel('ERROR')
+try:
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
+except Exception:
+    tf = None
 
 def cos_sim_tf(a, b=None):
+    if tf is None:
+        raise RuntimeError("TensorFlow is required for cos_sim_tf but is not installed.")
     if b is None:
         normalize_a = tf.nn.l2_normalize(a, 1)
         return tf.matmul(normalize_a, normalize_a, transpose_b=True)

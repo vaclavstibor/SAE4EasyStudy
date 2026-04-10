@@ -103,10 +103,11 @@ The repository also includes [nixpacks.toml](nixpacks.toml), which explicitly in
 
 On each push/deploy, Railway will:
 
-1. install Python dependencies from `server/pip_requirements.txt`
-2. run `server/bootstrap_datasets.py`
-3. run `server/plugins/sae_steering/bootstrap_model.py`
-4. start Gunicorn with `app:create_app()`
+1. install Python dependencies from `server/pip_requirements_railway.txt` (lean runtime set for faster Railway builds) and install CPU-only PyTorch wheel
+2. run `server/bootstrap_datasets.py` only if dataset files are missing
+3. run `server/plugins/sae_steering/bootstrap_model.py` only if runtime features are missing
+4. remove `ml-latest.zip` after extraction to avoid wasting persistent disk space
+5. start Gunicorn with `app:create_app()`
 
 Default runtime SAE asset in Railway config is:
 
@@ -125,18 +126,24 @@ Required Railway setup:
    - `SAE_MODEL_RELEASE_TAG` (default: `latest`)
    - `DATASET_RELEASE_TAG` (default: `latest`)
    - `SAE_RUNTIME_ASSET_NAME` (default: `item_sae_features_www_TopKSAE_8192.pt.xz`)
+   - `SAE_RUNTIME_OUTPUT_PATH` (default: `plugins/sae_steering/data/item_sae_features_www_TopKSAE_8192.pt`)
+   - `ML_DATASET_READY_FILE` (default: `static/datasets/ml-latest/ratings.csv`)
    - `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `GUNICORN_LOG_LEVEL`
 
 Notes:
 
 - If your release contains uncompressed runtime features, set `SAE_RUNTIME_ASSET_NAME=item_sae_features_www_TopKSAE_8192.pt`.
 - First deploy can take longer because it downloads and extracts dataset/model assets.
+- Railway runtime requirements intentionally skip TensorFlow-heavy dependencies to avoid build timeouts. If you need TF/TFRS-based fastcompare/vae features on Railway, install those packages in a separate deployment profile.
+- For faster redeploys, add a Railway volume mounted to `/app/server/plugins/sae_steering/data` so runtime features persist across deployments.
+- If you also want dataset persistence, mount a second Railway volume to `/app/server/static/datasets/ml-latest`.
 
-Persistent Docker volumes are used for:
+In this repository, persistent paths are:
 
-- SQLite data in `/app/instance`
-- runtime cache in `/app/cache`
-- downloaded SAE models in `/app/plugins/sae_steering/models`
+- SQLite data in `/app/server/instance`
+- runtime cache in `/app/server/cache`
+- downloaded SAE models in `/app/server/plugins/sae_steering/models`
+- runtime features in `/app/server/plugins/sae_steering/data`
 
 The `ml-latest.zip` asset should already contain:
 
@@ -146,7 +153,7 @@ The `ml-latest.zip` asset should already contain:
 - `tmdb_data.json`
 - the `img/` directory with poster JPGs
 
-It is extracted into `/app/static/datasets/ml-latest`, so the resulting structure contains the dataset, metadata, and poster images expected by the app.
+It is extracted into `/app/server/static/datasets/ml-latest`, so the resulting structure contains the dataset, metadata, and poster images expected by the app.
 
 ## Release Checklist
 
