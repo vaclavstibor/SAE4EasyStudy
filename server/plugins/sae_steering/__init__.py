@@ -184,7 +184,10 @@ def _get_active_model_config(conf, phase_idx=None):
 
 
 def _get_active_sae_model_id(conf, phase_idx=None):
-    return _get_active_model_config(conf, phase_idx).get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
+    model_id = _get_active_model_config(conf, phase_idx).get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
+    if not model_id or str(model_id).strip().lower() == "none":
+        return DEFAULT_TOPK_SAE_MODEL_ID
+    return model_id
 
 
 def _get_phase_questionnaire_filename(conf, phase_idx=None):
@@ -962,6 +965,8 @@ def available_neurons():
     Uses the active SAE model's LLM labels when possible.
     """
     model_id = request.args.get("model_id") or DEFAULT_TOPK_SAE_MODEL_ID
+    if not model_id or str(model_id).strip().lower() == "none":
+        model_id = DEFAULT_TOPK_SAE_MODEL_ID
     neurons = []
 
     try:
@@ -2095,7 +2100,7 @@ def steering_interface():
                 initial_cluster_values = {cid: round(d / max_dev, 4) for cid, d in devs.items()}
         except Exception as e:
             print(f"[steering_interface] Could not compute cluster values: {e}")
-            import traceback; traceback.print_exc()
+            traceback.print_exc()
 
     params = {
         "title": title,
