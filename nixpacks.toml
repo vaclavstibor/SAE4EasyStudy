@@ -2,6 +2,7 @@
 nixPkgs = [
 	"python39",
 	"gcc",
+	"stdenv.cc.cc.lib",
 	"gnumake",
 	"pkg-config",
 	"libffi",
