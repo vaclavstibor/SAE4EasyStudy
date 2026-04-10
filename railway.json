@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "python3.9 -m pip install --upgrade pip && python3.9 -m pip install -r server/pip_requirements.txt"
+    "buildCommand": "python3.9 --version && (pip3.9 --version || python3.9 -m ensurepip --upgrade) && (pip3.9 install --upgrade pip setuptools wheel || python3.9 -m pip install --upgrade pip setuptools wheel) && (pip3.9 install -r server/pip_requirements.txt || python3.9 -m pip install -r server/pip_requirements.txt)"
   },
   "deploy": {
     "restartPolicyType": "ON_FAILURE",
