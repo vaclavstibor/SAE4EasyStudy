@@ -113,6 +113,9 @@ def create_app():
     app = flask.Flask(__name__)
     #app.wsgi_app = ProfilerMiddleware(app.wsgi_app)
 
+    @app.get("/healthz")
+    def healthz():
+        return "ok", 200
 
     app.config['SECRET_KEY'] = os.environ.get('APP_SECRET_KEY', '8bf29bd88d0bfb94509f5fb0')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite')
