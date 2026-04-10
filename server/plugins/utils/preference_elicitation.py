@@ -5,8 +5,14 @@ from pathlib import Path
 import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
-from sklearn.cluster import SpectralClustering
-from sklearn.metrics.pairwise import cosine_similarity
+try:
+    from sklearn.cluster import SpectralClustering
+    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.preprocessing import QuantileTransformer
+except Exception:
+    SpectralClustering = None
+    cosine_similarity = None
+    QuantileTransformer = None
 
 import numpy as np
 import pickle
@@ -31,7 +37,6 @@ except (ImportError, TypeError):
     get_model_mf = None
 
 import time
-from sklearn.preprocessing import QuantileTransformer
 
 
 from rlprop_wrapper import RLPropWrapper

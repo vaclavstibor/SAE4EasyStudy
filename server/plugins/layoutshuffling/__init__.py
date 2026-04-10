@@ -3,7 +3,10 @@
 import json
 import os
 from flask import Blueprint, request, redirect, url_for, render_template, session
-from sklearn.preprocessing import QuantileTransformer
+try:
+    from sklearn.preprocessing import QuantileTransformer
+except Exception:
+    QuantileTransformer = None
 
 from plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance, prepare_tf_model
 from plugins.utils.data_loading import load_ml_dataset
@@ -536,7 +539,15 @@ def finish_user_study():
         div_input = np.array(per_user_importances["diversity"] + [objective_importance["diversity"]])
         nov_input = np.array(per_user_importances["novelty"] + [objective_importance["novelty"]])
 
-        if len(per_user_importances["relevance"]) and len(per_user_importances["diversity"]) and len(per_user_importances["novelty"]) and rel_input.size and div_input.size and nov_input.size:
+        if (
+            QuantileTransformer is not None
+            and len(per_user_importances["relevance"])
+            and len(per_user_importances["diversity"])
+            and len(per_user_importances["novelty"])
+            and rel_input.size
+            and div_input.size
+            and nov_input.size
+        ):
             rel_input = rel_input.reshape(-1, 1)
             rel = QuantileTransformer().fit_transform(rel_input)
             params["relevance_percent"] = round(rel[-1, 0].item() * 100.0, 1)
