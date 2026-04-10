@@ -99,6 +99,8 @@ DATASET_RELEASE_TAG=v1.0 docker compose up --build
 
 The repository now includes [railway.json](railway.json) for a no-Docker Railway deployment.
 
+The repository also includes [nixpacks.toml](nixpacks.toml), which explicitly installs Python 3.9 for Railway Nixpacks builds.
+
 On each push/deploy, Railway will:
 
 1. install Python dependencies from `server/pip_requirements.txt`
