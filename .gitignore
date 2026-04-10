@@ -31,14 +31,14 @@ research/
 notes/
 
 # Root files
-.secrets.toml
-PROJECT_SUMMARY.txt
-QUICKSTART.txt
-README_with_architecture.md
-RESEARCH_CONTRIBUTION.md
-run.md
-sae_steering_architecture.txt
-SHOWCASE_WALKTHROUGH.md
-todo.md
-TRAINING_PIPELINE.md
-tutorial.txt
+/.secrets.toml
+/PROJECT_SUMMARY.txt
+/QUICKSTART.txt
+/README_with_architecture.md
+/RESEARCH_CONTRIBUTION.md
+/run.md
+/sae_steering_architecture.txt
+/SHOWCASE_WALKTHROUGH.md
+/todo.md
+/TRAINING_PIPELINE.md
+/tutorial.txt

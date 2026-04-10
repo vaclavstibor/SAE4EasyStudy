@@ -23,23 +23,37 @@ The [sae_steering](./server/plugins/sae_steering/) plugin provides:
 
 ## Quick Start
 
-Requires Python 3.9 and Redis.
+Requires Python 3.9 and Redis. The SAE checkpoint is downloaded separately from GitHub Releases into `server/plugins/sae_steering/models/`.
 
 ```bash
 # Setup
 cd server
-python3.9 -m venv .venv && source .venv/bin/activate
+python3.9 -m venv .venv39 && source .venv39/bin/activate
 pip install -r pip_requirements.txt
+
+# Download the required SAE model
+python plugins/sae_steering/bootstrap_model.py
 
 # Start Redis (in separate terminal)
 brew install redis && brew services start redis
 
 # Run
+export FLASK_APP=app.py
 flask --debug run
 ```
 
-Open `http://localhost:5000`, create an SAE Steering study, and explore. Pretrained models and sample data are included.
+Open `http://localhost:5000`, create an SAE Steering study, and explore.
+
+If the GitHub release asset uses a different filename, select it explicitly:
+
+```bash
+cd server
+python plugins/sae_steering/bootstrap_model.py --asset-name model.pkl
+```
 
 ## EasyStudy Framework
 
 Built on [EasyStudy](https://github.com/pdokoupil/EasyStudy) by [Patrik Dokoupil](mailto:patrik.dokoupil@matfyz.cuni.cz) and [Ladislav Peska](mailto:ladislav.peska@matfyz.cuni.cz). For deployment details, dataset setup, and Docker configuration, refer to the original [documentation](https://github.com/pdokoupil/EasyStudy#readme).
+
+lsof -ti:5000 | xargs kill -9 2>/dev/null; echo "done"
+I like spiderman from marvel cinematic universe but dislike dc 
