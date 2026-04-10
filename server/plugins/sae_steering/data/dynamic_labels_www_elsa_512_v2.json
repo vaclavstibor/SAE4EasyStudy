@@ -1,0 +1,8616 @@
+{
+ "0": {
+  "label": "Alcatraz \u00b7 Chicago",
+  "tags": [
+   "alcatraz",
+   "chicago",
+   "casino",
+   "gambling",
+   "birds"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Western"
+  ],
+  "activation_count": 21771,
+  "selectivity": 0.6042
+ },
+ "1": {
+  "label": "Roald Dahl \u00b7 Office",
+  "tags": [
+   "roald dahl",
+   "office",
+   "east germany",
+   "opera",
+   "disney"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Children"
+  ],
+  "activation_count": 19067,
+  "selectivity": 0.6533
+ },
+ "2": {
+  "label": "Tarantino \u00b7 Baseball",
+  "tags": [
+   "tarantino",
+   "baseball",
+   "gross-out",
+   "minnesota",
+   "south africa"
+  ],
+  "genres": [
+   "War",
+   "Thriller"
+  ],
+  "activation_count": 38056,
+  "selectivity": 0.3081
+ },
+ "3": {
+  "label": "Beatles \u00b7 Figure Skating",
+  "tags": [
+   "beatles",
+   "figure skating",
+   "minnesota",
+   "coen brothers",
+   "alcatraz"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 34234,
+  "selectivity": 0.3776
+ },
+ "4": {
+  "label": "Chris Tucker \u00b7 Gulf War",
+  "tags": [
+   "chris tucker",
+   "gulf war",
+   "videogame",
+   "disney animated feature",
+   "jane austen"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 8579,
+  "selectivity": 0.844
+ },
+ "5": {
+  "label": "South America \u00b7 Boxing",
+  "tags": [
+   "south america",
+   "boxing",
+   "baseball",
+   "aviation",
+   "shakespeare"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance",
+   "Musical"
+  ],
+  "activation_count": 22823,
+  "selectivity": 0.585
+ },
+ "6": {
+  "label": "Kurosawa \u00b7 Vietnam War",
+  "tags": [
+   "kurosawa",
+   "vietnam war",
+   "opera",
+   "star wars",
+   "arnold"
+  ],
+  "genres": [
+   "Western",
+   "Crime",
+   "Romance"
+  ],
+  "activation_count": 37524,
+  "selectivity": 0.3177
+ },
+ "7": {
+  "label": "Trains \u00b7 Train",
+  "tags": [
+   "trains",
+   "train",
+   "alaska",
+   "hollywood",
+   "airport"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Fantasy",
+   "Thriller"
+  ],
+  "activation_count": 20277,
+  "selectivity": 0.6313
+ },
+ "8": {
+  "label": "Alcatraz \u00b7 Arnold",
+  "tags": [
+   "alcatraz",
+   "arnold",
+   "south america",
+   "hitchcock",
+   "oscar (best sound)"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 19427,
+  "selectivity": 0.6468
+ },
+ "9": {
+  "label": "Aardman \u00b7 Afi 100",
+  "tags": [
+   "aardman",
+   "afi 100",
+   "claymation",
+   "coen brothers",
+   "surfing"
+  ],
+  "genres": [
+   "War",
+   "Musical"
+  ],
+  "activation_count": 17796,
+  "selectivity": 0.6764
+ },
+ "10": {
+  "label": "Roald Dahl \u00b7 Emma Watson",
+  "tags": [
+   "roald dahl",
+   "emma watson",
+   "harry potter",
+   "dr. seuss",
+   "new zealand"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 33287,
+  "selectivity": 0.3948
+ },
+ "11": {
+  "label": "Figure Skating \u00b7 Beatles",
+  "tags": [
+   "figure skating",
+   "beatles",
+   "east germany",
+   "opera",
+   "indiana jones"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Fantasy"
+  ],
+  "activation_count": 37059,
+  "selectivity": 0.3262
+ },
+ "12": {
+  "label": "Submarine \u00b7 Heroine In Tight Suit",
+  "tags": [
+   "submarine",
+   "heroine in tight suit",
+   "punk",
+   "chess",
+   "boxing"
+  ],
+  "genres": [
+   "Western",
+   "Musical",
+   "Action"
+  ],
+  "activation_count": 22547,
+  "selectivity": 0.59
+ },
+ "13": {
+  "label": "Surfing \u00b7 New Zealand",
+  "tags": [
+   "surfing",
+   "new zealand",
+   "beatles",
+   "videogame",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 27041,
+  "selectivity": 0.5083
+ },
+ "14": {
+  "label": "Peter Pan \u00b7 Surfing",
+  "tags": [
+   "peter pan",
+   "surfing",
+   "circus",
+   "mining",
+   "baseball"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "War"
+  ],
+  "activation_count": 21751,
+  "selectivity": 0.6045
+ },
+ "15": {
+  "label": "James Bond \u00b7 Nuclear",
+  "tags": [
+   "james bond",
+   "nuclear",
+   "minnesota",
+   "jane austen",
+   "classical music"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "Adventure"
+  ],
+  "activation_count": 20887,
+  "selectivity": 0.6202
+ },
+ "16": {
+  "label": "Aviation \u00b7 Imaginary Friend",
+  "tags": [
+   "aviation",
+   "imaginary friend",
+   "circus",
+   "truman capote",
+   "monkey"
+  ],
+  "genres": [
+   "Western",
+   "Sci-Fi",
+   "Mystery"
+  ],
+  "activation_count": 34224,
+  "selectivity": 0.3777
+ },
+ "17": {
+  "label": "Sophia Coppola \u00b7 Alcatraz",
+  "tags": [
+   "sophia coppola",
+   "alcatraz",
+   "roald dahl",
+   "depp & burton",
+   "surfing"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Action"
+  ],
+  "activation_count": 19870,
+  "selectivity": 0.6387
+ },
+ "18": {
+  "label": "Chicago \u00b7 Ballet",
+  "tags": [
+   "chicago",
+   "ballet",
+   "india",
+   "nasa",
+   "stage magic"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Western"
+  ],
+  "activation_count": 34934,
+  "selectivity": 0.3648
+ },
+ "19": {
+  "label": "Hannibal Lecter \u00b7 Batman",
+  "tags": [
+   "hannibal lecter",
+   "batman",
+   "miyazaki",
+   "afi 100",
+   "studio ghibli"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 21625,
+  "selectivity": 0.6068
+ },
+ "20": {
+  "label": "Beatles \u00b7 Almodovar",
+  "tags": [
+   "beatles",
+   "almodovar",
+   "author:alan moore",
+   "truman capote",
+   "spain"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance",
+   "Crime"
+  ],
+  "activation_count": 32495,
+  "selectivity": 0.4092
+ },
+ "21": {
+  "label": "American Civil War \u00b7 Truman Capote",
+  "tags": [
+   "american civil war",
+   "truman capote",
+   "handycam",
+   "cyborgs",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Crime"
+  ],
+  "activation_count": 20627,
+  "selectivity": 0.625
+ },
+ "22": {
+  "label": "Coen Brothers \u00b7 East Germany",
+  "tags": [
+   "coen brothers",
+   "east germany",
+   "opera",
+   "zombies",
+   "handycam"
+  ],
+  "genres": [
+   "Musical",
+   "Crime",
+   "Mystery"
+  ],
+  "activation_count": 22501,
+  "selectivity": 0.5909
+ },
+ "23": {
+  "label": "Short-Term Memory Loss \u00b7 Swedish",
+  "tags": [
+   "short-term memory loss",
+   "swedish",
+   "olympics",
+   "native americans",
+   "peter pan"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Western"
+  ],
+  "activation_count": 33069,
+  "selectivity": 0.3987
+ },
+ "24": {
+  "label": "Claymation \u00b7 Arnold",
+  "tags": [
+   "claymation",
+   "arnold",
+   "videogame",
+   "monty python",
+   "casino"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "War"
+  ],
+  "activation_count": 31976,
+  "selectivity": 0.4186
+ },
+ "25": {
+  "label": "Vietnam \u00b7 mtv",
+  "tags": [
+   "vietnam",
+   "mtv",
+   "prohibition",
+   "blaxploitation",
+   "united nations"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Drama"
+  ],
+  "activation_count": 18990,
+  "selectivity": 0.6547
+ },
+ "26": {
+  "label": "Aardman \u00b7 Claymation",
+  "tags": [
+   "aardman",
+   "claymation",
+   "james bond",
+   "afi 100",
+   "videogame"
+  ],
+  "genres": [
+   "Musical",
+   "Children"
+  ],
+  "activation_count": 15617,
+  "selectivity": 0.716
+ },
+ "27": {
+  "label": "Hannibal Lecter \u00b7 Baseball",
+  "tags": [
+   "hannibal lecter",
+   "baseball",
+   "chicago",
+   "peter pan",
+   "broadway"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 25185,
+  "selectivity": 0.5421
+ },
+ "28": {
+  "label": "Batman \u00b7 South Africa",
+  "tags": [
+   "batman",
+   "south africa",
+   "nuclear bomb",
+   "kubrick",
+   "vampires"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 39559,
+  "selectivity": 0.2807
+ },
+ "29": {
+  "label": "Monkey \u00b7 Australian",
+  "tags": [
+   "monkey",
+   "australian",
+   "opera",
+   "robert ludlum",
+   "zombies"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Horror"
+  ],
+  "activation_count": 19323,
+  "selectivity": 0.6487
+ },
+ "30": {
+  "label": "Football \u00b7 Arnold",
+  "tags": [
+   "football",
+   "arnold",
+   "chris tucker",
+   "baseball",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Western"
+  ],
+  "activation_count": 39713,
+  "selectivity": 0.2779
+ },
+ "31": {
+  "label": "Tarantino \u00b7 Kurosawa",
+  "tags": [
+   "tarantino",
+   "kurosawa",
+   "shakespeare",
+   "neil gaiman",
+   "airplane"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Children"
+  ],
+  "activation_count": 17569,
+  "selectivity": 0.6806
+ },
+ "32": {
+  "label": "Minnesota \u00b7 Kubrick",
+  "tags": [
+   "minnesota",
+   "kubrick",
+   "shakespeare",
+   "fountain of youth",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 4402,
+  "selectivity": 0.92
+ },
+ "33": {
+  "label": "Swedish \u00b7 Soccer",
+  "tags": [
+   "swedish",
+   "soccer",
+   "chris tucker",
+   "monty python",
+   "football"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Western"
+  ],
+  "activation_count": 28947,
+  "selectivity": 0.4737
+ },
+ "34": {
+  "label": "Kubrick \u00b7 Cuba",
+  "tags": [
+   "kubrick",
+   "cuba",
+   "afi 100",
+   "tolkien",
+   "king arthur"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Adventure",
+   "Mystery"
+  ],
+  "activation_count": 22360,
+  "selectivity": 0.5934
+ },
+ "35": {
+  "label": "Aardman \u00b7 Beatles",
+  "tags": [
+   "aardman",
+   "beatles",
+   "monty python",
+   "liv tyler",
+   "claymation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 31368,
+  "selectivity": 0.4297
+ },
+ "36": {
+  "label": "Sophia Coppola \u00b7 Chris Tucker",
+  "tags": [
+   "sophia coppola",
+   "chris tucker",
+   "indiana jones",
+   "spielberg",
+   "pirates"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 6505,
+  "selectivity": 0.8817
+ },
+ "37": {
+  "label": "Chris Tucker \u00b7 Star Trek",
+  "tags": [
+   "chris tucker",
+   "star trek",
+   "monty python",
+   "tarantino",
+   "spock"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 17283,
+  "selectivity": 0.6858
+ },
+ "38": {
+  "label": "Depp & Burton \u00b7 mtv",
+  "tags": [
+   "depp & burton",
+   "mtv",
+   "pirates",
+   "jane austen",
+   "spaghetti western"
+  ],
+  "genres": [
+   "Western",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 18689,
+  "selectivity": 0.6602
+ },
+ "39": {
+  "label": "Star Trek \u00b7 Fountain Of Youth",
+  "tags": [
+   "star trek",
+   "fountain of youth",
+   "spock",
+   "ballet",
+   "hannibal lecter"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 18764,
+  "selectivity": 0.6588
+ },
+ "40": {
+  "label": "South Africa \u00b7 American Civil War",
+  "tags": [
+   "south africa",
+   "american civil war",
+   "trains",
+   "007 (series)",
+   "train"
+  ],
+  "genres": [
+   "Crime",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 23044,
+  "selectivity": 0.581
+ },
+ "41": {
+  "label": "Kurosawa \u00b7 Jay And Silent Bob",
+  "tags": [
+   "kurosawa",
+   "jay and silent bob",
+   "marx brothers",
+   "figure skating",
+   "samurai"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 24197,
+  "selectivity": 0.56
+ },
+ "42": {
+  "label": "Afi 100 \u00b7 Monty Python",
+  "tags": [
+   "afi 100",
+   "monty python",
+   "baseball",
+   "circus",
+   "private detective"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 17171,
+  "selectivity": 0.6878
+ },
+ "43": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "liv tyler",
+   "miyazaki",
+   "studio ghibli"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 20924,
+  "selectivity": 0.6196
+ },
+ "44": {
+  "label": "Emma Watson \u00b7 Harry Potter",
+  "tags": [
+   "emma watson",
+   "harry potter",
+   "mummy",
+   "tolkien",
+   "prohibition"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 36643,
+  "selectivity": 0.3338
+ },
+ "45": {
+  "label": "Tarantino \u00b7 Surfing",
+  "tags": [
+   "tarantino",
+   "surfing",
+   "olympics",
+   "minnesota",
+   "iran"
+  ],
+  "genres": [
+   "Children",
+   "Comedy",
+   "Romance"
+  ],
+  "activation_count": 44944,
+  "selectivity": 0.1828
+ },
+ "46": {
+  "label": "Hannibal Lecter \u00b7 Aardman",
+  "tags": [
+   "hannibal lecter",
+   "aardman",
+   "chris tucker",
+   "claymation",
+   "dogs"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Children"
+  ],
+  "activation_count": 15974,
+  "selectivity": 0.7096
+ },
+ "47": {
+  "label": "Autism \u00b7 Opera",
+  "tags": [
+   "autism",
+   "opera",
+   "alaska",
+   "surfing",
+   "aviation"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Comedy"
+  ],
+  "activation_count": 19357,
+  "selectivity": 0.648
+ },
+ "48": {
+  "label": "Cooking \u00b7 Monty Python",
+  "tags": [
+   "cooking",
+   "monty python",
+   "chicago",
+   "food",
+   "mathematics"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 34449,
+  "selectivity": 0.3736
+ },
+ "49": {
+  "label": "Liv Tyler \u00b7 Surfing",
+  "tags": [
+   "liv tyler",
+   "surfing",
+   "alcatraz",
+   "spaghetti western",
+   "american civil war"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Crime"
+  ],
+  "activation_count": 21368,
+  "selectivity": 0.6115
+ },
+ "50": {
+  "label": "Robert Ludlum \u00b7 Aardman",
+  "tags": [
+   "robert ludlum",
+   "aardman",
+   "alaska",
+   "tarantino",
+   "claymation"
+  ],
+  "genres": [
+   "War",
+   "Musical"
+  ],
+  "activation_count": 36229,
+  "selectivity": 0.3413
+ },
+ "51": {
+  "label": "Tarantino \u00b7 Coen Brothers",
+  "tags": [
+   "tarantino",
+   "coen brothers",
+   "jay and silent bob",
+   "basketball",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Horror"
+  ],
+  "activation_count": 30340,
+  "selectivity": 0.4484
+ },
+ "52": {
+  "label": "Star Trek \u00b7 Spock",
+  "tags": [
+   "star trek",
+   "spock",
+   "tolkien",
+   "swedish",
+   "american civil war"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 21439,
+  "selectivity": 0.6102
+ },
+ "53": {
+  "label": "Coen Brothers \u00b7 Baseball",
+  "tags": [
+   "coen brothers",
+   "baseball",
+   "beauty pageant",
+   "screwball comedy",
+   "mother daughter relationship"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 22337,
+  "selectivity": 0.5939
+ },
+ "54": {
+  "label": "Marx Brothers \u00b7 Star Trek",
+  "tags": [
+   "marx brothers",
+   "star trek",
+   "miyazaki",
+   "new zealand",
+   "studio ghibli"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 20042,
+  "selectivity": 0.6356
+ },
+ "55": {
+  "label": "Marx Brothers \u00b7 Sophia Coppola",
+  "tags": [
+   "marx brothers",
+   "sophia coppola",
+   "star trek",
+   "beatles",
+   "united nations"
+  ],
+  "genres": [
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 18751,
+  "selectivity": 0.6591
+ },
+ "56": {
+  "label": "Peter Pan \u00b7 Pirates",
+  "tags": [
+   "peter pan",
+   "pirates",
+   "baseball",
+   "dr. seuss",
+   "videogame"
+  ],
+  "genres": [
+   "Adventure",
+   "Children"
+  ],
+  "activation_count": 32137,
+  "selectivity": 0.4157
+ },
+ "57": {
+  "label": "Figure Skating \u00b7 Soccer",
+  "tags": [
+   "figure skating",
+   "soccer",
+   "vietnam",
+   "nasa",
+   "south america"
+  ],
+  "genres": [
+   "War",
+   "Children"
+  ],
+  "activation_count": 41268,
+  "selectivity": 0.2497
+ },
+ "58": {
+  "label": "Star Trek \u00b7 Spock",
+  "tags": [
+   "star trek",
+   "spock",
+   "ballet",
+   "mountain climbing",
+   "south africa"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 28929,
+  "selectivity": 0.474
+ },
+ "59": {
+  "label": "Ballet \u00b7 Stop-Motion",
+  "tags": [
+   "ballet",
+   "stop-motion",
+   "president",
+   "vampires",
+   "strippers"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 35237,
+  "selectivity": 0.3593
+ },
+ "60": {
+  "label": "Iran \u00b7 Prohibition",
+  "tags": [
+   "iran",
+   "prohibition",
+   "sophia coppola",
+   "shakespeare",
+   "gross-out"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 33276,
+  "selectivity": 0.395
+ },
+ "61": {
+  "label": "Indiana Jones \u00b7 Mountain Climbing",
+  "tags": [
+   "indiana jones",
+   "mountain climbing",
+   "native americans",
+   "united nations",
+   "star trek"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure",
+   "Action"
+  ],
+  "activation_count": 20757,
+  "selectivity": 0.6226
+ },
+ "62": {
+  "label": "Dr. Seuss \u00b7 Shakespeare",
+  "tags": [
+   "dr. seuss",
+   "shakespeare",
+   "tarantino",
+   "roald dahl",
+   "afi 100"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Sci-Fi"
+  ],
+  "activation_count": 20076,
+  "selectivity": 0.635
+ },
+ "63": {
+  "label": "Almodovar \u00b7 Disney Animated Feature",
+  "tags": [
+   "almodovar",
+   "disney animated feature",
+   "ballet",
+   "soccer",
+   "peter pan"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Children"
+  ],
+  "activation_count": 24038,
+  "selectivity": 0.5629
+ },
+ "64": {
+  "label": "Fountain Of Youth \u00b7 Vampires",
+  "tags": [
+   "fountain of youth",
+   "vampires",
+   "vampire",
+   "vietnam",
+   "heroine in tight suit"
+  ],
+  "genres": [
+   "War",
+   "Fantasy",
+   "Action"
+  ],
+  "activation_count": 29688,
+  "selectivity": 0.4602
+ },
+ "65": {
+  "label": "Chris Tucker \u00b7 Opera",
+  "tags": [
+   "chris tucker",
+   "opera",
+   "c.s. lewis",
+   "peter pan",
+   "almodovar"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 24004,
+  "selectivity": 0.5636
+ },
+ "66": {
+  "label": "Office \u00b7 Short-Term Memory Loss",
+  "tags": [
+   "office",
+   "short-term memory loss",
+   "circus",
+   "native americans",
+   "007 (series)"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Comedy",
+   "Romance"
+  ],
+  "activation_count": 31760,
+  "selectivity": 0.4225
+ },
+ "67": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "basketball",
+   "kurosawa",
+   "east germany"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "War"
+  ],
+  "activation_count": 33161,
+  "selectivity": 0.3971
+ },
+ "68": {
+  "label": "Batman \u00b7 Soccer",
+  "tags": [
+   "batman",
+   "soccer",
+   "chris tucker",
+   "indiana jones",
+   "football"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 17601,
+  "selectivity": 0.68
+ },
+ "69": {
+  "label": "Surfing \u00b7 Coen Brothers",
+  "tags": [
+   "surfing",
+   "coen brothers",
+   "cuba",
+   "vietnam",
+   "autism"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance",
+   "Musical"
+  ],
+  "activation_count": 31539,
+  "selectivity": 0.4266
+ },
+ "70": {
+  "label": "Robert Ludlum \u00b7 Autism",
+  "tags": [
+   "robert ludlum",
+   "autism",
+   "shakespeare",
+   "baseball",
+   "monkey"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Thriller"
+  ],
+  "activation_count": 20930,
+  "selectivity": 0.6194
+ },
+ "71": {
+  "label": "Truman Capote \u00b7 James Bond",
+  "tags": [
+   "truman capote",
+   "james bond",
+   "east germany",
+   "monkey",
+   "007 (series)"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 23702,
+  "selectivity": 0.569
+ },
+ "72": {
+  "label": "Mathematics \u00b7 Palestine",
+  "tags": [
+   "mathematics",
+   "palestine",
+   "chicago",
+   "math",
+   "wwii"
+  ],
+  "genres": [
+   "War",
+   "Western",
+   "Fantasy"
+  ],
+  "activation_count": 20085,
+  "selectivity": 0.6348
+ },
+ "73": {
+  "label": "Chris Tucker \u00b7 Opera",
+  "tags": [
+   "chris tucker",
+   "opera",
+   "videogame",
+   "hitchcock",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 20480,
+  "selectivity": 0.6276
+ },
+ "74": {
+  "label": "Iran \u00b7 Arnold",
+  "tags": [
+   "iran",
+   "arnold",
+   "spaghetti western",
+   "vietnam war",
+   "ennio morricone"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Action"
+  ],
+  "activation_count": 19971,
+  "selectivity": 0.6369
+ },
+ "75": {
+  "label": "Batman \u00b7 Alaska",
+  "tags": [
+   "batman",
+   "alaska",
+   "oscar (best music - original score)",
+   "mountain climbing",
+   "vienna"
+  ],
+  "genres": [
+   "Musical",
+   "Crime",
+   "Drama"
+  ],
+  "activation_count": 20408,
+  "selectivity": 0.6289
+ },
+ "76": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "coen brothers",
+   "depp & burton",
+   "tarantino"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Romance"
+  ],
+  "activation_count": 4930,
+  "selectivity": 0.9104
+ },
+ "77": {
+  "label": "Basketball \u00b7 Aviation",
+  "tags": [
+   "basketball",
+   "aviation",
+   "figure skating",
+   "pixar animation",
+   "olympics"
+  ],
+  "genres": [
+   "Western",
+   "War",
+   "Action"
+  ],
+  "activation_count": 49807,
+  "selectivity": 0.0944
+ },
+ "78": {
+  "label": "Archaeology \u00b7 Mathematics",
+  "tags": [
+   "archaeology",
+   "mathematics",
+   "aviation",
+   "mummy",
+   "androids"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "War",
+   "Horror"
+  ],
+  "activation_count": 30570,
+  "selectivity": 0.4442
+ },
+ "79": {
+  "label": "Chicago \u00b7 Aviation",
+  "tags": [
+   "chicago",
+   "aviation",
+   "airplane",
+   "007",
+   "afterlife"
+  ],
+  "genres": [
+   "Horror",
+   "Romance",
+   "Sci-Fi"
+  ],
+  "activation_count": 35065,
+  "selectivity": 0.3624
+ },
+ "80": {
+  "label": "Arnold \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "arnold",
+   "carrie-anne moss",
+   "ennio morricone",
+   "iran",
+   "fountain of youth"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Western"
+  ],
+  "activation_count": 35729,
+  "selectivity": 0.3504
+ },
+ "81": {
+  "label": "Monty Python \u00b7 Alcatraz",
+  "tags": [
+   "monty python",
+   "alcatraz",
+   "minnesota",
+   "james bond",
+   "liv tyler"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Fantasy"
+  ],
+  "activation_count": 18631,
+  "selectivity": 0.6612
+ },
+ "82": {
+  "label": "Chris Tucker \u00b7 Tarantino",
+  "tags": [
+   "chris tucker",
+   "tarantino",
+   "prohibition",
+   "roald dahl",
+   "shakespeare"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 22437,
+  "selectivity": 0.592
+ },
+ "83": {
+  "label": "Monty Python \u00b7 Alaska",
+  "tags": [
+   "monty python",
+   "alaska",
+   "indiana jones",
+   "aviation",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 19115,
+  "selectivity": 0.6524
+ },
+ "84": {
+  "label": "Indiana Jones \u00b7 Archaeology",
+  "tags": [
+   "indiana jones",
+   "archaeology",
+   "alcatraz",
+   "almodovar",
+   "spielberg"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Mystery"
+  ],
+  "activation_count": 31429,
+  "selectivity": 0.4286
+ },
+ "85": {
+  "label": "Alcatraz \u00b7 Afi 100",
+  "tags": [
+   "alcatraz",
+   "afi 100",
+   "marx brothers",
+   "monty python",
+   "chess"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Fantasy"
+  ],
+  "activation_count": 36586,
+  "selectivity": 0.3348
+ },
+ "86": {
+  "label": "Robert Ludlum \u00b7 James Bond",
+  "tags": [
+   "robert ludlum",
+   "james bond",
+   "basketball",
+   "united nations",
+   "opera"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Crime"
+  ],
+  "activation_count": 14584,
+  "selectivity": 0.7348
+ },
+ "87": {
+  "label": "Submarine \u00b7 Indiana Jones",
+  "tags": [
+   "submarine",
+   "indiana jones",
+   "ballet",
+   "circus",
+   "cuba"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Fantasy"
+  ],
+  "activation_count": 36106,
+  "selectivity": 0.3435
+ },
+ "88": {
+  "label": "Star Wars \u00b7 Mental Hospital",
+  "tags": [
+   "star wars",
+   "mental hospital",
+   "autism",
+   "bad sequel",
+   "halloween"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 22225,
+  "selectivity": 0.5959
+ },
+ "89": {
+  "label": "Peter Pan \u00b7 Pirates",
+  "tags": [
+   "peter pan",
+   "pirates",
+   "carrie-anne moss",
+   "jane austen",
+   "palestine"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 35388,
+  "selectivity": 0.3566
+ },
+ "90": {
+  "label": "Chris Tucker \u00b7 Figure Skating",
+  "tags": [
+   "chris tucker",
+   "figure skating",
+   "minnesota",
+   "pirates",
+   "marx brothers"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Children"
+  ],
+  "activation_count": 16866,
+  "selectivity": 0.6933
+ },
+ "91": {
+  "label": "Zombies \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "zombies",
+   "carrie-anne moss",
+   "chess",
+   "cyborgs",
+   "cyberpunk"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Horror"
+  ],
+  "activation_count": 30646,
+  "selectivity": 0.4428
+ },
+ "92": {
+  "label": "Chris Tucker \u00b7 Soccer",
+  "tags": [
+   "chris tucker",
+   "soccer",
+   "vietnam",
+   "blaxploitation",
+   "schizophrenia"
+  ],
+  "genres": [
+   "Action",
+   "Sci-Fi",
+   "Thriller"
+  ],
+  "activation_count": 34002,
+  "selectivity": 0.3818
+ },
+ "93": {
+  "label": "Mountain Climbing \u00b7 Arnold",
+  "tags": [
+   "mountain climbing",
+   "arnold",
+   "archaeology",
+   "fountain of youth",
+   "dragon"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 32934,
+  "selectivity": 0.4012
+ },
+ "94": {
+  "label": "Surfing \u00b7 Batman",
+  "tags": [
+   "surfing",
+   "batman",
+   "james bond",
+   "chris tucker",
+   "minnesota"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Film-Noir"
+  ],
+  "activation_count": 27392,
+  "selectivity": 0.502
+ },
+ "95": {
+  "label": "Liv Tyler \u00b7 Beatles",
+  "tags": [
+   "liv tyler",
+   "beatles",
+   "vietnam",
+   "iran",
+   "imaginary friend"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Mystery",
+   "Western"
+  ],
+  "activation_count": 23343,
+  "selectivity": 0.5756
+ },
+ "96": {
+  "label": "Monty Python \u00b7 Vietnam",
+  "tags": [
+   "monty python",
+   "vietnam",
+   "pirates",
+   "east germany",
+   "food"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Sci-Fi"
+  ],
+  "activation_count": 19375,
+  "selectivity": 0.6477
+ },
+ "97": {
+  "label": "Baseball \u00b7 Jay And Silent Bob",
+  "tags": [
+   "baseball",
+   "jay and silent bob",
+   "king arthur",
+   "minnesota",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 38213,
+  "selectivity": 0.3052
+ },
+ "98": {
+  "label": "Kurosawa \u00b7 Fountain Of Youth",
+  "tags": [
+   "kurosawa",
+   "fountain of youth",
+   "sophia coppola",
+   "east germany",
+   "alaska"
+  ],
+  "genres": [
+   "War",
+   "Children",
+   "Comedy"
+  ],
+  "activation_count": 23801,
+  "selectivity": 0.5672
+ },
+ "99": {
+  "label": "Marx Brothers \u00b7 Ballet",
+  "tags": [
+   "marx brothers",
+   "ballet",
+   "james bond",
+   "vietnam war",
+   "c.s. lewis"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Film-Noir"
+  ],
+  "activation_count": 35262,
+  "selectivity": 0.3589
+ },
+ "100": {
+  "label": "Beatles \u00b7 James Bond",
+  "tags": [
+   "beatles",
+   "james bond",
+   "hannibal lecter",
+   "007 (series)",
+   "colonialism"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Western"
+  ],
+  "activation_count": 25164,
+  "selectivity": 0.5425
+ },
+ "101": {
+  "label": "Marx Brothers \u00b7 Arnold",
+  "tags": [
+   "marx brothers",
+   "arnold",
+   "east germany",
+   "basketball",
+   "holocaust"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Thriller"
+  ],
+  "activation_count": 35312,
+  "selectivity": 0.358
+ },
+ "102": {
+  "label": "Figure Skating \u00b7 Basketball",
+  "tags": [
+   "figure skating",
+   "basketball",
+   "olympics",
+   "depp & burton",
+   "office"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 14124,
+  "selectivity": 0.7432
+ },
+ "103": {
+  "label": "Star Wars \u00b7 James Bond",
+  "tags": [
+   "star wars",
+   "james bond",
+   "surfing",
+   "mountain climbing",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 32120,
+  "selectivity": 0.416
+ },
+ "104": {
+  "label": "Tarantino \u00b7 Oscar (Best Music - Original Score)",
+  "tags": [
+   "tarantino",
+   "oscar (best music - original score)",
+   "ecology",
+   "stop-motion",
+   "vampires"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 37284,
+  "selectivity": 0.3221
+ },
+ "105": {
+  "label": "James Bond \u00b7 Indiana Jones",
+  "tags": [
+   "james bond",
+   "indiana jones",
+   "boxing",
+   "dragon",
+   "football"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 20410,
+  "selectivity": 0.6289
+ },
+ "106": {
+  "label": "Star Trek \u00b7 Chris Tucker",
+  "tags": [
+   "star trek",
+   "chris tucker",
+   "aardman",
+   "dr. seuss",
+   "spock"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 35785,
+  "selectivity": 0.3494
+ },
+ "107": {
+  "label": "Mountain Climbing \u00b7 Bad Sequel",
+  "tags": [
+   "mountain climbing",
+   "bad sequel",
+   "depp & burton",
+   "dogs",
+   "east germany"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery"
+  ],
+  "activation_count": 21562,
+  "selectivity": 0.608
+ },
+ "108": {
+  "label": "James Bond \u00b7 Monty Python",
+  "tags": [
+   "james bond",
+   "monty python",
+   "surfing",
+   "figure skating",
+   "short-term memory loss"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Thriller"
+  ],
+  "activation_count": 19836,
+  "selectivity": 0.6393
+ },
+ "109": {
+  "label": "James Bond \u00b7 Opera",
+  "tags": [
+   "james bond",
+   "opera",
+   "roald dahl",
+   "short-term memory loss",
+   "palestine"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Children"
+  ],
+  "activation_count": 31219,
+  "selectivity": 0.4324
+ },
+ "110": {
+  "label": "Alcatraz \u00b7 Indiana Jones",
+  "tags": [
+   "alcatraz",
+   "indiana jones",
+   "shakespeare",
+   "archaeology",
+   "spielberg"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 33559,
+  "selectivity": 0.3898
+ },
+ "111": {
+  "label": "Videogame \u00b7 Truman Capote",
+  "tags": [
+   "videogame",
+   "truman capote",
+   "punk",
+   "moon",
+   "video games"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 20923,
+  "selectivity": 0.6196
+ },
+ "112": {
+  "label": "Peter Pan \u00b7 Alcatraz",
+  "tags": [
+   "peter pan",
+   "alcatraz",
+   "pirates",
+   "james bond",
+   "surfing"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Fantasy"
+  ],
+  "activation_count": 19026,
+  "selectivity": 0.6541
+ },
+ "113": {
+  "label": "Beatles \u00b7 Batman",
+  "tags": [
+   "beatles",
+   "batman",
+   "aardman",
+   "miyazaki",
+   "cuba"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 11910,
+  "selectivity": 0.7835
+ },
+ "114": {
+  "label": "Opera \u00b7 Nuclear Bomb",
+  "tags": [
+   "opera",
+   "nuclear bomb",
+   "kubrick",
+   "kurosawa",
+   "arnold"
+  ],
+  "genres": [
+   "War",
+   "Sci-Fi",
+   "Crime"
+  ],
+  "activation_count": 22919,
+  "selectivity": 0.5833
+ },
+ "115": {
+  "label": "Kubrick \u00b7 Ballet",
+  "tags": [
+   "kubrick",
+   "ballet",
+   "pirates",
+   "minnesota",
+   "circus"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 21422,
+  "selectivity": 0.6105
+ },
+ "116": {
+  "label": "Alaska \u00b7 Almodovar",
+  "tags": [
+   "alaska",
+   "almodovar",
+   "baseball",
+   "spaghetti western",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 22297,
+  "selectivity": 0.5946
+ },
+ "117": {
+  "label": "Roald Dahl \u00b7 Coen Brothers",
+  "tags": [
+   "roald dahl",
+   "coen brothers",
+   "cooking",
+   "baseball",
+   "prohibition"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 17549,
+  "selectivity": 0.6809
+ },
+ "118": {
+  "label": "Almodovar \u00b7 Jay And Silent Bob",
+  "tags": [
+   "almodovar",
+   "jay and silent bob",
+   "alaska",
+   "autism",
+   "baseball"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 35928,
+  "selectivity": 0.3468
+ },
+ "119": {
+  "label": "Tolkien \u00b7 Emma Watson",
+  "tags": [
+   "tolkien",
+   "emma watson",
+   "harry potter",
+   "baseball",
+   "new zealand"
+  ],
+  "genres": [
+   "Adventure",
+   "Fantasy",
+   "Sci-Fi"
+  ],
+  "activation_count": 34759,
+  "selectivity": 0.368
+ },
+ "120": {
+  "label": "Carrie-Anne Moss \u00b7 Circus",
+  "tags": [
+   "carrie-anne moss",
+   "circus",
+   "man versus machine",
+   "archaeology",
+   "evolution"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 22137,
+  "selectivity": 0.5975
+ },
+ "121": {
+  "label": "Alcatraz \u00b7 American Civil War",
+  "tags": [
+   "alcatraz",
+   "american civil war",
+   "office",
+   "nuclear",
+   "underwater"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 30376,
+  "selectivity": 0.4477
+ },
+ "122": {
+  "label": "Kurosawa \u00b7 Shakespeare",
+  "tags": [
+   "kurosawa",
+   "shakespeare",
+   "studio ghibli",
+   "bad sequel",
+   "japanese"
+  ],
+  "genres": [
+   "War",
+   "Romance",
+   "Mystery"
+  ],
+  "activation_count": 32894,
+  "selectivity": 0.4019
+ },
+ "123": {
+  "label": "Kurosawa \u00b7 Indiana Jones",
+  "tags": [
+   "kurosawa",
+   "indiana jones",
+   "star wars",
+   "hollywood",
+   "monkey"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 33541,
+  "selectivity": 0.3902
+ },
+ "124": {
+  "label": "Alcatraz \u00b7 Ballet",
+  "tags": [
+   "alcatraz",
+   "ballet",
+   "new zealand",
+   "arnold",
+   "jay and silent bob"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 31514,
+  "selectivity": 0.427
+ },
+ "125": {
+  "label": "Truman Capote \u00b7 Tarantino",
+  "tags": [
+   "truman capote",
+   "tarantino",
+   "south africa",
+   "dogs",
+   "afi 100"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 35898,
+  "selectivity": 0.3473
+ },
+ "126": {
+  "label": "Alaska \u00b7 Miyazaki",
+  "tags": [
+   "alaska",
+   "miyazaki",
+   "palestine",
+   "holocaust",
+   "christmas"
+  ],
+  "genres": [
+   "War",
+   "Drama",
+   "Crime"
+  ],
+  "activation_count": 23719,
+  "selectivity": 0.5687
+ },
+ "127": {
+  "label": "Basketball \u00b7 Boxing",
+  "tags": [
+   "basketball",
+   "boxing",
+   "italian",
+   "rome",
+   "hollywood"
+  ],
+  "genres": [
+   "War",
+   "Drama",
+   "Comedy"
+  ],
+  "activation_count": 20609,
+  "selectivity": 0.6253
+ },
+ "128": {
+  "label": "Alcatraz \u00b7 Minnesota",
+  "tags": [
+   "alcatraz",
+   "minnesota",
+   "roald dahl",
+   "beatles",
+   "hannibal lecter"
+  ],
+  "genres": [
+   "Romance",
+   "Drama",
+   "Children"
+  ],
+  "activation_count": 2665,
+  "selectivity": 0.9515
+ },
+ "129": {
+  "label": "Prohibition \u00b7 Afi 100",
+  "tags": [
+   "prohibition",
+   "afi 100",
+   "chicago",
+   "vietnam",
+   "submarine"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "War"
+  ],
+  "activation_count": 19071,
+  "selectivity": 0.6532
+ },
+ "130": {
+  "label": "Indiana Jones \u00b7 Monty Python",
+  "tags": [
+   "indiana jones",
+   "monty python",
+   "spielberg",
+   "archaeology",
+   "sword fighting"
+  ],
+  "genres": [
+   "Musical",
+   "Action",
+   "Sci-Fi"
+  ],
+  "activation_count": 38891,
+  "selectivity": 0.2929
+ },
+ "131": {
+  "label": "Almodovar \u00b7 Sophia Coppola",
+  "tags": [
+   "almodovar",
+   "sophia coppola",
+   "videogame",
+   "homosexuality",
+   "dragon"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Adventure"
+  ],
+  "activation_count": 20795,
+  "selectivity": 0.6219
+ },
+ "132": {
+  "label": "Marx Brothers \u00b7 Spaghetti Western",
+  "tags": [
+   "marx brothers",
+   "spaghetti western",
+   "blaxploitation",
+   "baseball",
+   "mental hospital"
+  ],
+  "genres": [
+   "War",
+   "Western",
+   "Thriller"
+  ],
+  "activation_count": 18788,
+  "selectivity": 0.6584
+ },
+ "133": {
+  "label": "Olympics \u00b7 James Bond",
+  "tags": [
+   "olympics",
+   "james bond",
+   "basketball",
+   "american civil war",
+   "archaeology"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 21514,
+  "selectivity": 0.6088
+ },
+ "134": {
+  "label": "Baseball \u00b7 Australian",
+  "tags": [
+   "baseball",
+   "australian",
+   "amnesia",
+   "jay and silent bob",
+   "kurosawa"
+  ],
+  "genres": [
+   "Romance",
+   "Children",
+   "War"
+  ],
+  "activation_count": 20247,
+  "selectivity": 0.6319
+ },
+ "135": {
+  "label": "Gambling \u00b7 Liv Tyler",
+  "tags": [
+   "gambling",
+   "liv tyler",
+   "archaeology",
+   "autism",
+   "almodovar"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 18319,
+  "selectivity": 0.6669
+ },
+ "136": {
+  "label": "Indiana Jones \u00b7 Archaeology",
+  "tags": [
+   "indiana jones",
+   "archaeology",
+   "videogame",
+   "video game adaptation",
+   "jay and silent bob"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "War"
+  ],
+  "activation_count": 23324,
+  "selectivity": 0.5759
+ },
+ "137": {
+  "label": "Batman \u00b7 Alaska",
+  "tags": [
+   "batman",
+   "alaska",
+   "kurosawa",
+   "dr. seuss",
+   "opera"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Children"
+  ],
+  "activation_count": 20037,
+  "selectivity": 0.6357
+ },
+ "138": {
+  "label": "Gambling \u00b7 Casino",
+  "tags": [
+   "gambling",
+   "casino",
+   "arnold",
+   "archaeology",
+   "time travel"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 35680,
+  "selectivity": 0.3513
+ },
+ "139": {
+  "label": "Baseball \u00b7 Office",
+  "tags": [
+   "baseball",
+   "office",
+   "chicago",
+   "king arthur",
+   "basketball"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Comedy"
+  ],
+  "activation_count": 33663,
+  "selectivity": 0.3879
+ },
+ "140": {
+  "label": "Ballet \u00b7 Jane Austen",
+  "tags": [
+   "ballet",
+   "jane austen",
+   "hitchcock",
+   "private detective",
+   "airplane"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 28706,
+  "selectivity": 0.4781
+ },
+ "141": {
+  "label": "Almodovar \u00b7 United Nations",
+  "tags": [
+   "almodovar",
+   "united nations",
+   "south america",
+   "cuba",
+   "iraq war"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Mystery"
+  ],
+  "activation_count": 33249,
+  "selectivity": 0.3955
+ },
+ "142": {
+  "label": "Aardman \u00b7 Claymation",
+  "tags": [
+   "aardman",
+   "claymation",
+   "james bond",
+   "fountain of youth",
+   "alaska"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 19802,
+  "selectivity": 0.64
+ },
+ "143": {
+  "label": "Mathematics \u00b7 Holocaust",
+  "tags": [
+   "mathematics",
+   "holocaust",
+   "chicago",
+   "south africa",
+   "arnold"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Children",
+   "Drama"
+  ],
+  "activation_count": 22639,
+  "selectivity": 0.5884
+ },
+ "144": {
+  "label": "James Bond \u00b7 Beauty Pageant",
+  "tags": [
+   "james bond",
+   "beauty pageant",
+   "arnold",
+   "007 (series)",
+   "punk"
+  ],
+  "genres": [
+   "Adventure",
+   "Thriller",
+   "Action"
+  ],
+  "activation_count": 28734,
+  "selectivity": 0.4776
+ },
+ "145": {
+  "label": "Emma Watson \u00b7 Harry Potter",
+  "tags": [
+   "emma watson",
+   "harry potter",
+   "alcatraz",
+   "tolkien",
+   "east germany"
+  ],
+  "genres": [
+   "Western",
+   "Romance",
+   "Children"
+  ],
+  "activation_count": 22898,
+  "selectivity": 0.5837
+ },
+ "146": {
+  "label": "Depp & Burton \u00b7 Soccer",
+  "tags": [
+   "depp & burton",
+   "soccer",
+   "kubrick",
+   "brilliant",
+   "airplane"
+  ],
+  "genres": [
+   "War",
+   "Romance",
+   "Western"
+  ],
+  "activation_count": 18147,
+  "selectivity": 0.67
+ },
+ "147": {
+  "label": "Chris Tucker \u00b7 Batman",
+  "tags": [
+   "chris tucker",
+   "batman",
+   "tarantino",
+   "afi 100",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Romance"
+  ],
+  "activation_count": 20001,
+  "selectivity": 0.6363
+ },
+ "148": {
+  "label": "Sophia Coppola \u00b7 Indiana Jones",
+  "tags": [
+   "sophia coppola",
+   "indiana jones",
+   "spaghetti western",
+   "cuba",
+   "south america"
+  ],
+  "genres": [
+   "Western",
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 17832,
+  "selectivity": 0.6758
+ },
+ "149": {
+  "label": "Hannibal Lecter \u00b7 Chris Tucker",
+  "tags": [
+   "hannibal lecter",
+   "chris tucker",
+   "mountain climbing",
+   "almodovar",
+   "tarantino"
+  ],
+  "genres": [
+   "War",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 18469,
+  "selectivity": 0.6642
+ },
+ "150": {
+  "label": "Roald Dahl \u00b7 Truman Capote",
+  "tags": [
+   "roald dahl",
+   "truman capote",
+   "almodovar",
+   "chris tucker",
+   "kurosawa"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 33875,
+  "selectivity": 0.3841
+ },
+ "151": {
+  "label": "Almodovar \u00b7 Gulf War",
+  "tags": [
+   "almodovar",
+   "gulf war",
+   "argentina",
+   "vietnam",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "War"
+  ],
+  "activation_count": 34485,
+  "selectivity": 0.373
+ },
+ "152": {
+  "label": "Beauty Pageant \u00b7 New Zealand",
+  "tags": [
+   "beauty pageant",
+   "new zealand",
+   "minnesota",
+   "cuba",
+   "figure skating"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 20805,
+  "selectivity": 0.6217
+ },
+ "153": {
+  "label": "Roald Dahl \u00b7 Spock",
+  "tags": [
+   "roald dahl",
+   "spock",
+   "chris tucker",
+   "tarantino",
+   "star trek"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Fantasy"
+  ],
+  "activation_count": 7128,
+  "selectivity": 0.8704
+ },
+ "154": {
+  "label": "Ballet \u00b7 Cuba",
+  "tags": [
+   "ballet",
+   "cuba",
+   "nuclear bomb",
+   "videogame",
+   "arnold"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Children"
+  ],
+  "activation_count": 37161,
+  "selectivity": 0.3243
+ },
+ "155": {
+  "label": "Marx Brothers \u00b7 Ballet",
+  "tags": [
+   "marx brothers",
+   "ballet",
+   "circus",
+   "indiana jones",
+   "swedish"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 22812,
+  "selectivity": 0.5852
+ },
+ "156": {
+  "label": "Carrie-Anne Moss \u00b7 Indiana Jones",
+  "tags": [
+   "carrie-anne moss",
+   "indiana jones",
+   "short-term memory loss",
+   "spielberg",
+   "prohibition"
+  ],
+  "genres": [
+   "Western",
+   "Fantasy",
+   "Sci-Fi"
+  ],
+  "activation_count": 19142,
+  "selectivity": 0.652
+ },
+ "157": {
+  "label": "Beatles \u00b7 Aviation",
+  "tags": [
+   "beatles",
+   "aviation",
+   "monty python",
+   "dragon",
+   "ballet"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Fantasy"
+  ],
+  "activation_count": 35379,
+  "selectivity": 0.3567
+ },
+ "158": {
+  "label": "Star Trek \u00b7 Spock",
+  "tags": [
+   "star trek",
+   "spock",
+   "fountain of youth",
+   "tolkien",
+   "chris tucker"
+  ],
+  "genres": [
+   "Crime",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 32889,
+  "selectivity": 0.402
+ },
+ "159": {
+  "label": "Surfing \u00b7 Star Trek",
+  "tags": [
+   "surfing",
+   "star trek",
+   "spock",
+   "olympics",
+   "truman capote"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 38354,
+  "selectivity": 0.3026
+ },
+ "160": {
+  "label": "Peter Pan \u00b7 Almodovar",
+  "tags": [
+   "peter pan",
+   "almodovar",
+   "disney animated feature",
+   "kurosawa",
+   "iran"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 22868,
+  "selectivity": 0.5842
+ },
+ "161": {
+  "label": "Beatles \u00b7 Monty Python",
+  "tags": [
+   "beatles",
+   "monty python",
+   "baseball",
+   "mummy",
+   "football"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 21420,
+  "selectivity": 0.6105
+ },
+ "162": {
+  "label": "Figure Skating \u00b7 Almodovar",
+  "tags": [
+   "figure skating",
+   "almodovar",
+   "depp & burton",
+   "coen brothers",
+   "olympics"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "War"
+  ],
+  "activation_count": 22004,
+  "selectivity": 0.5999
+ },
+ "163": {
+  "label": "Native Americans \u00b7 Indiana Jones",
+  "tags": [
+   "native americans",
+   "indiana jones",
+   "new zealand",
+   "iran",
+   "private detective"
+  ],
+  "genres": [
+   "Mystery",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 19493,
+  "selectivity": 0.6456
+ },
+ "164": {
+  "label": "Dr. Seuss \u00b7 Surfing",
+  "tags": [
+   "dr. seuss",
+   "surfing",
+   "afi 100",
+   "oscar (best sound)",
+   "airport"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 22894,
+  "selectivity": 0.5837
+ },
+ "165": {
+  "label": "Peter Pan \u00b7 Dr. Seuss",
+  "tags": [
+   "peter pan",
+   "dr. seuss",
+   "aviation",
+   "kubrick",
+   "ballet"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 29997,
+  "selectivity": 0.4546
+ },
+ "166": {
+  "label": "Beatles \u00b7 Claymation",
+  "tags": [
+   "beatles",
+   "claymation",
+   "china",
+   "zombies",
+   "wuxia"
+  ],
+  "genres": [
+   "Musical",
+   "Comedy",
+   "Romance"
+  ],
+  "activation_count": 23938,
+  "selectivity": 0.5648
+ },
+ "167": {
+  "label": "Peter Pan \u00b7 Pirates",
+  "tags": [
+   "peter pan",
+   "pirates",
+   "chris tucker",
+   "office",
+   "007 (series)"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Fantasy"
+  ],
+  "activation_count": 30017,
+  "selectivity": 0.4542
+ },
+ "168": {
+  "label": "C.S. Lewis \u00b7 Iran",
+  "tags": [
+   "c.s. lewis",
+   "iran",
+   "football",
+   "cuba",
+   "swedish"
+  ],
+  "genres": [
+   "War",
+   "Fantasy",
+   "Comedy"
+  ],
+  "activation_count": 18221,
+  "selectivity": 0.6687
+ },
+ "169": {
+  "label": "Autism \u00b7 Liv Tyler",
+  "tags": [
+   "autism",
+   "liv tyler",
+   "beauty pageant",
+   "chicago",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 37274,
+  "selectivity": 0.3223
+ },
+ "170": {
+  "label": "Minnesota \u00b7 Beauty Pageant",
+  "tags": [
+   "minnesota",
+   "beauty pageant",
+   "baseball",
+   "punk",
+   "biblical"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 34466,
+  "selectivity": 0.3733
+ },
+ "171": {
+  "label": "Star Wars \u00b7 Ballet",
+  "tags": [
+   "star wars",
+   "ballet",
+   "pirates",
+   "minnesota",
+   "videogame"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Romance"
+  ],
+  "activation_count": 22377,
+  "selectivity": 0.5931
+ },
+ "172": {
+  "label": "Pirates \u00b7 James Bond",
+  "tags": [
+   "pirates",
+   "james bond",
+   "airport",
+   "olympics",
+   "dreamworks"
+  ],
+  "genres": [
+   "War",
+   "Crime",
+   "Musical"
+  ],
+  "activation_count": 21341,
+  "selectivity": 0.612
+ },
+ "173": {
+  "label": "Alaska \u00b7 Swedish",
+  "tags": [
+   "alaska",
+   "swedish",
+   "spanish civil war",
+   "kurosawa",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Romance"
+  ],
+  "activation_count": 36344,
+  "selectivity": 0.3392
+ },
+ "174": {
+  "label": "Baseball \u00b7 Beauty Pageant",
+  "tags": [
+   "baseball",
+   "beauty pageant",
+   "hackers",
+   "chicago",
+   "hacking"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery"
+  ],
+  "activation_count": 7772,
+  "selectivity": 0.8587
+ },
+ "175": {
+  "label": "Pirates \u00b7 Bad Sequel",
+  "tags": [
+   "pirates",
+   "bad sequel",
+   "vietnam war",
+   "autism",
+   "alcatraz"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "War"
+  ],
+  "activation_count": 33076,
+  "selectivity": 0.3986
+ },
+ "176": {
+  "label": "Chris Tucker \u00b7 Monty Python",
+  "tags": [
+   "chris tucker",
+   "monty python",
+   "arnold",
+   "muppets",
+   "hitchcock"
+  ],
+  "genres": [
+   "Adventure",
+   "Fantasy",
+   "Action"
+  ],
+  "activation_count": 22185,
+  "selectivity": 0.5966
+ },
+ "177": {
+  "label": "Marx Brothers \u00b7 James Bond",
+  "tags": [
+   "marx brothers",
+   "james bond",
+   "roald dahl",
+   "depp & burton",
+   "south africa"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 19580,
+  "selectivity": 0.644
+ },
+ "178": {
+  "label": "Indiana Jones \u00b7 Archaeology",
+  "tags": [
+   "indiana jones",
+   "archaeology",
+   "mummy",
+   "native americans",
+   "vampires"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 23065,
+  "selectivity": 0.5806
+ },
+ "179": {
+  "label": "Jane Austen \u00b7 Vietnam War",
+  "tags": [
+   "jane austen",
+   "vietnam war",
+   "shark",
+   "short",
+   "based on comic"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Sci-Fi"
+  ],
+  "activation_count": 20364,
+  "selectivity": 0.6297
+ },
+ "180": {
+  "label": "Iran \u00b7 American Civil War",
+  "tags": [
+   "iran",
+   "american civil war",
+   "lynch",
+   "figure skating",
+   "casino"
+  ],
+  "genres": [
+   "War",
+   "Western"
+  ],
+  "activation_count": 33525,
+  "selectivity": 0.3904
+ },
+ "181": {
+  "label": "Almodovar \u00b7 Surfing",
+  "tags": [
+   "almodovar",
+   "surfing",
+   "baseball",
+   "italy",
+   "china"
+  ],
+  "genres": [
+   "Adventure",
+   "Action",
+   "War"
+  ],
+  "activation_count": 28953,
+  "selectivity": 0.4736
+ },
+ "182": {
+  "label": "Batman \u00b7 Chris Tucker",
+  "tags": [
+   "batman",
+   "chris tucker",
+   "james bond",
+   "vampire",
+   "vampires"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure",
+   "Musical"
+  ],
+  "activation_count": 16828,
+  "selectivity": 0.694
+ },
+ "183": {
+  "label": "Alaska \u00b7 Short-Term Memory Loss",
+  "tags": [
+   "alaska",
+   "short-term memory loss",
+   "courtroom drama",
+   "archaeology",
+   "space program"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Sci-Fi"
+  ],
+  "activation_count": 22322,
+  "selectivity": 0.5941
+ },
+ "184": {
+  "label": "Strippers \u00b7 Office",
+  "tags": [
+   "strippers",
+   "office",
+   "mathematics",
+   "math",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 35996,
+  "selectivity": 0.3455
+ },
+ "185": {
+  "label": "Marx Brothers \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "marx brothers",
+   "carrie-anne moss",
+   "short-term memory loss",
+   "palestine",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 32216,
+  "selectivity": 0.4142
+ },
+ "186": {
+  "label": "Videogame \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "videogame",
+   "carrie-anne moss",
+   "kurosawa",
+   "palestine",
+   "sophia coppola"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Sci-Fi"
+  ],
+  "activation_count": 31463,
+  "selectivity": 0.4279
+ },
+ "187": {
+  "label": "Dr. Seuss \u00b7 Shakespeare",
+  "tags": [
+   "dr. seuss",
+   "shakespeare",
+   "alcatraz",
+   "italy",
+   "dragon"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 10320,
+  "selectivity": 0.8124
+ },
+ "188": {
+  "label": "Almodovar \u00b7 Short-Term Memory Loss",
+  "tags": [
+   "almodovar",
+   "short-term memory loss",
+   "broadway",
+   "ocean",
+   "strippers"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "War"
+  ],
+  "activation_count": 33251,
+  "selectivity": 0.3954
+ },
+ "189": {
+  "label": "Beatles \u00b7 Truman Capote",
+  "tags": [
+   "beatles",
+   "truman capote",
+   "basketball",
+   "figure skating",
+   "south africa"
+  ],
+  "genres": [
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 34139,
+  "selectivity": 0.3793
+ },
+ "190": {
+  "label": "Peter Pan \u00b7 Monkey",
+  "tags": [
+   "peter pan",
+   "monkey",
+   "indiana jones",
+   "football",
+   "pirates"
+  ],
+  "genres": [
+   "Romance",
+   "Mystery",
+   "Adventure"
+  ],
+  "activation_count": 37774,
+  "selectivity": 0.3132
+ },
+ "191": {
+  "label": "Figure Skating \u00b7 Mountain Climbing",
+  "tags": [
+   "figure skating",
+   "mountain climbing",
+   "depp & burton",
+   "rome",
+   "minnesota"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Children"
+  ],
+  "activation_count": 20127,
+  "selectivity": 0.634
+ },
+ "192": {
+  "label": "Aardman \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "aardman",
+   "carrie-anne moss",
+   "chris tucker",
+   "claymation",
+   "monty python"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 9013,
+  "selectivity": 0.8361
+ },
+ "193": {
+  "label": "Hannibal Lecter \u00b7 Alcatraz",
+  "tags": [
+   "hannibal lecter",
+   "alcatraz",
+   "sophia coppola",
+   "afi 100",
+   "batman"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery"
+  ],
+  "activation_count": 3644,
+  "selectivity": 0.9337
+ },
+ "194": {
+  "label": "Beatles \u00b7 Soccer",
+  "tags": [
+   "beatles",
+   "soccer",
+   "vampires",
+   "9/11",
+   "vampire"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Mystery"
+  ],
+  "activation_count": 21982,
+  "selectivity": 0.6003
+ },
+ "195": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "claymation",
+   "olympics",
+   "halloween"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 35002,
+  "selectivity": 0.3636
+ },
+ "196": {
+  "label": "Circus \u00b7 Aviation",
+  "tags": [
+   "circus",
+   "aviation",
+   "007 (series)",
+   "basketball",
+   "vampires"
+  ],
+  "genres": [
+   "Western",
+   "Mystery",
+   "Comedy"
+  ],
+  "activation_count": 33256,
+  "selectivity": 0.3953
+ },
+ "197": {
+  "label": "Pirates \u00b7 Aviation",
+  "tags": [
+   "pirates",
+   "aviation",
+   "american civil war",
+   "bad sequel",
+   "dogs"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 20003,
+  "selectivity": 0.6363
+ },
+ "198": {
+  "label": "Beauty Pageant \u00b7 Basketball",
+  "tags": [
+   "beauty pageant",
+   "basketball",
+   "american civil war",
+   "short-term memory loss",
+   "sophia coppola"
+  ],
+  "genres": [
+   "War",
+   "Western",
+   "Romance"
+  ],
+  "activation_count": 33620,
+  "selectivity": 0.3887
+ },
+ "199": {
+  "label": "Ballet \u00b7 Broadway",
+  "tags": [
+   "ballet",
+   "broadway",
+   "spaghetti western",
+   "shakespeare",
+   "ennio morricone"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Mystery"
+  ],
+  "activation_count": 20693,
+  "selectivity": 0.6238
+ },
+ "200": {
+  "label": "Claymation \u00b7 Arnold",
+  "tags": [
+   "claymation",
+   "arnold",
+   "penguins",
+   "baseball",
+   "ballet"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Animation"
+  ],
+  "activation_count": 20962,
+  "selectivity": 0.6189
+ },
+ "201": {
+  "label": "Figure Skating \u00b7 Minnesota",
+  "tags": [
+   "figure skating",
+   "minnesota",
+   "vietnam war",
+   "airport",
+   "private detective"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Western"
+  ],
+  "activation_count": 21126,
+  "selectivity": 0.6159
+ },
+ "202": {
+  "label": "Hannibal Lecter \u00b7 Mountain Climbing",
+  "tags": [
+   "hannibal lecter",
+   "mountain climbing",
+   "afi 100",
+   "brilliant",
+   "james bond"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 38764,
+  "selectivity": 0.2952
+ },
+ "203": {
+  "label": "Minnesota \u00b7 Hannibal Lecter",
+  "tags": [
+   "minnesota",
+   "hannibal lecter",
+   "arnold",
+   "ballet",
+   "iran"
+  ],
+  "genres": [
+   "Mystery",
+   "Romance",
+   "Drama"
+  ],
+  "activation_count": 43742,
+  "selectivity": 0.2047
+ },
+ "204": {
+  "label": "Rome \u00b7 Kurosawa",
+  "tags": [
+   "rome",
+   "kurosawa",
+   "opera",
+   "italy",
+   "monty python"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Romance"
+  ],
+  "activation_count": 22262,
+  "selectivity": 0.5952
+ },
+ "205": {
+  "label": "Swedish \u00b7 Circus",
+  "tags": [
+   "swedish",
+   "circus",
+   "casino",
+   "halloween",
+   "vietnam war"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 35508,
+  "selectivity": 0.3544
+ },
+ "206": {
+  "label": "Spaghetti Western \u00b7 Submarine",
+  "tags": [
+   "spaghetti western",
+   "submarine",
+   "dogs",
+   "mining",
+   "minnesota"
+  ],
+  "genres": [
+   "Western",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 32833,
+  "selectivity": 0.403
+ },
+ "207": {
+  "label": "Alcatraz \u00b7 Claymation",
+  "tags": [
+   "alcatraz",
+   "claymation",
+   "kurosawa",
+   "dr. seuss",
+   "prohibition"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 20069,
+  "selectivity": 0.6351
+ },
+ "208": {
+  "label": "Tarantino \u00b7 Miyazaki",
+  "tags": [
+   "tarantino",
+   "miyazaki",
+   "studio ghibli",
+   "arnold",
+   "afi 100"
+  ],
+  "genres": [
+   "Romance",
+   "Adventure",
+   "Comedy"
+  ],
+  "activation_count": 23356,
+  "selectivity": 0.5753
+ },
+ "209": {
+  "label": "Indiana Jones \u00b7 Archaeology",
+  "tags": [
+   "indiana jones",
+   "archaeology",
+   "iran",
+   "arnold",
+   "nasa"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 31845,
+  "selectivity": 0.421
+ },
+ "210": {
+  "label": "Tolkien \u00b7 New Zealand",
+  "tags": [
+   "tolkien",
+   "new zealand",
+   "liv tyler",
+   "harry potter",
+   "palestine"
+  ],
+  "genres": [
+   "Western",
+   "Crime",
+   "War"
+  ],
+  "activation_count": 32142,
+  "selectivity": 0.4156
+ },
+ "211": {
+  "label": "Jane Austen \u00b7 Kubrick",
+  "tags": [
+   "jane austen",
+   "kubrick",
+   "archaeology",
+   "videogame",
+   "indiana jones"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Western"
+  ],
+  "activation_count": 21572,
+  "selectivity": 0.6078
+ },
+ "212": {
+  "label": "Mathematics \u00b7 Fountain Of Youth",
+  "tags": [
+   "mathematics",
+   "fountain of youth",
+   "kurosawa",
+   "archaeology",
+   "claymation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 18367,
+  "selectivity": 0.666
+ },
+ "213": {
+  "label": "Marx Brothers \u00b7 New Zealand",
+  "tags": [
+   "marx brothers",
+   "new zealand",
+   "surfing",
+   "mental hospital",
+   "alaska"
+  ],
+  "genres": [
+   "Western",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 23206,
+  "selectivity": 0.5781
+ },
+ "214": {
+  "label": "Surfing \u00b7 Swedish",
+  "tags": [
+   "surfing",
+   "swedish",
+   "airport",
+   "private detective",
+   "airplane"
+  ],
+  "genres": [
+   "Romance",
+   "Crime",
+   "Western"
+  ],
+  "activation_count": 20117,
+  "selectivity": 0.6342
+ },
+ "215": {
+  "label": "Autism \u00b7 Afi 100",
+  "tags": [
+   "autism",
+   "afi 100",
+   "chess",
+   "gambling",
+   "tarantino"
+  ],
+  "genres": [
+   "War",
+   "Crime",
+   "Romance"
+  ],
+  "activation_count": 18512,
+  "selectivity": 0.6634
+ },
+ "216": {
+  "label": "South America \u00b7 Pirates",
+  "tags": [
+   "south america",
+   "pirates",
+   "chicago",
+   "androids",
+   "chris tucker"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 22868,
+  "selectivity": 0.5842
+ },
+ "217": {
+  "label": "Figure Skating \u00b7 Brazil",
+  "tags": [
+   "figure skating",
+   "brazil",
+   "indiana jones",
+   "mummy",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Action"
+  ],
+  "activation_count": 17514,
+  "selectivity": 0.6816
+ },
+ "218": {
+  "label": "Hannibal Lecter \u00b7 Aardman",
+  "tags": [
+   "hannibal lecter",
+   "aardman",
+   "dogs",
+   "claymation",
+   "american civil war"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 36041,
+  "selectivity": 0.3447
+ },
+ "219": {
+  "label": "Coen Brothers \u00b7 Alaska",
+  "tags": [
+   "coen brothers",
+   "alaska",
+   "trains",
+   "submarine",
+   "holocaust"
+  ],
+  "genres": [
+   "War",
+   "Crime",
+   "Mystery"
+  ],
+  "activation_count": 35802,
+  "selectivity": 0.349
+ },
+ "220": {
+  "label": "Dogs \u00b7 Trains",
+  "tags": [
+   "dogs",
+   "trains",
+   "train",
+   "australian",
+   "french"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Horror"
+  ],
+  "activation_count": 47396,
+  "selectivity": 0.1382
+ },
+ "221": {
+  "label": "East Germany \u00b7 Mental Hospital",
+  "tags": [
+   "east germany",
+   "mental hospital",
+   "holocaust",
+   "nazi",
+   "marx brothers"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Musical"
+  ],
+  "activation_count": 37179,
+  "selectivity": 0.324
+ },
+ "222": {
+  "label": "Mountain Climbing \u00b7 Basketball",
+  "tags": [
+   "mountain climbing",
+   "basketball",
+   "baseball",
+   "dr. seuss",
+   "united nations"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 37240,
+  "selectivity": 0.3229
+ },
+ "223": {
+  "label": "Swedish \u00b7 Iran",
+  "tags": [
+   "swedish",
+   "iran",
+   "arnold",
+   "peter pan",
+   "dragon"
+  ],
+  "genres": [
+   "Crime",
+   "Musical"
+  ],
+  "activation_count": 28051,
+  "selectivity": 0.49
+ },
+ "224": {
+  "label": "Figure Skating \u00b7 Marx Brothers",
+  "tags": [
+   "figure skating",
+   "marx brothers",
+   "batman",
+   "mountain climbing",
+   "olympics"
+  ],
+  "genres": [
+   "Western",
+   "Romance",
+   "Musical"
+  ],
+  "activation_count": 32890,
+  "selectivity": 0.402
+ },
+ "225": {
+  "label": "Almodovar \u00b7 Kubrick",
+  "tags": [
+   "almodovar",
+   "kubrick",
+   "opera",
+   "pixar",
+   "south america"
+  ],
+  "genres": [
+   "Western",
+   "Adventure",
+   "Drama"
+  ],
+  "activation_count": 21139,
+  "selectivity": 0.6156
+ },
+ "226": {
+  "label": "Airport \u00b7 India",
+  "tags": [
+   "airport",
+   "india",
+   "private detective",
+   "palestine",
+   "swedish"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "War"
+  ],
+  "activation_count": 22271,
+  "selectivity": 0.5951
+ },
+ "227": {
+  "label": "Batman \u00b7 Mountain Climbing",
+  "tags": [
+   "batman",
+   "mountain climbing",
+   "roald dahl",
+   "hannibal lecter",
+   "claymation"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 16059,
+  "selectivity": 0.708
+ },
+ "228": {
+  "label": "Baseball \u00b7 Palestine",
+  "tags": [
+   "baseball",
+   "palestine",
+   "olympics",
+   "vietnam war",
+   "fountain of youth"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 21717,
+  "selectivity": 0.6051
+ },
+ "229": {
+  "label": "Shakespeare \u00b7 Tarantino",
+  "tags": [
+   "shakespeare",
+   "tarantino",
+   "almodovar",
+   "sword fighting",
+   "circus"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Romance"
+  ],
+  "activation_count": 18807,
+  "selectivity": 0.658
+ },
+ "230": {
+  "label": "Almodovar \u00b7 Archaeology",
+  "tags": [
+   "almodovar",
+   "archaeology",
+   "figure skating",
+   "fountain of youth",
+   "punk"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Romance"
+  ],
+  "activation_count": 21284,
+  "selectivity": 0.613
+ },
+ "231": {
+  "label": "Alcatraz \u00b7 Afi 100",
+  "tags": [
+   "alcatraz",
+   "afi 100",
+   "arnold",
+   "south america",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 32987,
+  "selectivity": 0.4002
+ },
+ "232": {
+  "label": "Punk \u00b7 Television",
+  "tags": [
+   "punk",
+   "television",
+   "bowling",
+   "robert ludlum",
+   "hallucinatory"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Sci-Fi",
+   "Musical"
+  ],
+  "activation_count": 32162,
+  "selectivity": 0.4152
+ },
+ "233": {
+  "label": "Almodovar \u00b7 Airplane",
+  "tags": [
+   "almodovar",
+   "airplane",
+   "fountain of youth",
+   "jay and silent bob",
+   "robert ludlum"
+  ],
+  "genres": [
+   "Crime",
+   "Horror",
+   "War"
+  ],
+  "activation_count": 41778,
+  "selectivity": 0.2404
+ },
+ "234": {
+  "label": "Roald Dahl \u00b7 Kurosawa",
+  "tags": [
+   "roald dahl",
+   "kurosawa",
+   "south america",
+   "mummy",
+   "rio de janeiro"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 23361,
+  "selectivity": 0.5752
+ },
+ "235": {
+  "label": "American Civil War \u00b7 Mountain Climbing",
+  "tags": [
+   "american civil war",
+   "mountain climbing",
+   "prohibition",
+   "videogame",
+   "mother daughter relationship"
+  ],
+  "genres": [
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 31366,
+  "selectivity": 0.4297
+ },
+ "236": {
+  "label": "Star Wars \u00b7 Almodovar",
+  "tags": [
+   "star wars",
+   "almodovar",
+   "kurosawa",
+   "alaska",
+   "basketball"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 29248,
+  "selectivity": 0.4682
+ },
+ "237": {
+  "label": "Hannibal Lecter \u00b7 Minnesota",
+  "tags": [
+   "hannibal lecter",
+   "minnesota",
+   "beauty pageant",
+   "arnold",
+   "truman capote"
+  ],
+  "genres": [
+   "Crime",
+   "Western",
+   "Thriller"
+  ],
+  "activation_count": 24217,
+  "selectivity": 0.5597
+ },
+ "238": {
+  "label": "Ballet \u00b7 Arnold",
+  "tags": [
+   "ballet",
+   "arnold",
+   "james bond",
+   "minnesota",
+   "figure skating"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 14979,
+  "selectivity": 0.7276
+ },
+ "239": {
+  "label": "Indiana Jones \u00b7 Beauty Pageant",
+  "tags": [
+   "indiana jones",
+   "beauty pageant",
+   "archaeology",
+   "liv tyler",
+   "king arthur"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Comedy"
+  ],
+  "activation_count": 19403,
+  "selectivity": 0.6472
+ },
+ "240": {
+  "label": "Penguins \u00b7 Dreamworks",
+  "tags": [
+   "penguins",
+   "dreamworks",
+   "alcatraz",
+   "aviation",
+   "mtv"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Horror"
+  ],
+  "activation_count": 20093,
+  "selectivity": 0.6347
+ },
+ "241": {
+  "label": "Indiana Jones \u00b7 Robert Ludlum",
+  "tags": [
+   "indiana jones",
+   "robert ludlum",
+   "alaska",
+   "spielberg",
+   "sword fighting"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 31954,
+  "selectivity": 0.419
+ },
+ "242": {
+  "label": "Arnold \u00b7 Oscar (Best Sound)",
+  "tags": [
+   "arnold",
+   "oscar (best sound)",
+   "ballet",
+   "mining",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 38237,
+  "selectivity": 0.3048
+ },
+ "243": {
+  "label": "Aardman \u00b7 Claymation",
+  "tags": [
+   "aardman",
+   "claymation",
+   "iran",
+   "new zealand",
+   "pirates"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Horror",
+   "Mystery"
+  ],
+  "activation_count": 32218,
+  "selectivity": 0.4142
+ },
+ "244": {
+  "label": "Aardman \u00b7 Jane Austen",
+  "tags": [
+   "aardman",
+   "jane austen",
+   "depp & burton",
+   "autism",
+   "tarantino"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 37533,
+  "selectivity": 0.3176
+ },
+ "245": {
+  "label": "Tarantino \u00b7 Ballet",
+  "tags": [
+   "tarantino",
+   "ballet",
+   "shakespeare",
+   "airplane",
+   "punk"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 37745,
+  "selectivity": 0.3137
+ },
+ "246": {
+  "label": "Star Trek \u00b7 Spock",
+  "tags": [
+   "star trek",
+   "spock",
+   "roald dahl",
+   "pirates",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 5203,
+  "selectivity": 0.9054
+ },
+ "247": {
+  "label": "James Bond \u00b7 Almodovar",
+  "tags": [
+   "james bond",
+   "almodovar",
+   "chicago",
+   "nuclear bomb",
+   "east germany"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Romance"
+  ],
+  "activation_count": 20386,
+  "selectivity": 0.6293
+ },
+ "248": {
+  "label": "Carrie-Anne Moss \u00b7 Jay And Silent Bob",
+  "tags": [
+   "carrie-anne moss",
+   "jay and silent bob",
+   "fountain of youth",
+   "arnold",
+   "airport"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 9370,
+  "selectivity": 0.8296
+ },
+ "249": {
+  "label": "Monty Python \u00b7 King Arthur",
+  "tags": [
+   "monty python",
+   "king arthur",
+   "tarantino",
+   "james bond",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 38196,
+  "selectivity": 0.3055
+ },
+ "250": {
+  "label": "Coen Brothers \u00b7 Palestine",
+  "tags": [
+   "coen brothers",
+   "palestine",
+   "pirates",
+   "iraq war",
+   "airplane"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 33494,
+  "selectivity": 0.391
+ },
+ "251": {
+  "label": "Batman \u00b7 Dr. Seuss",
+  "tags": [
+   "batman",
+   "dr. seuss",
+   "cuba",
+   "claymation",
+   "liv tyler"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 34565,
+  "selectivity": 0.3715
+ },
+ "252": {
+  "label": "Dr. Seuss \u00b7 Baseball",
+  "tags": [
+   "dr. seuss",
+   "baseball",
+   "iran",
+   "basketball",
+   "football"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 24159,
+  "selectivity": 0.5607
+ },
+ "253": {
+  "label": "Star Wars \u00b7 Prequel",
+  "tags": [
+   "star wars",
+   "prequel",
+   "classical music",
+   "androids",
+   "private detective"
+  ],
+  "genres": [
+   "Western",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 49068,
+  "selectivity": 0.1078
+ },
+ "254": {
+  "label": "Chris Tucker \u00b7 Indiana Jones",
+  "tags": [
+   "chris tucker",
+   "indiana jones",
+   "mountain climbing",
+   "almodovar",
+   "liv tyler"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Thriller",
+   "Adventure"
+  ],
+  "activation_count": 21184,
+  "selectivity": 0.6148
+ },
+ "255": {
+  "label": "Monty Python \u00b7 Claymation",
+  "tags": [
+   "monty python",
+   "claymation",
+   "circus",
+   "mountain climbing",
+   "peter pan"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 16609,
+  "selectivity": 0.698
+ },
+ "256": {
+  "label": "Mountain Climbing \u00b7 Baseball",
+  "tags": [
+   "mountain climbing",
+   "baseball",
+   "james bond",
+   "minnesota",
+   "afi 100"
+  ],
+  "genres": [
+   "Western",
+   "Action",
+   "Thriller"
+  ],
+  "activation_count": 34187,
+  "selectivity": 0.3784
+ },
+ "257": {
+  "label": "Kurosawa \u00b7 Nuclear Bomb",
+  "tags": [
+   "kurosawa",
+   "nuclear bomb",
+   "gulf war",
+   "native americans",
+   "samurai"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Sci-Fi"
+  ],
+  "activation_count": 34218,
+  "selectivity": 0.3778
+ },
+ "258": {
+  "label": "007 (Series) \u00b7 Rio De Janeiro",
+  "tags": [
+   "007 (series)",
+   "rio de janeiro",
+   "brazil",
+   "south america",
+   "c.s. lewis"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "War"
+  ],
+  "activation_count": 24110,
+  "selectivity": 0.5616
+ },
+ "259": {
+  "label": "Oscar (Best Sound) \u00b7 Archaeology",
+  "tags": [
+   "oscar (best sound)",
+   "archaeology",
+   "spielberg",
+   "depp & burton",
+   "mummy"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 37462,
+  "selectivity": 0.3189
+ },
+ "260": {
+  "label": "Alcatraz \u00b7 Archaeology",
+  "tags": [
+   "alcatraz",
+   "archaeology",
+   "tarantino",
+   "videogame",
+   "brilliant"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 18497,
+  "selectivity": 0.6637
+ },
+ "261": {
+  "label": "Baseball \u00b7 Figure Skating",
+  "tags": [
+   "baseball",
+   "figure skating",
+   "james bond",
+   "jane austen",
+   "coen brothers"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 20057,
+  "selectivity": 0.6353
+ },
+ "262": {
+  "label": "Surfing \u00b7 Claymation",
+  "tags": [
+   "surfing",
+   "claymation",
+   "dr. seuss",
+   "arnold",
+   "punk"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 33577,
+  "selectivity": 0.3895
+ },
+ "263": {
+  "label": "James Bond \u00b7 Star Wars",
+  "tags": [
+   "james bond",
+   "star wars",
+   "liv tyler",
+   "pirates",
+   "spielberg"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 35845,
+  "selectivity": 0.3483
+ },
+ "264": {
+  "label": "Truman Capote \u00b7 Shakespeare",
+  "tags": [
+   "truman capote",
+   "shakespeare",
+   "circus",
+   "saturn award (best science fiction film)",
+   "better than the american version"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 28699,
+  "selectivity": 0.4782
+ },
+ "265": {
+  "label": "Almodovar \u00b7 Holocaust",
+  "tags": [
+   "almodovar",
+   "holocaust",
+   "cuba",
+   "alcatraz",
+   "beauty pageant"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Drama"
+  ],
+  "activation_count": 19568,
+  "selectivity": 0.6442
+ },
+ "266": {
+  "label": "Baseball \u00b7 Roald Dahl",
+  "tags": [
+   "baseball",
+   "roald dahl",
+   "jane austen",
+   "minnesota",
+   "beauty pageant"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Children"
+  ],
+  "activation_count": 36416,
+  "selectivity": 0.3379
+ },
+ "267": {
+  "label": "Olympics \u00b7 Mathematics",
+  "tags": [
+   "olympics",
+   "mathematics",
+   "cuba",
+   "vietnam",
+   "math"
+  ],
+  "genres": [
+   "War",
+   "Musical"
+  ],
+  "activation_count": 34601,
+  "selectivity": 0.3709
+ },
+ "268": {
+  "label": "Autism \u00b7 Baseball",
+  "tags": [
+   "autism",
+   "baseball",
+   "kubrick",
+   "aviation",
+   "sword fighting"
+  ],
+  "genres": [
+   "Romance",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 32133,
+  "selectivity": 0.4158
+ },
+ "269": {
+  "label": "Fountain Of Youth \u00b7 Chris Tucker",
+  "tags": [
+   "fountain of youth",
+   "chris tucker",
+   "james bond",
+   "figure skating",
+   "liv tyler"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Romance"
+  ],
+  "activation_count": 31823,
+  "selectivity": 0.4214
+ },
+ "270": {
+  "label": "Beatles \u00b7 Shakespeare",
+  "tags": [
+   "beatles",
+   "shakespeare",
+   "south america",
+   "mountain climbing",
+   "afi 100"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Children"
+  ],
+  "activation_count": 17163,
+  "selectivity": 0.6879
+ },
+ "271": {
+  "label": "Mountain Climbing \u00b7 Coen Brothers",
+  "tags": [
+   "mountain climbing",
+   "coen brothers",
+   "basketball",
+   "nuclear bomb",
+   "punk"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 34571,
+  "selectivity": 0.3714
+ },
+ "272": {
+  "label": "Beatles \u00b7 Depp & Burton",
+  "tags": [
+   "beatles",
+   "depp & burton",
+   "roald dahl",
+   "baseball",
+   "minnesota"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 21536,
+  "selectivity": 0.6084
+ },
+ "273": {
+  "label": "Baseball \u00b7 Basketball",
+  "tags": [
+   "baseball",
+   "basketball",
+   "mummy",
+   "archaeology",
+   "marx brothers"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Romance"
+  ],
+  "activation_count": 18967,
+  "selectivity": 0.6551
+ },
+ "274": {
+  "label": "Arnold \u00b7 mtv",
+  "tags": [
+   "arnold",
+   "mtv",
+   "broadway",
+   "private detective",
+   "olympics"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 17570,
+  "selectivity": 0.6805
+ },
+ "275": {
+  "label": "Truman Capote \u00b7 Vietnam",
+  "tags": [
+   "truman capote",
+   "vietnam",
+   "united nations",
+   "gulf war",
+   "ballet"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 36137,
+  "selectivity": 0.343
+ },
+ "276": {
+  "label": "Batman \u00b7 Alcatraz",
+  "tags": [
+   "batman",
+   "alcatraz",
+   "spock",
+   "chris tucker",
+   "star trek"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Sci-Fi"
+  ],
+  "activation_count": 38270,
+  "selectivity": 0.3042
+ },
+ "277": {
+  "label": "Ballet \u00b7 Football",
+  "tags": [
+   "ballet",
+   "football",
+   "broadway",
+   "minnesota",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 20867,
+  "selectivity": 0.6206
+ },
+ "278": {
+  "label": "United Nations \u00b7 Communism",
+  "tags": [
+   "united nations",
+   "communism",
+   "antarctica",
+   "hollywood",
+   "better than the american version"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Adventure",
+   "Romance"
+  ],
+  "activation_count": 47834,
+  "selectivity": 0.1303
+ },
+ "279": {
+  "label": "Autism \u00b7 Space Program",
+  "tags": [
+   "autism",
+   "space program",
+   "minnesota",
+   "nasa",
+   "airplane"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "War"
+  ],
+  "activation_count": 31657,
+  "selectivity": 0.4244
+ },
+ "280": {
+  "label": "Chris Tucker \u00b7 Mountain Climbing",
+  "tags": [
+   "chris tucker",
+   "mountain climbing",
+   "alaska",
+   "baseball",
+   "monkey"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 36122,
+  "selectivity": 0.3432
+ },
+ "281": {
+  "label": "James Bond \u00b7 Underwater",
+  "tags": [
+   "james bond",
+   "underwater",
+   "nuclear bomb",
+   "disney animated feature",
+   "kubrick"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Children"
+  ],
+  "activation_count": 21018,
+  "selectivity": 0.6178
+ },
+ "282": {
+  "label": "Vampires \u00b7 Cuba",
+  "tags": [
+   "vampires",
+   "cuba",
+   "vampire",
+   "united nations",
+   "office"
+  ],
+  "genres": [
+   "Crime",
+   "Thriller",
+   "Action"
+  ],
+  "activation_count": 20836,
+  "selectivity": 0.6212
+ },
+ "283": {
+  "label": "Marx Brothers \u00b7 Fountain Of Youth",
+  "tags": [
+   "marx brothers",
+   "fountain of youth",
+   "chris tucker",
+   "mining",
+   "biblical"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 30040,
+  "selectivity": 0.4538
+ },
+ "284": {
+  "label": "Almodovar \u00b7 New Zealand",
+  "tags": [
+   "almodovar",
+   "new zealand",
+   "mining",
+   "peter pan",
+   "baseball"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Sci-Fi"
+  ],
+  "activation_count": 36329,
+  "selectivity": 0.3395
+ },
+ "285": {
+  "label": "Beauty Pageant \u00b7 Baseball",
+  "tags": [
+   "beauty pageant",
+   "baseball",
+   "nuclear bomb",
+   "kubrick",
+   "vienna"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Adventure"
+  ],
+  "activation_count": 20957,
+  "selectivity": 0.619
+ },
+ "286": {
+  "label": "Tolkien \u00b7 New Zealand",
+  "tags": [
+   "tolkien",
+   "new zealand",
+   "liv tyler",
+   "harry potter",
+   "spielberg"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 20839,
+  "selectivity": 0.6211
+ },
+ "287": {
+  "label": "Coen Brothers \u00b7 East Germany",
+  "tags": [
+   "coen brothers",
+   "east germany",
+   "vampires",
+   "arnold",
+   "vampire"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Romance"
+  ],
+  "activation_count": 18334,
+  "selectivity": 0.6666
+ },
+ "288": {
+  "label": "Chris Tucker \u00b7 Jay And Silent Bob",
+  "tags": [
+   "chris tucker",
+   "jay and silent bob",
+   "autism",
+   "almodovar",
+   "brazil"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Romance"
+  ],
+  "activation_count": 21614,
+  "selectivity": 0.607
+ },
+ "289": {
+  "label": "Tolkien \u00b7 Batman",
+  "tags": [
+   "tolkien",
+   "batman",
+   "star trek",
+   "new zealand",
+   "liv tyler"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 31093,
+  "selectivity": 0.4347
+ },
+ "290": {
+  "label": "Vietnam War \u00b7 Pirates",
+  "tags": [
+   "vietnam war",
+   "pirates",
+   "surfing",
+   "antarctica",
+   "archaeology"
+  ],
+  "genres": [
+   "Western",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 22539,
+  "selectivity": 0.5902
+ },
+ "291": {
+  "label": "Marx Brothers \u00b7 Peter Pan",
+  "tags": [
+   "marx brothers",
+   "peter pan",
+   "fountain of youth",
+   "circus",
+   "beauty pageant"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Comedy"
+  ],
+  "activation_count": 34001,
+  "selectivity": 0.3818
+ },
+ "292": {
+  "label": "Robert Ludlum \u00b7 Jay And Silent Bob",
+  "tags": [
+   "robert ludlum",
+   "jay and silent bob",
+   "shakespeare",
+   "iran",
+   "kurosawa"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 20601,
+  "selectivity": 0.6254
+ },
+ "293": {
+  "label": "Peter Pan \u00b7 New Zealand",
+  "tags": [
+   "peter pan",
+   "new zealand",
+   "pirates",
+   "south america",
+   "swedish"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Western",
+   "War"
+  ],
+  "activation_count": 38992,
+  "selectivity": 0.291
+ },
+ "294": {
+  "label": "Robert Ludlum \u00b7 East Germany",
+  "tags": [
+   "robert ludlum",
+   "east germany",
+   "star wars",
+   "archaeology",
+   "spielberg"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Action"
+  ],
+  "activation_count": 35840,
+  "selectivity": 0.3484
+ },
+ "295": {
+  "label": "Beatles \u00b7 Star Wars",
+  "tags": [
+   "beatles",
+   "star wars",
+   "roald dahl",
+   "cuba",
+   "alaska"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 30127,
+  "selectivity": 0.4522
+ },
+ "296": {
+  "label": "Soccer \u00b7 Arnold",
+  "tags": [
+   "soccer",
+   "arnold",
+   "football",
+   "roald dahl",
+   "peter pan"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "Fantasy"
+  ],
+  "activation_count": 33370,
+  "selectivity": 0.3933
+ },
+ "297": {
+  "label": "Almodovar \u00b7 mtv",
+  "tags": [
+   "almodovar",
+   "mtv",
+   "scotland",
+   "peter pan",
+   "american civil war"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Children"
+  ],
+  "activation_count": 30164,
+  "selectivity": 0.4516
+ },
+ "298": {
+  "label": "Sophia Coppola \u00b7 Ballet",
+  "tags": [
+   "sophia coppola",
+   "ballet",
+   "circus",
+   "monkey",
+   "airport"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Western"
+  ],
+  "activation_count": 34626,
+  "selectivity": 0.3704
+ },
+ "299": {
+  "label": "Coen Brothers \u00b7 Autism",
+  "tags": [
+   "coen brothers",
+   "autism",
+   "chess",
+   "swedish",
+   "gambling"
+  ],
+  "genres": [
+   "War",
+   "Romance",
+   "Adventure"
+  ],
+  "activation_count": 27822,
+  "selectivity": 0.4941
+ },
+ "300": {
+  "label": "Almodovar \u00b7 Spaghetti Western",
+  "tags": [
+   "almodovar",
+   "spaghetti western",
+   "american civil war",
+   "airplane",
+   "mexico"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 22200,
+  "selectivity": 0.5964
+ },
+ "301": {
+  "label": "Aardman \u00b7 Figure Skating",
+  "tags": [
+   "aardman",
+   "figure skating",
+   "emma watson",
+   "harry potter",
+   "claymation"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 36206,
+  "selectivity": 0.3417
+ },
+ "302": {
+  "label": "Ballet \u00b7 Chris Tucker",
+  "tags": [
+   "ballet",
+   "chris tucker",
+   "figure skating",
+   "alaska",
+   "indiana jones"
+  ],
+  "genres": [
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 22328,
+  "selectivity": 0.594
+ },
+ "303": {
+  "label": "Jay And Silent Bob \u00b7 Nasa",
+  "tags": [
+   "jay and silent bob",
+   "nasa",
+   "cuba",
+   "vienna",
+   "kurosawa"
+  ],
+  "genres": [
+   "Western",
+   "Action",
+   "Comedy"
+  ],
+  "activation_count": 33503,
+  "selectivity": 0.3908
+ },
+ "304": {
+  "label": "Baseball \u00b7 Spielberg",
+  "tags": [
+   "baseball",
+   "spielberg",
+   "chicago",
+   "swedish",
+   "gambling"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Fantasy"
+  ],
+  "activation_count": 32300,
+  "selectivity": 0.4127
+ },
+ "305": {
+  "label": "Hannibal Lecter \u00b7 Spock",
+  "tags": [
+   "hannibal lecter",
+   "spock",
+   "star trek",
+   "indiana jones",
+   "liv tyler"
+  ],
+  "genres": [
+   "Musical",
+   "Action",
+   "Adventure"
+  ],
+  "activation_count": 30947,
+  "selectivity": 0.4373
+ },
+ "306": {
+  "label": "Surfing \u00b7 Beauty Pageant",
+  "tags": [
+   "surfing",
+   "beauty pageant",
+   "coen brothers",
+   "figure skating",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance"
+  ],
+  "activation_count": 21355,
+  "selectivity": 0.6117
+ },
+ "307": {
+  "label": "Marx Brothers \u00b7 Arnold",
+  "tags": [
+   "marx brothers",
+   "arnold",
+   "baseball",
+   "vietnam war",
+   "ballet"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 29604,
+  "selectivity": 0.4617
+ },
+ "308": {
+  "label": "Chris Tucker \u00b7 Vietnam",
+  "tags": [
+   "chris tucker",
+   "vietnam",
+   "afi 100",
+   "indiana jones",
+   "oscar (best sound)"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 13589,
+  "selectivity": 0.7529
+ },
+ "309": {
+  "label": "James Bond \u00b7 Basketball",
+  "tags": [
+   "james bond",
+   "basketball",
+   "beauty pageant",
+   "dragon",
+   "videogame"
+  ],
+  "genres": [
+   "Musical",
+   "Drama",
+   "Action"
+  ],
+  "activation_count": 40958,
+  "selectivity": 0.2553
+ },
+ "310": {
+  "label": "Tolkien \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "tolkien",
+   "carrie-anne moss",
+   "new zealand",
+   "tarantino",
+   "liv tyler"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Thriller"
+  ],
+  "activation_count": 24544,
+  "selectivity": 0.5537
+ },
+ "311": {
+  "label": "Almodovar \u00b7 Marx Brothers",
+  "tags": [
+   "almodovar",
+   "marx brothers",
+   "christmas",
+   "arnold",
+   "mathematics"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 27588,
+  "selectivity": 0.4984
+ },
+ "312": {
+  "label": "East Germany \u00b7 Spielberg",
+  "tags": [
+   "east germany",
+   "spielberg",
+   "chess",
+   "mountain climbing",
+   "swedish"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Sci-Fi"
+  ],
+  "activation_count": 37006,
+  "selectivity": 0.3272
+ },
+ "313": {
+  "label": "Ballet \u00b7 Robert Ludlum",
+  "tags": [
+   "ballet",
+   "robert ludlum",
+   "alcoholism",
+   "irish",
+   "broadway"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Romance"
+  ],
+  "activation_count": 22883,
+  "selectivity": 0.5839
+ },
+ "314": {
+  "label": "Marx Brothers \u00b7 Pixar",
+  "tags": [
+   "marx brothers",
+   "pixar",
+   "united nations",
+   "opera",
+   "south africa"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Fantasy"
+  ],
+  "activation_count": 29903,
+  "selectivity": 0.4563
+ },
+ "315": {
+  "label": "Truman Capote \u00b7 Kurosawa",
+  "tags": [
+   "truman capote",
+   "kurosawa",
+   "basketball",
+   "punk",
+   "monkey"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Mystery"
+  ],
+  "activation_count": 36454,
+  "selectivity": 0.3372
+ },
+ "316": {
+  "label": "Chris Tucker \u00b7 Arnold",
+  "tags": [
+   "chris tucker",
+   "arnold",
+   "imaginary friend",
+   "disney animated feature",
+   "carrie-anne moss"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 27201,
+  "selectivity": 0.5054
+ },
+ "317": {
+  "label": "Figure Skating \u00b7 Aardman",
+  "tags": [
+   "figure skating",
+   "aardman",
+   "star trek",
+   "claymation",
+   "autism"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 21680,
+  "selectivity": 0.6058
+ },
+ "318": {
+  "label": "Roald Dahl \u00b7 Jay And Silent Bob",
+  "tags": [
+   "roald dahl",
+   "jay and silent bob",
+   "dogs",
+   "claymation",
+   "mining"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Fantasy"
+  ],
+  "activation_count": 40389,
+  "selectivity": 0.2656
+ },
+ "319": {
+  "label": "Indiana Jones \u00b7 Alcatraz",
+  "tags": [
+   "indiana jones",
+   "alcatraz",
+   "archaeology",
+   "disney animated feature",
+   "airplane"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 33816,
+  "selectivity": 0.3852
+ },
+ "320": {
+  "label": "Aardman \u00b7 Claymation",
+  "tags": [
+   "aardman",
+   "claymation",
+   "almodovar",
+   "mummy",
+   "kurosawa"
+  ],
+  "genres": [
+   "War",
+   "Western",
+   "Fantasy"
+  ],
+  "activation_count": 29970,
+  "selectivity": 0.4551
+ },
+ "321": {
+  "label": "Tarantino \u00b7 Truman Capote",
+  "tags": [
+   "tarantino",
+   "truman capote",
+   "disney animated feature",
+   "dc comics",
+   "chris tucker"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 35841,
+  "selectivity": 0.3483
+ },
+ "322": {
+  "label": "Robert Ludlum \u00b7 Alcatraz",
+  "tags": [
+   "robert ludlum",
+   "alcatraz",
+   "arnold",
+   "ballet",
+   "office"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Thriller"
+  ],
+  "activation_count": 27628,
+  "selectivity": 0.4977
+ },
+ "323": {
+  "label": "New Zealand \u00b7 Liv Tyler",
+  "tags": [
+   "new zealand",
+   "liv tyler",
+   "shakespeare",
+   "videogame",
+   "bowling"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 33465,
+  "selectivity": 0.3915
+ },
+ "324": {
+  "label": "Chris Tucker \u00b7 Chess",
+  "tags": [
+   "chris tucker",
+   "chess",
+   "spielberg",
+   "punk",
+   "trains"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "Crime"
+  ],
+  "activation_count": 24427,
+  "selectivity": 0.5559
+ },
+ "325": {
+  "label": "Surfing \u00b7 Christmas",
+  "tags": [
+   "surfing",
+   "christmas",
+   "swedish",
+   "airplane",
+   "chicago"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "War"
+  ],
+  "activation_count": 21110,
+  "selectivity": 0.6162
+ },
+ "326": {
+  "label": "Olympics \u00b7 Minnesota",
+  "tags": [
+   "olympics",
+   "minnesota",
+   "underwater",
+   "almodovar",
+   "nasa"
+  ],
+  "genres": [
+   "Children",
+   "Crime",
+   "Adventure"
+  ],
+  "activation_count": 30256,
+  "selectivity": 0.4499
+ },
+ "327": {
+  "label": "Surfing \u00b7 Minnesota",
+  "tags": [
+   "surfing",
+   "minnesota",
+   "imaginary friend",
+   "ocean",
+   "ennio morricone"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Western"
+  ],
+  "activation_count": 24978,
+  "selectivity": 0.5458
+ },
+ "328": {
+  "label": "Baseball \u00b7 Mummy",
+  "tags": [
+   "baseball",
+   "mummy",
+   "vietnam war",
+   "james bond",
+   "alaska"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 36946,
+  "selectivity": 0.3282
+ },
+ "329": {
+  "label": "Truman Capote \u00b7 James Bond",
+  "tags": [
+   "truman capote",
+   "james bond",
+   "ballet",
+   "dragon",
+   "figure skating"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "War"
+  ],
+  "activation_count": 33067,
+  "selectivity": 0.3988
+ },
+ "330": {
+  "label": "Jane Austen \u00b7 Palestine",
+  "tags": [
+   "jane austen",
+   "palestine",
+   "punk",
+   "bowling",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Drama"
+  ],
+  "activation_count": 22080,
+  "selectivity": 0.5985
+ },
+ "331": {
+  "label": "Soccer \u00b7 East Germany",
+  "tags": [
+   "soccer",
+   "east germany",
+   "swedish",
+   "arnold",
+   "shakespeare"
+  ],
+  "genres": [
+   "Fantasy",
+   "Crime",
+   "Musical"
+  ],
+  "activation_count": 19880,
+  "selectivity": 0.6385
+ },
+ "332": {
+  "label": "Autism \u00b7 Archaeology",
+  "tags": [
+   "autism",
+   "archaeology",
+   "basketball",
+   "mummy",
+   "imaginary friend"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Romance"
+  ],
+  "activation_count": 20892,
+  "selectivity": 0.6201
+ },
+ "333": {
+  "label": "Football \u00b7 Beauty Pageant",
+  "tags": [
+   "football",
+   "beauty pageant",
+   "mummy",
+   "kurosawa",
+   "soccer"
+  ],
+  "genres": [
+   "Musical",
+   "Crime",
+   "Comedy"
+  ],
+  "activation_count": 21087,
+  "selectivity": 0.6166
+ },
+ "334": {
+  "label": "Robert Ludlum \u00b7 Indiana Jones",
+  "tags": [
+   "robert ludlum",
+   "indiana jones",
+   "archaeology",
+   "american civil war",
+   "treasure"
+  ],
+  "genres": [
+   "Western",
+   "Fantasy",
+   "Musical"
+  ],
+  "activation_count": 21705,
+  "selectivity": 0.6054
+ },
+ "335": {
+  "label": "Prohibition \u00b7 Imaginary Friend",
+  "tags": [
+   "prohibition",
+   "imaginary friend",
+   "brilliant",
+   "short-term memory loss",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 21272,
+  "selectivity": 0.6132
+ },
+ "336": {
+  "label": "Mummy \u00b7 Beauty Pageant",
+  "tags": [
+   "mummy",
+   "beauty pageant",
+   "indiana jones",
+   "baseball",
+   "archaeology"
+  ],
+  "genres": [
+   "Adventure",
+   "Romance"
+  ],
+  "activation_count": 37033,
+  "selectivity": 0.3267
+ },
+ "337": {
+  "label": "Surfing \u00b7 Jay And Silent Bob",
+  "tags": [
+   "surfing",
+   "jay and silent bob",
+   "arnold",
+   "alaska",
+   "baseball"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Crime"
+  ],
+  "activation_count": 24868,
+  "selectivity": 0.5478
+ },
+ "338": {
+  "label": "Indiana Jones \u00b7 Archaeology",
+  "tags": [
+   "indiana jones",
+   "archaeology",
+   "shakespeare",
+   "treasure",
+   "monty python"
+  ],
+  "genres": [
+   "Adventure",
+   "Western",
+   "Fantasy"
+  ],
+  "activation_count": 33632,
+  "selectivity": 0.3885
+ },
+ "339": {
+  "label": "Marx Brothers \u00b7 Opera",
+  "tags": [
+   "marx brothers",
+   "opera",
+   "9/11",
+   "minnesota",
+   "iran"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Action"
+  ],
+  "activation_count": 38249,
+  "selectivity": 0.3046
+ },
+ "340": {
+  "label": "Peter Pan \u00b7 Ballet",
+  "tags": [
+   "peter pan",
+   "ballet",
+   "tarantino",
+   "indiana jones",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "Western"
+  ],
+  "activation_count": 32617,
+  "selectivity": 0.407
+ },
+ "341": {
+  "label": "mtv \u00b7 Gross-Out",
+  "tags": [
+   "mtv",
+   "gross-out",
+   "communism",
+   "hollywood",
+   "shark"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Children"
+  ],
+  "activation_count": 51012,
+  "selectivity": 0.0725
+ },
+ "342": {
+  "label": "Aardman \u00b7 Emma Watson",
+  "tags": [
+   "aardman",
+   "emma watson",
+   "batman",
+   "harry potter",
+   "star wars"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 21003,
+  "selectivity": 0.6181
+ },
+ "343": {
+  "label": "Robert Ludlum \u00b7 Beauty Pageant",
+  "tags": [
+   "robert ludlum",
+   "beauty pageant",
+   "minnesota",
+   "tarantino",
+   "prohibition"
+  ],
+  "genres": [
+   "Crime",
+   "Romance",
+   "Children"
+  ],
+  "activation_count": 19853,
+  "selectivity": 0.639
+ },
+ "344": {
+  "label": "Baseball \u00b7 Mountain Climbing",
+  "tags": [
+   "baseball",
+   "mountain climbing",
+   "opera",
+   "fountain of youth",
+   "hannibal lecter"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Sci-Fi"
+  ],
+  "activation_count": 17888,
+  "selectivity": 0.6748
+ },
+ "345": {
+  "label": "Beatles \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "beatles",
+   "carrie-anne moss",
+   "chess",
+   "punk",
+   "shakespeare"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 35939,
+  "selectivity": 0.3466
+ },
+ "346": {
+  "label": "Archaeology \u00b7 Prequel",
+  "tags": [
+   "archaeology",
+   "prequel",
+   "frightening",
+   "mountain climbing",
+   "nature"
+  ],
+  "genres": [
+   "Thriller",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 27756,
+  "selectivity": 0.4953
+ },
+ "347": {
+  "label": "Ballet \u00b7 Almodovar",
+  "tags": [
+   "ballet",
+   "almodovar",
+   "star wars",
+   "vietnam",
+   "kurosawa"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 32935,
+  "selectivity": 0.4012
+ },
+ "348": {
+  "label": "Tolkien \u00b7 New Zealand",
+  "tags": [
+   "tolkien",
+   "new zealand",
+   "surfing",
+   "liv tyler",
+   "mountain climbing"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Mystery"
+  ],
+  "activation_count": 26002,
+  "selectivity": 0.5272
+ },
+ "349": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "disney animated feature",
+   "batman",
+   "robert ludlum"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 15259,
+  "selectivity": 0.7226
+ },
+ "350": {
+  "label": "Tarantino \u00b7 New Zealand",
+  "tags": [
+   "tarantino",
+   "new zealand",
+   "james bond",
+   "basketball",
+   "christmas"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Drama"
+  ],
+  "activation_count": 35165,
+  "selectivity": 0.3606
+ },
+ "351": {
+  "label": "Mountain Climbing \u00b7 Star Trek",
+  "tags": [
+   "mountain climbing",
+   "star trek",
+   "indiana jones",
+   "marx brothers",
+   "basketball"
+  ],
+  "genres": [
+   "Adventure",
+   "Crime",
+   "Sci-Fi"
+  ],
+  "activation_count": 32311,
+  "selectivity": 0.4125
+ },
+ "352": {
+  "label": "Roald Dahl \u00b7 Depp & Burton",
+  "tags": [
+   "roald dahl",
+   "depp & burton",
+   "dr. seuss",
+   "peter pan",
+   "chocolate"
+  ],
+  "genres": [
+   "Fantasy",
+   "Children"
+  ],
+  "activation_count": 23021,
+  "selectivity": 0.5814
+ },
+ "353": {
+  "label": "Autism \u00b7 Minnesota",
+  "tags": [
+   "autism",
+   "minnesota",
+   "mathematics",
+   "prohibition",
+   "olympics"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 18561,
+  "selectivity": 0.6625
+ },
+ "354": {
+  "label": "Beatles \u00b7 Archaeology",
+  "tags": [
+   "beatles",
+   "archaeology",
+   "arnold",
+   "mummy",
+   "baseball"
+  ],
+  "genres": [
+   "Children",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 21342,
+  "selectivity": 0.612
+ },
+ "355": {
+  "label": "Sophia Coppola \u00b7 James Bond",
+  "tags": [
+   "sophia coppola",
+   "james bond",
+   "liv tyler",
+   "archaeology",
+   "minnesota"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime"
+  ],
+  "activation_count": 18951,
+  "selectivity": 0.6554
+ },
+ "356": {
+  "label": "Jane Austen \u00b7 Pixar",
+  "tags": [
+   "jane austen",
+   "pixar",
+   "almodovar",
+   "mexico",
+   "blaxploitation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 20448,
+  "selectivity": 0.6282
+ },
+ "357": {
+  "label": "Chris Tucker \u00b7 Hannibal Lecter",
+  "tags": [
+   "chris tucker",
+   "hannibal lecter",
+   "depp & burton",
+   "dogs",
+   "indiana jones"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Crime"
+  ],
+  "activation_count": 37575,
+  "selectivity": 0.3168
+ },
+ "358": {
+  "label": "King Arthur \u00b7 Basketball",
+  "tags": [
+   "king arthur",
+   "basketball",
+   "star trek",
+   "punk",
+   "soccer"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Comedy"
+  ],
+  "activation_count": 25051,
+  "selectivity": 0.5445
+ },
+ "359": {
+  "label": "Jane Austen \u00b7 Trains",
+  "tags": [
+   "jane austen",
+   "trains",
+   "alcatraz",
+   "underwater",
+   "ocean"
+  ],
+  "genres": [
+   "War",
+   "Romance",
+   "Sci-Fi"
+  ],
+  "activation_count": 29122,
+  "selectivity": 0.4705
+ },
+ "360": {
+  "label": "Indiana Jones \u00b7 Videogame",
+  "tags": [
+   "indiana jones",
+   "videogame",
+   "archaeology",
+   "roald dahl",
+   "vietnam"
+  ],
+  "genres": [
+   "Adventure",
+   "Fantasy",
+   "Children"
+  ],
+  "activation_count": 21193,
+  "selectivity": 0.6147
+ },
+ "361": {
+  "label": "Olympics \u00b7 Arnold",
+  "tags": [
+   "olympics",
+   "arnold",
+   "pirates",
+   "punk",
+   "autism"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Fantasy",
+   "Crime"
+  ],
+  "activation_count": 20766,
+  "selectivity": 0.6224
+ },
+ "362": {
+  "label": "Roald Dahl \u00b7 Baseball",
+  "tags": [
+   "roald dahl",
+   "baseball",
+   "star trek",
+   "alaska",
+   "christmas"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 14485,
+  "selectivity": 0.7366
+ },
+ "363": {
+  "label": "Strippers \u00b7 Jazz",
+  "tags": [
+   "strippers",
+   "jazz",
+   "scotland",
+   "heroin",
+   "dancing"
+  ],
+  "genres": [
+   "Action",
+   "Children",
+   "Comedy"
+  ],
+  "activation_count": 34131,
+  "selectivity": 0.3794
+ },
+ "364": {
+  "label": "Claymation \u00b7 Liv Tyler",
+  "tags": [
+   "claymation",
+   "liv tyler",
+   "arnold",
+   "basketball",
+   "vietnam war"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 34696,
+  "selectivity": 0.3692
+ },
+ "365": {
+  "label": "Robert Ludlum \u00b7 Mathematics",
+  "tags": [
+   "robert ludlum",
+   "mathematics",
+   "imaginary friend",
+   "amnesia",
+   "mtv"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Romance",
+   "Thriller"
+  ],
+  "activation_count": 28417,
+  "selectivity": 0.4833
+ },
+ "366": {
+  "label": "Liv Tyler \u00b7 Shakespeare",
+  "tags": [
+   "liv tyler",
+   "shakespeare",
+   "dogs",
+   "airport",
+   "kurosawa"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Sci-Fi",
+   "Children"
+  ],
+  "activation_count": 23106,
+  "selectivity": 0.5799
+ },
+ "367": {
+  "label": "Chris Tucker \u00b7 Baseball",
+  "tags": [
+   "chris tucker",
+   "baseball",
+   "arnold",
+   "native americans",
+   "archaeology"
+  ],
+  "genres": [
+   "Musical",
+   "Children"
+  ],
+  "activation_count": 37332,
+  "selectivity": 0.3212
+ },
+ "368": {
+  "label": "Almodovar \u00b7 Marx Brothers",
+  "tags": [
+   "almodovar",
+   "marx brothers",
+   "christmas",
+   "vietnam war",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Mystery"
+  ],
+  "activation_count": 36835,
+  "selectivity": 0.3303
+ },
+ "369": {
+  "label": "Hannibal Lecter \u00b7 Sophia Coppola",
+  "tags": [
+   "hannibal lecter",
+   "sophia coppola",
+   "star wars",
+   "afi 100",
+   "kubrick"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 18180,
+  "selectivity": 0.6694
+ },
+ "370": {
+  "label": "Liv Tyler \u00b7 Archaeology",
+  "tags": [
+   "liv tyler",
+   "archaeology",
+   "beatles",
+   "autism",
+   "videogame"
+  ],
+  "genres": [
+   "Fantasy",
+   "Adventure"
+  ],
+  "activation_count": 29306,
+  "selectivity": 0.4672
+ },
+ "371": {
+  "label": "Arnold \u00b7 Tarantino",
+  "tags": [
+   "arnold",
+   "tarantino",
+   "oscar (best sound)",
+   "vampires",
+   "vampire"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 24729,
+  "selectivity": 0.5504
+ },
+ "372": {
+  "label": "Sophia Coppola \u00b7 Alaska",
+  "tags": [
+   "sophia coppola",
+   "alaska",
+   "vienna",
+   "italy",
+   "ennio morricone"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Western"
+  ],
+  "activation_count": 34172,
+  "selectivity": 0.3787
+ },
+ "373": {
+  "label": "Swedish \u00b7 James Bond",
+  "tags": [
+   "swedish",
+   "james bond",
+   "figure skating",
+   "jane austen",
+   "halloween"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Children"
+  ],
+  "activation_count": 14206,
+  "selectivity": 0.7417
+ },
+ "374": {
+  "label": "Sophia Coppola \u00b7 United Nations",
+  "tags": [
+   "sophia coppola",
+   "united nations",
+   "afi 100",
+   "kubrick",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "Western",
+   "Adventure",
+   "Mystery"
+  ],
+  "activation_count": 27157,
+  "selectivity": 0.5062
+ },
+ "375": {
+  "label": "Miyazaki \u00b7 Studio Ghibli",
+  "tags": [
+   "miyazaki",
+   "studio ghibli",
+   "roald dahl",
+   "dr. seuss",
+   "pirates"
+  ],
+  "genres": [
+   "Fantasy",
+   "Crime",
+   "Adventure"
+  ],
+  "activation_count": 23292,
+  "selectivity": 0.5765
+ },
+ "376": {
+  "label": "Spaghetti Western \u00b7 American Civil War",
+  "tags": [
+   "spaghetti western",
+   "american civil war",
+   "minnesota",
+   "mountain climbing",
+   "communism"
+  ],
+  "genres": [
+   "Western",
+   "War",
+   "Romance"
+  ],
+  "activation_count": 32253,
+  "selectivity": 0.4136
+ },
+ "377": {
+  "label": "Alcatraz \u00b7 Basketball",
+  "tags": [
+   "alcatraz",
+   "basketball",
+   "iran",
+   "football",
+   "east germany"
+  ],
+  "genres": [
+   "Mystery",
+   "Musical"
+  ],
+  "activation_count": 34542,
+  "selectivity": 0.372
+ },
+ "378": {
+  "label": "Depp & Burton \u00b7 Office",
+  "tags": [
+   "depp & burton",
+   "office",
+   "iran",
+   "9/11",
+   "shakespeare"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Mystery",
+   "Adventure"
+  ],
+  "activation_count": 35554,
+  "selectivity": 0.3536
+ },
+ "379": {
+  "label": "Truman Capote \u00b7 Aviation",
+  "tags": [
+   "truman capote",
+   "aviation",
+   "airport",
+   "south america",
+   "airplane"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 24053,
+  "selectivity": 0.5627
+ },
+ "380": {
+  "label": "Robert Ludlum \u00b7 East Germany",
+  "tags": [
+   "robert ludlum",
+   "east germany",
+   "airplane",
+   "kurosawa",
+   "boxing"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 22566,
+  "selectivity": 0.5897
+ },
+ "381": {
+  "label": "Batman \u00b7 Kubrick",
+  "tags": [
+   "batman",
+   "kubrick",
+   "child abuse",
+   "roald dahl",
+   "punk"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 18501,
+  "selectivity": 0.6636
+ },
+ "382": {
+  "label": "Vietnam \u00b7 Iran",
+  "tags": [
+   "vietnam",
+   "iran",
+   "oscar (best sound)",
+   "nuclear bomb",
+   "gambling"
+  ],
+  "genres": [
+   "War",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 25492,
+  "selectivity": 0.5365
+ },
+ "383": {
+  "label": "Aardman \u00b7 Emma Watson",
+  "tags": [
+   "aardman",
+   "emma watson",
+   "indiana jones",
+   "miyazaki",
+   "harry potter"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 16850,
+  "selectivity": 0.6936
+ },
+ "384": {
+  "label": "Carrie-Anne Moss \u00b7 South Africa",
+  "tags": [
+   "carrie-anne moss",
+   "south africa",
+   "ballet",
+   "tarantino",
+   "vietnam war"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 32306,
+  "selectivity": 0.4126
+ },
+ "385": {
+  "label": "Ballet \u00b7 Truman Capote",
+  "tags": [
+   "ballet",
+   "truman capote",
+   "soccer",
+   "brazil",
+   "rio de janeiro"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 17760,
+  "selectivity": 0.6771
+ },
+ "386": {
+  "label": "Roald Dahl \u00b7 Depp & Burton",
+  "tags": [
+   "roald dahl",
+   "depp & burton",
+   "south africa",
+   "arnold",
+   "spaghetti western"
+  ],
+  "genres": [
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 22110,
+  "selectivity": 0.598
+ },
+ "387": {
+  "label": "Surfing \u00b7 Figure Skating",
+  "tags": [
+   "surfing",
+   "figure skating",
+   "beatles",
+   "batman",
+   "east germany"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Crime"
+  ],
+  "activation_count": 33626,
+  "selectivity": 0.3886
+ },
+ "388": {
+  "label": "Mathematics \u00b7 Dreamworks",
+  "tags": [
+   "mathematics",
+   "dreamworks",
+   "penguins",
+   "spaghetti western",
+   "imaginary friend"
+  ],
+  "genres": [
+   "Western",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 18272,
+  "selectivity": 0.6678
+ },
+ "389": {
+  "label": "Spaghetti Western \u00b7 South Africa",
+  "tags": [
+   "spaghetti western",
+   "south africa",
+   "airport",
+   "orphans",
+   "ennio morricone"
+  ],
+  "genres": [
+   "Fantasy",
+   "Western",
+   "Mystery"
+  ],
+  "activation_count": 29177,
+  "selectivity": 0.4695
+ },
+ "390": {
+  "label": "Star Wars \u00b7 Monty Python",
+  "tags": [
+   "star wars",
+   "monty python",
+   "iran",
+   "hollywood",
+   "aviation"
+  ],
+  "genres": [
+   "Adventure",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 22385,
+  "selectivity": 0.593
+ },
+ "391": {
+  "label": "Kurosawa \u00b7 Prohibition",
+  "tags": [
+   "kurosawa",
+   "prohibition",
+   "liv tyler",
+   "afi 100",
+   "shakespeare"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 33951,
+  "selectivity": 0.3827
+ },
+ "392": {
+  "label": "James Bond \u00b7 Miyazaki",
+  "tags": [
+   "james bond",
+   "miyazaki",
+   "studio ghibli",
+   "south america",
+   "arnold"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 26161,
+  "selectivity": 0.5243
+ },
+ "393": {
+  "label": "Shakespeare \u00b7 Olympics",
+  "tags": [
+   "shakespeare",
+   "olympics",
+   "pirates",
+   "chris tucker",
+   "spielberg"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Romance"
+  ],
+  "activation_count": 35927,
+  "selectivity": 0.3468
+ },
+ "394": {
+  "label": "Circus \u00b7 Iran",
+  "tags": [
+   "circus",
+   "iran",
+   "shakespeare",
+   "truman capote",
+   "chris tucker"
+  ],
+  "genres": [
+   "Crime",
+   "Sci-Fi"
+  ],
+  "activation_count": 21654,
+  "selectivity": 0.6063
+ },
+ "395": {
+  "label": "Spock \u00b7 Mountain Climbing",
+  "tags": [
+   "spock",
+   "mountain climbing",
+   "robert ludlum",
+   "star trek",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 19453,
+  "selectivity": 0.6463
+ },
+ "396": {
+  "label": "Arnold \u00b7 Mountain Climbing",
+  "tags": [
+   "arnold",
+   "mountain climbing",
+   "afi 100",
+   "james bond",
+   "almodovar"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Musical"
+  ],
+  "activation_count": 19434,
+  "selectivity": 0.6466
+ },
+ "397": {
+  "label": "Cuba \u00b7 Aviation",
+  "tags": [
+   "cuba",
+   "aviation",
+   "minnesota",
+   "cooking",
+   "brazil"
+  ],
+  "genres": [
+   "Adventure",
+   "Drama",
+   "Thriller"
+  ],
+  "activation_count": 21118,
+  "selectivity": 0.616
+ },
+ "398": {
+  "label": "Basketball \u00b7 Coen Brothers",
+  "tags": [
+   "basketball",
+   "coen brothers",
+   "jay and silent bob",
+   "pirates",
+   "swedish"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Children"
+  ],
+  "activation_count": 29727,
+  "selectivity": 0.4595
+ },
+ "399": {
+  "label": "Hannibal Lecter \u00b7 Ballet",
+  "tags": [
+   "hannibal lecter",
+   "ballet",
+   "pirates",
+   "rome",
+   "italy"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 33624,
+  "selectivity": 0.3886
+ },
+ "400": {
+  "label": "East Germany \u00b7 Dogs",
+  "tags": [
+   "east germany",
+   "dogs",
+   "vietnam",
+   "pirates",
+   "palestine"
+  ],
+  "genres": [
+   "Children",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 28547,
+  "selectivity": 0.481
+ },
+ "401": {
+  "label": "Tolkien \u00b7 New Zealand",
+  "tags": [
+   "tolkien",
+   "new zealand",
+   "almodovar",
+   "liv tyler",
+   "mathematics"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Mystery"
+  ],
+  "activation_count": 32952,
+  "selectivity": 0.4009
+ },
+ "402": {
+  "label": "Beauty Pageant \u00b7 Fountain Of Youth",
+  "tags": [
+   "beauty pageant",
+   "fountain of youth",
+   "baseball",
+   "tarantino",
+   "football"
+  ],
+  "genres": [
+   "Western",
+   "Romance",
+   "War"
+  ],
+  "activation_count": 18406,
+  "selectivity": 0.6653
+ },
+ "403": {
+  "label": "Chris Tucker \u00b7 Mathematics",
+  "tags": [
+   "chris tucker",
+   "mathematics",
+   "pixar",
+   "math",
+   "opera"
+  ],
+  "genres": [
+   "Adventure",
+   "Sci-Fi",
+   "Fantasy"
+  ],
+  "activation_count": 27691,
+  "selectivity": 0.4965
+ },
+ "404": {
+  "label": "Dogs \u00b7 Man Versus Machine",
+  "tags": [
+   "dogs",
+   "man versus machine",
+   "dog",
+   "comic book",
+   "palestine"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Children"
+  ],
+  "activation_count": 32374,
+  "selectivity": 0.4114
+ },
+ "405": {
+  "label": "Chris Tucker \u00b7 Carrie-Anne Moss",
+  "tags": [
+   "chris tucker",
+   "carrie-anne moss",
+   "shakespeare",
+   "truman capote",
+   "ballet"
+  ],
+  "genres": [
+   "Musical",
+   "Crime",
+   "Comedy"
+  ],
+  "activation_count": 36050,
+  "selectivity": 0.3445
+ },
+ "406": {
+  "label": "Star Trek \u00b7 Fountain Of Youth",
+  "tags": [
+   "star trek",
+   "fountain of youth",
+   "disney animated feature",
+   "shakespeare",
+   "spock"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 5765,
+  "selectivity": 0.8952
+ },
+ "407": {
+  "label": "Carrie-Anne Moss \u00b7 Surfing",
+  "tags": [
+   "carrie-anne moss",
+   "surfing",
+   "man versus machine",
+   "spock",
+   "train"
+  ],
+  "genres": [
+   "Western",
+   "Adventure"
+  ],
+  "activation_count": 21589,
+  "selectivity": 0.6075
+ },
+ "408": {
+  "label": "James Bond \u00b7 New Zealand",
+  "tags": [
+   "james bond",
+   "new zealand",
+   "indiana jones",
+   "opera",
+   "airport"
+  ],
+  "genres": [
+   "Adventure",
+   "Mystery",
+   "Action"
+  ],
+  "activation_count": 27122,
+  "selectivity": 0.5069
+ },
+ "409": {
+  "label": "Aardman \u00b7 Star Trek",
+  "tags": [
+   "aardman",
+   "star trek",
+   "spock",
+   "arnold",
+   "truman capote"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Adventure"
+  ],
+  "activation_count": 16831,
+  "selectivity": 0.694
+ },
+ "410": {
+  "label": "Batman \u00b7 Aardman",
+  "tags": [
+   "batman",
+   "aardman",
+   "coen brothers",
+   "claymation",
+   "short-term memory loss"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Musical"
+  ],
+  "activation_count": 34525,
+  "selectivity": 0.3723
+ },
+ "411": {
+  "label": "Robert Ludlum \u00b7 Ballet",
+  "tags": [
+   "robert ludlum",
+   "ballet",
+   "india",
+   "spaghetti western",
+   "south america"
+  ],
+  "genres": [
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 27161,
+  "selectivity": 0.5062
+ },
+ "412": {
+  "label": "Batman \u00b7 James Bond",
+  "tags": [
+   "batman",
+   "james bond",
+   "mountain climbing",
+   "metaphysics",
+   "circus"
+  ],
+  "genres": [
+   "Fantasy",
+   "Sci-Fi",
+   "Adventure"
+  ],
+  "activation_count": 16692,
+  "selectivity": 0.6965
+ },
+ "413": {
+  "label": "James Bond \u00b7 Italian",
+  "tags": [
+   "james bond",
+   "italian",
+   "boxing",
+   "gulf war",
+   "beauty pageant"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Fantasy"
+  ],
+  "activation_count": 18999,
+  "selectivity": 0.6546
+ },
+ "414": {
+  "label": "Aardman \u00b7 Claymation",
+  "tags": [
+   "aardman",
+   "claymation",
+   "liv tyler",
+   "beatles",
+   "circus"
+  ],
+  "genres": [
+   "Western",
+   "Romance",
+   "Musical"
+  ],
+  "activation_count": 19916,
+  "selectivity": 0.6379
+ },
+ "415": {
+  "label": "Peter Pan \u00b7 Opera",
+  "tags": [
+   "peter pan",
+   "opera",
+   "arnold",
+   "neil gaiman",
+   "aviation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 18795,
+  "selectivity": 0.6583
+ },
+ "416": {
+  "label": "Minnesota \u00b7 Hannibal Lecter",
+  "tags": [
+   "minnesota",
+   "hannibal lecter",
+   "batman",
+   "roald dahl",
+   "iran"
+  ],
+  "genres": [
+   "Children",
+   "Adventure"
+  ],
+  "activation_count": 1887,
+  "selectivity": 0.9657
+ },
+ "417": {
+  "label": "Chris Tucker \u00b7 Vietnam",
+  "tags": [
+   "chris tucker",
+   "vietnam",
+   "claymation",
+   "basketball",
+   "hong kong"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Drama"
+  ],
+  "activation_count": 33864,
+  "selectivity": 0.3843
+ },
+ "418": {
+  "label": "Mountain Climbing \u00b7 Claymation",
+  "tags": [
+   "mountain climbing",
+   "claymation",
+   "cuba",
+   "circus",
+   "fountain of youth"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 21404,
+  "selectivity": 0.6108
+ },
+ "419": {
+  "label": "Arnold \u00b7 Punk",
+  "tags": [
+   "arnold",
+   "punk",
+   "jay and silent bob",
+   "american civil war",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "War",
+   "Crime",
+   "Fantasy"
+  ],
+  "activation_count": 20897,
+  "selectivity": 0.62
+ },
+ "420": {
+  "label": "James Bond \u00b7 Airplane",
+  "tags": [
+   "james bond",
+   "airplane",
+   "autism",
+   "mathematics",
+   "east germany"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Mystery"
+  ],
+  "activation_count": 21347,
+  "selectivity": 0.6119
+ },
+ "421": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "depp & burton",
+   "rats",
+   "monkey"
+  ],
+  "genres": [
+   "Adventure",
+   "Film-Noir",
+   "Fantasy"
+  ],
+  "activation_count": 34805,
+  "selectivity": 0.3672
+ },
+ "422": {
+  "label": "Kurosawa \u00b7 Truman Capote",
+  "tags": [
+   "kurosawa",
+   "truman capote",
+   "punk",
+   "strippers",
+   "mental hospital"
+  ],
+  "genres": [
+   "War",
+   "Romance"
+  ],
+  "activation_count": 33713,
+  "selectivity": 0.387
+ },
+ "423": {
+  "label": "James Bond \u00b7 Chicago",
+  "tags": [
+   "james bond",
+   "chicago",
+   "casino",
+   "peter pan",
+   "disney animated feature"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Children"
+  ],
+  "activation_count": 18041,
+  "selectivity": 0.672
+ },
+ "424": {
+  "label": "Peter Pan \u00b7 Imaginary Friend",
+  "tags": [
+   "peter pan",
+   "imaginary friend",
+   "dogs",
+   "basketball",
+   "videogame"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 33011,
+  "selectivity": 0.3998
+ },
+ "425": {
+  "label": "Robert Ludlum \u00b7 Vietnam",
+  "tags": [
+   "robert ludlum",
+   "vietnam",
+   "nuclear bomb",
+   "beauty pageant",
+   "gulf war"
+  ],
+  "genres": [
+   "Action",
+   "Comedy",
+   "Sci-Fi"
+  ],
+  "activation_count": 21040,
+  "selectivity": 0.6174
+ },
+ "426": {
+  "label": "Robert Ludlum \u00b7 Shakespeare",
+  "tags": [
+   "robert ludlum",
+   "shakespeare",
+   "office",
+   "train",
+   "australian"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Western"
+  ],
+  "activation_count": 21499,
+  "selectivity": 0.6091
+ },
+ "427": {
+  "label": "Fountain Of Youth \u00b7 Terminal Illness",
+  "tags": [
+   "fountain of youth",
+   "terminal illness",
+   "truman capote",
+   "metaphysics",
+   "chess"
+  ],
+  "genres": [
+   "Romance",
+   "Fantasy",
+   "Documentary"
+  ],
+  "activation_count": 33738,
+  "selectivity": 0.3866
+ },
+ "428": {
+  "label": "South America \u00b7 Casino",
+  "tags": [
+   "south america",
+   "casino",
+   "gambling",
+   "opera",
+   "shakespeare"
+  ],
+  "genres": [
+   "Adventure",
+   "War",
+   "Action"
+  ],
+  "activation_count": 34752,
+  "selectivity": 0.3681
+ },
+ "429": {
+  "label": "Batman \u00b7 Claymation",
+  "tags": [
+   "batman",
+   "claymation",
+   "arnold",
+   "king arthur",
+   "chicago"
+  ],
+  "genres": [
+   "Western",
+   "Adventure",
+   "Fantasy"
+  ],
+  "activation_count": 21496,
+  "selectivity": 0.6092
+ },
+ "430": {
+  "label": "Chris Tucker \u00b7 Jay And Silent Bob",
+  "tags": [
+   "chris tucker",
+   "jay and silent bob",
+   "chicago",
+   "baseball",
+   "mathematics"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Comedy"
+  ],
+  "activation_count": 33104,
+  "selectivity": 0.3981
+ },
+ "431": {
+  "label": "Chris Tucker \u00b7 Hannibal Lecter",
+  "tags": [
+   "chris tucker",
+   "hannibal lecter",
+   "minnesota",
+   "arnold",
+   "claymation"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Thriller"
+  ],
+  "activation_count": 2039,
+  "selectivity": 0.9629
+ },
+ "432": {
+  "label": "Arnold \u00b7 Autism",
+  "tags": [
+   "arnold",
+   "autism",
+   "jay and silent bob",
+   "united nations",
+   "holocaust"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Western"
+  ],
+  "activation_count": 35286,
+  "selectivity": 0.3584
+ },
+ "433": {
+  "label": "Arnold \u00b7 Surfing",
+  "tags": [
+   "arnold",
+   "surfing",
+   "saturn award (best science fiction film)",
+   "gross-out",
+   "carrie-anne moss"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Musical",
+   "Horror"
+  ],
+  "activation_count": 33647,
+  "selectivity": 0.3882
+ },
+ "434": {
+  "label": "Beauty Pageant \u00b7 Indiana Jones",
+  "tags": [
+   "beauty pageant",
+   "indiana jones",
+   "surfing",
+   "dogs",
+   "claymation"
+  ],
+  "genres": [
+   "Crime",
+   "Comedy",
+   "Sci-Fi"
+  ],
+  "activation_count": 34977,
+  "selectivity": 0.364
+ },
+ "435": {
+  "label": "Chris Tucker \u00b7 Alaska",
+  "tags": [
+   "chris tucker",
+   "alaska",
+   "disney animated feature",
+   "cuba",
+   "united nations"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Children"
+  ],
+  "activation_count": 31974,
+  "selectivity": 0.4186
+ },
+ "436": {
+  "label": "Chris Tucker \u00b7 Indiana Jones",
+  "tags": [
+   "chris tucker",
+   "indiana jones",
+   "mountain climbing",
+   "james bond",
+   "new zealand"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 15334,
+  "selectivity": 0.7212
+ },
+ "437": {
+  "label": "Chris Tucker \u00b7 Ballet",
+  "tags": [
+   "chris tucker",
+   "ballet",
+   "roald dahl",
+   "kurosawa",
+   "truman capote"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 34167,
+  "selectivity": 0.3788
+ },
+ "438": {
+  "label": "Miyazaki \u00b7 Studio Ghibli",
+  "tags": [
+   "miyazaki",
+   "studio ghibli",
+   "short-term memory loss",
+   "pirates",
+   "gulf war"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Crime",
+   "Mystery"
+  ],
+  "activation_count": 23639,
+  "selectivity": 0.5702
+ },
+ "439": {
+  "label": "Alcatraz \u00b7 Airplane",
+  "tags": [
+   "alcatraz",
+   "airplane",
+   "aviation",
+   "airport",
+   "gambling"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Mystery",
+   "Adventure"
+  ],
+  "activation_count": 18686,
+  "selectivity": 0.6602
+ },
+ "440": {
+  "label": "Rome \u00b7 Pirates",
+  "tags": [
+   "rome",
+   "pirates",
+   "afi 100",
+   "prohibition",
+   "iran"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Mystery"
+  ],
+  "activation_count": 21880,
+  "selectivity": 0.6022
+ },
+ "441": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "new zealand",
+   "monty python",
+   "mockumentary"
+  ],
+  "genres": [
+   "Musical",
+   "Comedy",
+   "Sci-Fi"
+  ],
+  "activation_count": 33279,
+  "selectivity": 0.3949
+ },
+ "442": {
+  "label": "Beauty Pageant \u00b7 James Bond",
+  "tags": [
+   "beauty pageant",
+   "james bond",
+   "monkey",
+   "football",
+   "opera"
+  ],
+  "genres": [
+   "Western",
+   "War"
+  ],
+  "activation_count": 19514,
+  "selectivity": 0.6452
+ },
+ "443": {
+  "label": "Beatles \u00b7 Sophia Coppola",
+  "tags": [
+   "beatles",
+   "sophia coppola",
+   "baseball",
+   "star trek",
+   "jay and silent bob"
+  ],
+  "genres": [
+   "War",
+   "Mystery"
+  ],
+  "activation_count": 17781,
+  "selectivity": 0.6767
+ },
+ "444": {
+  "label": "Spock \u00b7 Mountain Climbing",
+  "tags": [
+   "spock",
+   "mountain climbing",
+   "star trek",
+   "disney animated feature",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 29183,
+  "selectivity": 0.4694
+ },
+ "445": {
+  "label": "Almodovar \u00b7 Star Trek",
+  "tags": [
+   "almodovar",
+   "star trek",
+   "coen brothers",
+   "indiana jones",
+   "arnold"
+  ],
+  "genres": [
+   "Crime",
+   "Fantasy",
+   "Action"
+  ],
+  "activation_count": 22009,
+  "selectivity": 0.5998
+ },
+ "446": {
+  "label": "Opera \u00b7 Underwater",
+  "tags": [
+   "opera",
+   "underwater",
+   "arnold",
+   "south africa",
+   "mummy"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 34134,
+  "selectivity": 0.3794
+ },
+ "447": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "hannibal lecter",
+   "opera",
+   "shakespeare"
+  ],
+  "genres": [
+   "Musical",
+   "Mystery",
+   "Sci-Fi"
+  ],
+  "activation_count": 20884,
+  "selectivity": 0.6203
+ },
+ "448": {
+  "label": "Figure Skating \u00b7 Kurosawa",
+  "tags": [
+   "figure skating",
+   "kurosawa",
+   "football",
+   "minnesota",
+   "pirates"
+  ],
+  "genres": [
+   "Children",
+   "Adventure",
+   "Musical"
+  ],
+  "activation_count": 36100,
+  "selectivity": 0.3436
+ },
+ "449": {
+  "label": "Monty Python \u00b7 New Zealand",
+  "tags": [
+   "monty python",
+   "new zealand",
+   "arnold",
+   "spielberg",
+   "american civil war"
+  ],
+  "genres": [
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 16312,
+  "selectivity": 0.7034
+ },
+ "450": {
+  "label": "Surfing \u00b7 Circus",
+  "tags": [
+   "surfing",
+   "circus",
+   "king arthur",
+   "imaginary friend",
+   "monty python"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Crime"
+  ],
+  "activation_count": 18620,
+  "selectivity": 0.6614
+ },
+ "451": {
+  "label": "American Civil War \u00b7 Trains",
+  "tags": [
+   "american civil war",
+   "trains",
+   "marx brothers",
+   "mexico",
+   "mtv"
+  ],
+  "genres": [
+   "Western",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 33658,
+  "selectivity": 0.388
+ },
+ "452": {
+  "label": "Carrie-Anne Moss \u00b7 Oscar (Best Music - Original Score)",
+  "tags": [
+   "carrie-anne moss",
+   "oscar (best music - original score)",
+   "swedish",
+   "mental hospital",
+   "office"
+  ],
+  "genres": [
+   "Western",
+   "Crime",
+   "Thriller"
+  ],
+  "activation_count": 21904,
+  "selectivity": 0.6017
+ },
+ "453": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "indiana jones",
+   "archaeology",
+   "vietnam war"
+  ],
+  "genres": [
+   "War",
+   "Mystery",
+   "Romance"
+  ],
+  "activation_count": 18583,
+  "selectivity": 0.6621
+ },
+ "454": {
+  "label": "Native Americans \u00b7 Nuclear Bomb",
+  "tags": [
+   "native americans",
+   "nuclear bomb",
+   "alcatraz",
+   "dreamworks",
+   "oscar (best animated feature)"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 32059,
+  "selectivity": 0.4171
+ },
+ "455": {
+  "label": "Marx Brothers \u00b7 Shakespeare",
+  "tags": [
+   "marx brothers",
+   "shakespeare",
+   "monty python",
+   "circus",
+   "figure skating"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 20849,
+  "selectivity": 0.6209
+ },
+ "456": {
+  "label": "Alcatraz \u00b7 South Africa",
+  "tags": [
+   "alcatraz",
+   "south africa",
+   "baseball",
+   "beauty pageant",
+   "rome"
+  ],
+  "genres": [
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 34731,
+  "selectivity": 0.3685
+ },
+ "457": {
+  "label": "Prohibition \u00b7 Chicago",
+  "tags": [
+   "prohibition",
+   "chicago",
+   "swedish",
+   "palestine",
+   "afi 100"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 31813,
+  "selectivity": 0.4216
+ },
+ "458": {
+  "label": "Coen Brothers \u00b7 New Zealand",
+  "tags": [
+   "coen brothers",
+   "new zealand",
+   "beauty pageant",
+   "cuba",
+   "archaeology"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical"
+  ],
+  "activation_count": 34815,
+  "selectivity": 0.367
+ },
+ "459": {
+  "label": "Liv Tyler \u00b7 Monty Python",
+  "tags": [
+   "liv tyler",
+   "monty python",
+   "videogame",
+   "video games",
+   "alaska"
+  ],
+  "genres": [
+   "Fantasy",
+   "War",
+   "Horror"
+  ],
+  "activation_count": 22193,
+  "selectivity": 0.5965
+ },
+ "460": {
+  "label": "Spock \u00b7 Monty Python",
+  "tags": [
+   "spock",
+   "monty python",
+   "star trek",
+   "kurosawa",
+   "jay and silent bob"
+  ],
+  "genres": [
+   "Adventure",
+   "Western",
+   "Action"
+  ],
+  "activation_count": 34687,
+  "selectivity": 0.3693
+ },
+ "461": {
+  "label": "James Bond \u00b7 Horses",
+  "tags": [
+   "james bond",
+   "horses",
+   "italy",
+   "nuclear bomb",
+   "train"
+  ],
+  "genres": [
+   "Western",
+   "Adventure",
+   "Musical"
+  ],
+  "activation_count": 27357,
+  "selectivity": 0.5026
+ },
+ "462": {
+  "label": "Kurosawa \u00b7 Spaghetti Western",
+  "tags": [
+   "kurosawa",
+   "spaghetti western",
+   "truman capote",
+   "communism",
+   "samurai"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "Musical"
+  ],
+  "activation_count": 27692,
+  "selectivity": 0.4965
+ },
+ "463": {
+  "label": "Roald Dahl \u00b7 Miyazaki",
+  "tags": [
+   "roald dahl",
+   "miyazaki",
+   "beatles",
+   "studio ghibli",
+   "spaghetti western"
+  ],
+  "genres": [
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 34746,
+  "selectivity": 0.3682
+ },
+ "464": {
+  "label": "Videogame \u00b7 American Civil War",
+  "tags": [
+   "videogame",
+   "american civil war",
+   "almodovar",
+   "beauty pageant",
+   "punk"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Musical"
+  ],
+  "activation_count": 21889,
+  "selectivity": 0.602
+ },
+ "465": {
+  "label": "Miyazaki \u00b7 Studio Ghibli",
+  "tags": [
+   "miyazaki",
+   "studio ghibli",
+   "liv tyler",
+   "neil gaiman",
+   "pirates"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Adventure"
+  ],
+  "activation_count": 29339,
+  "selectivity": 0.4666
+ },
+ "466": {
+  "label": "Peter Pan \u00b7 Star Wars",
+  "tags": [
+   "peter pan",
+   "star wars",
+   "surfing",
+   "spielberg",
+   "carrie-anne moss"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Action"
+  ],
+  "activation_count": 33071,
+  "selectivity": 0.3987
+ },
+ "467": {
+  "label": "Dr. Seuss \u00b7 Truman Capote",
+  "tags": [
+   "dr. seuss",
+   "truman capote",
+   "arnold",
+   "baseball",
+   "roald dahl"
+  ],
+  "genres": [
+   "Musical",
+   "Children",
+   "War"
+  ],
+  "activation_count": 19090,
+  "selectivity": 0.6529
+ },
+ "468": {
+  "label": "Beatles \u00b7 Videogame",
+  "tags": [
+   "beatles",
+   "videogame",
+   "hackers",
+   "007 (series)",
+   "roald dahl"
+  ],
+  "genres": [
+   "Fantasy",
+   "Crime",
+   "Sci-Fi"
+  ],
+  "activation_count": 32242,
+  "selectivity": 0.4138
+ },
+ "469": {
+  "label": "Carrie-Anne Moss \u00b7 Surfing",
+  "tags": [
+   "carrie-anne moss",
+   "surfing",
+   "tarantino",
+   "kurosawa",
+   "baseball"
+  ],
+  "genres": [
+   "Musical",
+   "Crime",
+   "Mystery"
+  ],
+  "activation_count": 33806,
+  "selectivity": 0.3853
+ },
+ "470": {
+  "label": "Alcatraz \u00b7 Mathematics",
+  "tags": [
+   "alcatraz",
+   "mathematics",
+   "king arthur",
+   "jane austen",
+   "dr. seuss"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Fantasy",
+   "Crime"
+  ],
+  "activation_count": 30391,
+  "selectivity": 0.4474
+ },
+ "471": {
+  "label": "New Zealand \u00b7 Monty Python",
+  "tags": [
+   "new zealand",
+   "monty python",
+   "tolkien",
+   "olympics",
+   "dr. seuss"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "Children"
+  ],
+  "activation_count": 22512,
+  "selectivity": 0.5907
+ },
+ "472": {
+  "label": "Afi 100 \u00b7 Minnesota",
+  "tags": [
+   "afi 100",
+   "minnesota",
+   "south america",
+   "shakespeare",
+   "chicago"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi",
+   "Western"
+  ],
+  "activation_count": 20156,
+  "selectivity": 0.6335
+ },
+ "473": {
+  "label": "Marx Brothers \u00b7 Gulf War",
+  "tags": [
+   "marx brothers",
+   "gulf war",
+   "vietnam",
+   "minnesota",
+   "olympics"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 22145,
+  "selectivity": 0.5974
+ },
+ "474": {
+  "label": "Sophia Coppola \u00b7 King Arthur",
+  "tags": [
+   "sophia coppola",
+   "king arthur",
+   "peter pan",
+   "opera",
+   "robbery"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Romance"
+  ],
+  "activation_count": 33253,
+  "selectivity": 0.3954
+ },
+ "475": {
+  "label": "Hannibal Lecter \u00b7 Aardman",
+  "tags": [
+   "hannibal lecter",
+   "aardman",
+   "roald dahl",
+   "claymation",
+   "shakespeare"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Fantasy"
+  ],
+  "activation_count": 14376,
+  "selectivity": 0.7386
+ },
+ "476": {
+  "label": "Argentina \u00b7 Werewolves",
+  "tags": [
+   "argentina",
+   "werewolves",
+   "palestine",
+   "werewolf",
+   "christianity"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Thriller"
+  ],
+  "activation_count": 47012,
+  "selectivity": 0.1452
+ },
+ "477": {
+  "label": "Beatles \u00b7 Star Trek",
+  "tags": [
+   "beatles",
+   "star trek",
+   "spock",
+   "office",
+   "vietnam war"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Sci-Fi"
+  ],
+  "activation_count": 22218,
+  "selectivity": 0.596
+ },
+ "478": {
+  "label": "Baseball \u00b7 Autism",
+  "tags": [
+   "baseball",
+   "autism",
+   "james bond",
+   "indiana jones",
+   "archaeology"
+  ],
+  "genres": [
+   "Mystery",
+   "Adventure",
+   "Action"
+  ],
+  "activation_count": 29038,
+  "selectivity": 0.472
+ },
+ "479": {
+  "label": "Basketball \u00b7 South America",
+  "tags": [
+   "basketball",
+   "south america",
+   "biblical",
+   "cia",
+   "nasa"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 24950,
+  "selectivity": 0.5464
+ },
+ "480": {
+  "label": "Chris Tucker \u00b7 Roald Dahl",
+  "tags": [
+   "chris tucker",
+   "roald dahl",
+   "mother daughter relationship",
+   "dogs",
+   "china"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir"
+  ],
+  "activation_count": 22927,
+  "selectivity": 0.5831
+ },
+ "481": {
+  "label": "Swedish \u00b7 Imaginary Friend",
+  "tags": [
+   "swedish",
+   "imaginary friend",
+   "beatles",
+   "halloween",
+   "marijuana"
+  ],
+  "genres": [
+   "Musical",
+   "Romance",
+   "Horror"
+  ],
+  "activation_count": 36258,
+  "selectivity": 0.3408
+ },
+ "482": {
+  "label": "Miyazaki \u00b7 Studio Ghibli",
+  "tags": [
+   "miyazaki",
+   "studio ghibli",
+   "figure skating",
+   "mummy",
+   "arnold"
+  ],
+  "genres": [
+   "Musical",
+   "Western",
+   "War"
+  ],
+  "activation_count": 32040,
+  "selectivity": 0.4174
+ },
+ "483": {
+  "label": "Surfing \u00b7 Baseball",
+  "tags": [
+   "surfing",
+   "baseball",
+   "pirates",
+   "king arthur",
+   "spielberg"
+  ],
+  "genres": [
+   "Western",
+   "Mystery",
+   "Musical"
+  ],
+  "activation_count": 33830,
+  "selectivity": 0.3849
+ },
+ "484": {
+  "label": "South Africa \u00b7 Alcatraz",
+  "tags": [
+   "south africa",
+   "alcatraz",
+   "roald dahl",
+   "alaska",
+   "punk"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 36284,
+  "selectivity": 0.3403
+ },
+ "485": {
+  "label": "Sophia Coppola \u00b7 Hannibal Lecter",
+  "tags": [
+   "sophia coppola",
+   "hannibal lecter",
+   "indiana jones",
+   "archaeology",
+   "spielberg"
+  ],
+  "genres": [
+   "Musical",
+   "Thriller",
+   "Crime"
+  ],
+  "activation_count": 31397,
+  "selectivity": 0.4291
+ },
+ "486": {
+  "label": "Alcatraz \u00b7 New Zealand",
+  "tags": [
+   "alcatraz",
+   "new zealand",
+   "shakespeare",
+   "east germany",
+   "hannibal lecter"
+  ],
+  "genres": [
+   "Crime",
+   "Thriller",
+   "Drama"
+  ],
+  "activation_count": 20470,
+  "selectivity": 0.6278
+ },
+ "487": {
+  "label": "Aardman \u00b7 Tarantino",
+  "tags": [
+   "aardman",
+   "tarantino",
+   "claymation",
+   "afi 100",
+   "iran"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Children",
+   "Adventure"
+  ],
+  "activation_count": 34149,
+  "selectivity": 0.3791
+ },
+ "488": {
+  "label": "Monty Python \u00b7 East Germany",
+  "tags": [
+   "monty python",
+   "east germany",
+   "surfing",
+   "arnold",
+   "king arthur"
+  ],
+  "genres": [
+   "Adventure",
+   "Action",
+   "Musical"
+  ],
+  "activation_count": 22703,
+  "selectivity": 0.5872
+ },
+ "489": {
+  "label": "Alcatraz \u00b7 Gulf War",
+  "tags": [
+   "alcatraz",
+   "gulf war",
+   "prohibition",
+   "iran",
+   "spaghetti western"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "War"
+  ],
+  "activation_count": 35310,
+  "selectivity": 0.358
+ },
+ "490": {
+  "label": "Imaginary Friend \u00b7 Chicago",
+  "tags": [
+   "imaginary friend",
+   "chicago",
+   "monty python",
+   "autism",
+   "punk"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Mystery"
+  ],
+  "activation_count": 23375,
+  "selectivity": 0.575
+ },
+ "491": {
+  "label": "Jane Austen \u00b7 Almodovar",
+  "tags": [
+   "jane austen",
+   "almodovar",
+   "tarantino",
+   "monkey",
+   "marx brothers"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "War"
+  ],
+  "activation_count": 28791,
+  "selectivity": 0.4765
+ },
+ "492": {
+  "label": "Beatles \u00b7 Star Trek",
+  "tags": [
+   "beatles",
+   "star trek",
+   "spock",
+   "monty python",
+   "coen brothers"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Action"
+  ],
+  "activation_count": 35923,
+  "selectivity": 0.3468
+ },
+ "493": {
+  "label": "Classical Music \u00b7 Ballet",
+  "tags": [
+   "classical music",
+   "ballet",
+   "baseball",
+   "mental hospital",
+   "east germany"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Children"
+  ],
+  "activation_count": 22772,
+  "selectivity": 0.586
+ },
+ "494": {
+  "label": "East Germany \u00b7 Miyazaki",
+  "tags": [
+   "east germany",
+   "miyazaki",
+   "chris tucker",
+   "basketball",
+   "studio ghibli"
+  ],
+  "genres": [
+   "Musical",
+   "Crime"
+  ],
+  "activation_count": 20086,
+  "selectivity": 0.6348
+ },
+ "495": {
+  "label": "Miyazaki \u00b7 Studio Ghibli",
+  "tags": [
+   "miyazaki",
+   "studio ghibli",
+   "vietnam",
+   "baseball",
+   "dragon"
+  ],
+  "genres": [
+   "Film-Noir",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 27825,
+  "selectivity": 0.4941
+ },
+ "496": {
+  "label": "Mountain Climbing \u00b7 Almodovar",
+  "tags": [
+   "mountain climbing",
+   "almodovar",
+   "ballet",
+   "arnold",
+   "mummy"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "War"
+  ],
+  "activation_count": 35178,
+  "selectivity": 0.3604
+ },
+ "497": {
+  "label": "South America \u00b7 James Bond",
+  "tags": [
+   "south america",
+   "james bond",
+   "liv tyler",
+   "sophia coppola",
+   "trains"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Adventure"
+  ],
+  "activation_count": 21377,
+  "selectivity": 0.6113
+ },
+ "498": {
+  "label": "Emma Watson \u00b7 Harry Potter",
+  "tags": [
+   "emma watson",
+   "harry potter",
+   "tolkien",
+   "marx brothers",
+   "spielberg"
+  ],
+  "genres": [
+   "War",
+   "Musical",
+   "Children"
+  ],
+  "activation_count": 17443,
+  "selectivity": 0.6828
+ },
+ "499": {
+  "label": "Liv Tyler \u00b7 Iran",
+  "tags": [
+   "liv tyler",
+   "iran",
+   "football",
+   "underwater",
+   "nuclear bomb"
+  ],
+  "genres": [
+   "Sci-Fi",
+   "Action",
+   "Crime"
+  ],
+  "activation_count": 31317,
+  "selectivity": 0.4306
+ },
+ "500": {
+  "label": "Almodovar \u00b7 Basketball",
+  "tags": [
+   "almodovar",
+   "basketball",
+   "circus",
+   "blaxploitation",
+   "mtv"
+  ],
+  "genres": [
+   "War",
+   "Comedy",
+   "Musical"
+  ],
+  "activation_count": 32832,
+  "selectivity": 0.403
+ },
+ "501": {
+  "label": "Circus \u00b7 Soccer",
+  "tags": [
+   "circus",
+   "soccer",
+   "arnold",
+   "baseball",
+   "italy"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Adventure",
+   "Fantasy"
+  ],
+  "activation_count": 21169,
+  "selectivity": 0.6151
+ },
+ "502": {
+  "label": "Afi 100 \u00b7 Spaghetti Western",
+  "tags": [
+   "afi 100",
+   "spaghetti western",
+   "holocaust",
+   "scotland",
+   "trains"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Western",
+   "War"
+  ],
+  "activation_count": 31440,
+  "selectivity": 0.4284
+ },
+ "503": {
+  "label": "Ballet \u00b7 East Germany",
+  "tags": [
+   "ballet",
+   "east germany",
+   "james bond",
+   "truman capote",
+   "kurosawa"
+  ],
+  "genres": [
+   "Musical",
+   "Adventure",
+   "Sci-Fi"
+  ],
+  "activation_count": 21090,
+  "selectivity": 0.6165
+ },
+ "504": {
+  "label": "Peter Pan \u00b7 Dr. Seuss",
+  "tags": [
+   "peter pan",
+   "dr. seuss",
+   "broadway",
+   "rome",
+   "boxing"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Adventure"
+  ],
+  "activation_count": 32097,
+  "selectivity": 0.4164
+ },
+ "505": {
+  "label": "Olympics \u00b7 Figure Skating",
+  "tags": [
+   "olympics",
+   "figure skating",
+   "argentina",
+   "so bad it's good",
+   "rome"
+  ],
+  "genres": [
+   "Musical",
+   "War",
+   "Western"
+  ],
+  "activation_count": 35176,
+  "selectivity": 0.3604
+ },
+ "506": {
+  "label": "Star Trek \u00b7 Spock",
+  "tags": [
+   "star trek",
+   "spock",
+   "time travel",
+   "stage magic",
+   "vietnam"
+  ],
+  "genres": [
+   "Musical",
+   "Film-Noir",
+   "Western"
+  ],
+  "activation_count": 37786,
+  "selectivity": 0.313
+ },
+ "507": {
+  "label": "Fountain Of Youth \u00b7 Indiana Jones",
+  "tags": [
+   "fountain of youth",
+   "indiana jones",
+   "monkey",
+   "mummy",
+   "east germany"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 33642,
+  "selectivity": 0.3883
+ },
+ "508": {
+  "label": "Spock \u00b7 Star Trek",
+  "tags": [
+   "spock",
+   "star trek",
+   "office",
+   "colonialism",
+   "pirates"
+  ],
+  "genres": [
+   "Film-Noir",
+   "Musical",
+   "Western"
+  ],
+  "activation_count": 35095,
+  "selectivity": 0.3619
+ },
+ "509": {
+  "label": "Star Trek \u00b7 mtv",
+  "tags": [
+   "star trek",
+   "mtv",
+   "south africa",
+   "new zealand",
+   "pirates"
+  ],
+  "genres": [
+   "Musical",
+   "War"
+  ],
+  "activation_count": 17204,
+  "selectivity": 0.6872
+ },
+ "510": {
+  "label": "Arnold \u00b7 Basketball",
+  "tags": [
+   "arnold",
+   "basketball",
+   "baseball",
+   "vietnam war",
+   "beauty pageant"
+  ],
+  "genres": [
+   "Musical",
+   "Fantasy",
+   "Romance"
+  ],
+  "activation_count": 35553,
+  "selectivity": 0.3536
+ },
+ "511": {
+  "label": "Chris Tucker \u00b7 New Zealand",
+  "tags": [
+   "chris tucker",
+   "new zealand",
+   "sophia coppola",
+   "king arthur",
+   "vampires"
+  ],
+  "genres": [
+   "Musical",
+   "Sci-Fi"
+  ],
+  "activation_count": 15911,
+  "selectivity": 0.7107
+ }
+}

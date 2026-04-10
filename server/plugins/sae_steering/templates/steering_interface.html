@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - SAE Steering</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        :root {
+            --model-a-color: #007bff;
+            --model-b-color: #28a745;
+            --card-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            --border-radius: 12px;
+        }
+        
+        body {
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            max-width: 1560px;
+            margin: 0 auto;
+            padding: 20px;
+            --visible-recs: {{ num_recommendations|default(10) }};
+            zoom: 0.92;
+        }
+        
+        /* Header */
+        .page-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .page-guidance {
+            max-width: 880px;
+            margin: 8px auto 14px;
+            font-size: 0.93em;
+            line-height: 1.5;
+            color: #6c757d;
+        }
+        .iteration-badge {
+            display: inline-block;
+            background: #6c757d;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        /* Recommendations Section */
+        .recommendations-section {
+            margin-bottom: 24px;
+        }
+        
+        .recommendations-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .model-recommendations {
+            flex: 1;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        
+        .model-header {
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .model-header.model-a {
+            background: linear-gradient(135deg, #e7f1ff 0%, #f8f9fa 100%);
+            border-bottom: 2px solid var(--model-a-color);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+        .model-header.model-b {
+            background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+            border-bottom: 2px solid var(--model-b-color);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+        .model-header .badge {
+            font-size: 0.75em;
+        }
+        
+        .recommendations-scroll {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            min-height: 280px;
+        }
+        .recommendations-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .recommendations-scroll::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+        .recommendations-scroll::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        
+        .rec-card {
+            flex: 0 0 140px;
+            min-width: 140px;
+            background: #fafafa;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            border: 1px solid #e8e8e8;
+            position: relative;
+        }
+        .rec-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+        }
+        .rec-poster {
+            width: 100%;
+            height: 180px;
+            border-radius: 10px 10px 0 0;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: white;
+            font-size: 2.5em;
+        }
+        
+        .rec-info {
+            padding: 10px;
+        }
+        .rec-title {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #333;
+            line-height: 1.3;
+            height: 2.6em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .rec-metadata {
+            font-size: 0.7em;
+            color: #888;
+            margin-top: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .rec-genres {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 6px;
+            min-height: 36px;
+            max-height: 36px;
+            align-content: flex-start;
+            overflow: hidden;
+        }
+        .rec-genre-pill {
+            display: inline-flex;
+            align-items: center;
+            background: #edf0f2;
+            color: #5f6368;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.64em;
+            font-weight: 500;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .empty-recs {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        /* Steering Panel */
+        .steering-panel {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            position: relative;
+        }
+        .steering-panel.locked {
+            opacity: 0.72;
+        }
+        .steering-panel.locked .steering-lock-target {
+            pointer-events: none;
+            filter: grayscale(0.2);
+        }
+        .steering-lock-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.62);
+            border-radius: var(--border-radius);
+            z-index: 5;
+        }
+        .steering-panel.locked .steering-lock-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .steering-lock-message {
+            display: none;
+            position: relative;
+            z-index: 6;
+            width: min(720px, calc(100% - 48px));
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+            border-radius: var(--border-radius);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        }
+        .steering-lock-message.visible {
+            display: block;
+        }
+        
+        .steering-header {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .steering-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        /* Text Steering */
+        .text-steering {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: linear-gradient(135deg, #e7f1ff 0%, #f8f9fa 100%);
+            border-radius: 10px;
+            border: 1px solid #cce5ff;
+        }
+        .text-steering-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        .text-steering textarea {
+            width: 100%;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 0.9em;
+            resize: none;
+            background-color: rgba(241, 242, 244, 1);
+            background-image: none;
+            color: #333;
+        }
+        .text-steering textarea::placeholder {
+            color: #888;
+        }
+        .text-steering textarea:focus {
+            outline: none;
+            border-color: var(--model-a-color);
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            background-color: rgba(241, 242, 244, 1);
+            background-image: none;
+            color: #333;
+        }
+        .text-steering-hint {
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 6px;
+        }
+        .detected-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .detected-tag {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75em;
+            font-weight: 500;
+        }
+        .detected-tag.boost {
+            background: #d4edda;
+            color: #155724;
+        }
+        .detected-tag.suppress {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Dynamically injected text-steering slider */
+        .slider-card.text-injected {
+            border-color: var(--model-a-color);
+            background: linear-gradient(135deg, #e7f1ff 0%, #f8f9fa 100%);
+        }
+        /* Feature Sliders */
+        .sliders-section {
+            margin-bottom: 20px;
+        }
+        .sliders-label {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sliders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+        }
+        
+        .slider-card {
+            background: #f8f9fa;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 12px;
+            transition: all 0.2s;
+        }
+        .slider-card:hover {
+            border-color: #aaa;
+        }
+        .slider-card.active-boost {
+            border-color: var(--model-b-color);
+            background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+        }
+        .slider-card.active-suppress {
+            border-color: #dc3545;
+            background: linear-gradient(135deg, #f8d7da 0%, #f8f9fa 100%);
+        }
+        .slider-card.slider-new {
+            animation: slider-pulse 1.8s ease-in-out;
+        }
+        @keyframes slider-pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(67,97,238,0.45); }
+            40%  { box-shadow: 0 0 0 6px rgba(67,97,238,0.15); }
+            100% { box-shadow: none; }
+        }
+
+        /* Section headers for user-activated vs static groups */
+        .slider-section-header {
+            grid-column: 1 / -1;
+            font-size: 0.8em;
+            font-weight: 700;
+            color: #495057;
+            padding: 6px 2px 2px;
+            margin-top: 4px;
+            letter-spacing: 0.03em;
+            border-bottom: 2px solid #4361ee;
+        }
+        .slider-section-header.static-header {
+            border-bottom-color: #6c757d;
+            margin-top: 10px;
+        }
+        .section-count {
+            font-weight: 400;
+            color: #868e96;
+            font-size: 0.9em;
+        }
+        .role-badge {
+            display: inline-block;
+            font-size: 0.65em;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+        .role-badge.static {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        .slider-card.role-static {
+            opacity: 0.85;
+        }
+        
+        .slider-label {
+            font-weight: 600;
+            font-size: 0.85em;
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.3;
+            /* Fixed two-line height so sliders align even with short labels */
+            height: 2.6em;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .slider-control {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e0e0e0;
+            border-radius: 3px;
+            outline: none;
+        }
+        .slider-control::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--model-a-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider-value {
+            text-align: center;
+            font-size: 0.75em;
+            color: #666;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+        .slider-card.active-boost .slider-value::after,
+        .slider-card.active-suppress .slider-value::after {
+            content: '  (dbl-click to reset)';
+            font-size: 0.85em;
+            opacity: 0;
+            transition: opacity 0.2s;
+            color: #999;
+        }
+        .slider-card.active-boost:hover .slider-value::after,
+        .slider-card.active-suppress:hover .slider-value::after {
+            opacity: 1;
+        }
+        
+        /* Cluster Profile */
+        .cluster-profile-section {
+            margin-top: 14px;
+            padding-top: 4px;
+        }
+        .cluster-header {
+            color: #495057;
+            border-bottom-color: #6c757d !important;
+        }
+        .cluster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-top: 20px;
+            margin-bottom: 18px;
+        }
+        .action-buttons .btn {
+            padding: 12px 32px;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        .readonly-state {
+            pointer-events: none;
+        }
+        .btn-success.readonly-state {
+            opacity: 1;
+        }
+        
+        /* Loading */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .loading-overlay.hidden {
+            display: none;
+        }
+        .approval-card {
+            background: #fff;
+            border: 1px solid #dfe6ee;
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            padding: 18px 20px;
+            margin-bottom: 20px;
+        }
+        .approval-card.approved {
+            border-color: #198754;
+            background: #f3fbf6;
+        }
+        .approval-card.completed {
+            border-color: #198754;
+            background: #eef8f0;
+        }
+        .approval-title {
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .approval-copy {
+            color: #555;
+            margin-bottom: 12px;
+            font-size: 0.92em;
+        }
+        .approval-copy svg {
+            width: 14px;
+            height: 14px;
+            vertical-align: -2px;
+            margin: 0 2px;
+        }
+        .approval-copy .like-icon {
+            color: #2e7d32;
+        }
+        .approval-copy .dislike-icon {
+            color: #c62828;
+        }
+        .mode-hint-box {
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            color: #555;
+            font-size: 0.92em;
+        }
+        
+        /* Finish Section */
+        .finish-section {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+            border-radius: var(--border-radius);
+            margin-top: 24px;
+        }
+        .finish-section.hidden {
+            display: none;
+        }
+        
+        /* Single model mode – single horizontal row with scrollbar */
+        .single-model .model-recommendations {
+            max-width: 100%;
+        }
+        .single-model .recommendations-row {
+            justify-content: flex-start;
+        }
+        .single-model .recommendations-scroll {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            min-height: auto;
+            justify-content: flex-start;
+            padding-bottom: 8px;          /* room for scrollbar */
+            scrollbar-width: thin;        /* Firefox */
+            gap: 8px;
+        }
+        .single-model .recommendations-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .single-model .recommendations-scroll::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 3px;
+        }
+        .single-model .recommendations-scroll::-webkit-scrollbar-thumb {
+            background: #bbb;
+            border-radius: 3px;
+        }
+        .single-model .recommendations-scroll::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+        .single-model .rec-card {
+            flex: 0 0 calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
+            min-width: calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
+            max-width: calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
+        }
+        .single-model .rec-poster {
+            height: 162px;
+        }
+        .single-model .rec-info {
+            padding: 10px 8px 6px;
+        }
+
+        /* Like / Dislike buttons */
+        .rec-actions {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            padding: 6px 10px 8px;
+        }
+        .rec-actions button {
+            flex: 1;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 0;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .rec-actions button svg {
+            width: 16px;
+            height: 16px;
+        }
+        .btn-like {
+            background: #e8f5e9;
+            color: #43a047;
+        }
+        .btn-like:hover {
+            background: #c8e6c9;
+        }
+        .btn-like.active {
+            background: #2e7d32;
+            color: #fff;
+        }
+        .btn-dislike {
+            background: #fce4ec;
+            color: #e53935;
+        }
+        .btn-dislike:hover {
+            background: #f8bbd0;
+        }
+        .btn-dislike.active {
+            background: #c62828;
+            color: #fff;
+        }
+        .recommendations-section.final-locked .rec-card {
+            opacity: 0.68;
+            filter: grayscale(0.35);
+        }
+        .recommendations-section.final-locked .rec-actions button {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .toast-msg {
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            opacity: 0;
+            transform: translateX(40px);
+            animation: toastIn 0.3s ease forwards;
+        }
+        .toast-msg.fade-out {
+            animation: toastOut 0.3s ease forwards;
+        }
+        @keyframes toastIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes toastOut {
+            to { opacity: 0; transform: translateX(40px); }
+        }
+        .rec-card.liked {
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 2px rgba(46,125,50,0.25);
+        }
+        .rec-card.liked.liked-dimming {
+            opacity: 0.45;
+            filter: brightness(0.7);
+            transition: opacity 0.4s ease, filter 0.4s ease;
+        }
+        .rec-card.disliked {
+            opacity: 0.45;
+            filter: brightness(0.7);
+            transition: opacity 0.4s ease, filter 0.4s ease;
+            border-color: #c62828;
+        }
+
+        /* Movie plot tooltip -- uses fixed positioning so it never clips */
+        .rec-tooltip {
+            display: none;
+            position: fixed;
+            width: 240px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #222;
+            color: #eee;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.72em;
+            line-height: 1.4;
+            pointer-events: none;
+            z-index: 9999;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .recommendations-row {
+                flex-direction: column;
+            }
+            .sliders-grid {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+            .main-container {
+                zoom: 1;
+            }
+        }
+
+        /* Activity History Panel */
+        .activity-history-panel {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+        .activity-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            user-select: none;
+            background: #f8f9fa;
+            transition: background 0.15s;
+        }
+        .activity-header:hover {
+            background: #e9ecef;
+        }
+        .activity-toggle-icon {
+            font-size: 0.7em;
+            transition: transform 0.2s;
+        }
+        .activity-toggle-icon.open {
+            transform: rotate(90deg);
+        }
+        .activity-label {
+            font-weight: 600;
+            font-size: 0.9em;
+            color: #333;
+        }
+        .activity-body {
+            padding: 12px 16px;
+            border-top: 1px solid #e0e0e0;
+        }
+        .activity-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .activity-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+        }
+        .activity-tag:hover {
+            filter: brightness(0.95);
+            border-color: #999;
+        }
+        .activity-tag.boost {
+            background: #d4edda;
+            color: #155724;
+        }
+        .activity-tag.suppress {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .activity-tag.liked {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        .activity-tag .activity-tag-close {
+            margin-left: 4px;
+            opacity: 0.6;
+            font-size: 1.1em;
+            line-height: 1;
+        }
+        .activity-tag .activity-tag-close:hover {
+            opacity: 1;
+        }
+
+        /* Iteration-based history timeline */
+        .history-iteration {
+            margin-bottom: 10px;
+        }
+        .history-iteration-header {
+            font-weight: 600;
+            font-size: 0.8em;
+            color: #495057;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .history-iteration-header:hover {
+            background: #dee2e6;
+        }
+        .history-iteration-body {
+            padding-left: 12px;
+            border-left: 2px solid #dee2e6;
+            margin-left: 6px;
+        }
+        .history-subsection {
+            margin-bottom: 6px;
+        }
+        .history-subsection-label {
+            font-size: 0.7em;
+            font-weight: 600;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 3px;
+        }
+        .history-movie-list {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        /* Liked movies in history */
+        .history-movie-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 16px;
+            font-size: 0.75em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            border: 1px solid transparent;
+            background: #e8f5e9;
+            color: #2e7d32;
+            margin: 2px;
+        }
+        .history-movie-tag.disliked-tag {
+            background: #fce4ec;
+            color: #c62828;
+        }
+        .history-movie-tag:hover {
+            filter: brightness(0.95);
+            border-color: #999;
+        }
+        .history-movie-tag .toggle-dislike-btn {
+            margin-left: 2px;
+            opacity: 0.6;
+            font-size: 1.1em;
+            cursor: pointer;
+            color: #c62828;
+        }
+        .history-movie-tag.disliked-tag .toggle-dislike-btn {
+            color: #495057;
+        }
+        .history-movie-tag .toggle-dislike-btn:hover {
+            opacity: 1;
+        }
+
+        /* Slider description snippet */
+        .slider-description-snippet {
+            font-size: 0.65em;
+            color: #888;
+            line-height: 1.3;
+            margin-top: 2px;
+            margin-bottom: 6px;
+            height: 2.6em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="toast-container" id="toast-container"></div>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>Steering - {{ title }}</h1>
+            <p class="text-muted">{{ header_subtitle }}</p>
+            <div class="page-guidance">{{ header_guidance }}</div>
+            <span class="iteration-badge" id="iteration-badge">
+                {% if iteration > max_iterations %}
+                    All iterations completed
+                {% else %}
+                    Iteration <span id="current-iteration">{{ iteration }}</span> of {{ max_iterations }}
+                {% endif %}
+            </span>
+        </div>
+        
+        <!-- Recommendations Section -->
+        <div class="recommendations-section">
+            <div class="recommendations-row {% if not enable_comparison %}single-model{% endif %}">
+                {% if enable_comparison %}
+                <!-- Model A (Left) -->
+                <div class="model-recommendations" id="model-a-container">
+                    <div class="model-header model-a">
+                        <span class="badge bg-primary">A</span>
+                        {{ model_a_name|default('Model A') }}
+                    </div>
+                    <div class="recommendations-scroll" id="recs-model-a">
+                        <div class="empty-recs">
+                            <p>Adjust the features below and click <strong>"Get Recommendations"</strong></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Model B (Right) -->
+                <div class="model-recommendations" id="model-b-container">
+                    <div class="model-header model-b">
+                        <span class="badge bg-success">B</span>
+                        {{ model_b_name|default('Model B') }}
+                    </div>
+                    <div class="recommendations-scroll" id="recs-model-b">
+                        <div class="empty-recs">
+                            <p>Adjust the features below and click <strong>"Get Recommendations"</strong></p>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <!-- Single Model -->
+                <div class="model-recommendations">
+                    <div class="model-header model-a">
+                        Recommendations
+                    </div>
+                    <div class="recommendations-scroll" id="recs-single">
+                        <div class="empty-recs">
+                            <p>Adjust the features below and click <strong>"Get Recommendations"</strong></p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="approval-card {% if preferences_approved %}approved{% endif %}" id="approval-card">
+            <div class="approval-title">Review and confirm your preferences</div>
+            <div class="approval-copy">
+                Before continuing, confirm that you reviewed the current recommendations and selected your
+                <span class="like-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2V8H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.49 1.49 0 00-.44-1.06L13.17 0 6.59 6.59C6.22 6.95 6 7.45 6 8v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></span>
+                and
+                <span class="dislike-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 4h-2v12h2V4zm-4 12a2 2 0 002-2V4a2 2 0 00-2-2H9c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2a2 2 0 002 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L13.17 22l6.58-6.59c.37-.36.59-.86.59-1.41z"/></svg></span>.
+                You can still change it later, but this checkpoint makes the study flow explicit.
+            </div>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <button class="btn btn-outline-primary" id="approve-preferences-btn">Preference selection approved</button>
+            </div>
+        </div>
+        
+        <!-- Steering Panel -->
+        <div class="steering-panel {% if not preferences_approved or iteration_locked_final %}locked{% endif %}" id="steering-panel">
+            <div class="steering-lock-overlay">
+                <div class="steering-lock-message" id="steering-lock-message">
+                    {% if is_sequential %}
+                    <div id="phase-complete-content">
+                        <h4 class="text-primary mb-3">Approach complete</h4>
+                        <p>You have completed all iterations for this approach. Ready for the next one?</p>
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-primary btn-lg">
+                            {% if next_phase_name %}Continue to {{ next_phase_name }}{% else %}Continue to Next Approach{% endif %} &rarr;
+                        </a>
+                    </div>
+                    <div id="study-complete-content" style="display:none;">
+                        <h4 class="text-success mb-3">All Approaches Complete!</h4>
+                        <p>You have completed all approaches. A short questionnaire follows before we finish.</p>
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-success btn-lg">
+                            Continue &rarr;
+                        </a>
+                    </div>
+                    {% else %}
+                    <div id="study-complete-content">
+                        <h4 class="text-success mb-3">Study Complete!</h4>
+                        <p>You have completed all iterations. A short questionnaire follows.</p>
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-success btn-lg">
+                            Continue &rarr;
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="steering-header">
+                <h3>Steer Your Recommendations</h3>
+            </div>
+            <div class="steering-lock-target" id="steering-lock-target">
+            <!-- Text Steering -->
+            {% if steering_mode == 'text' or steering_mode == 'both' %}
+            <div class="text-steering">
+                <div class="text-steering-label">Describe what you want</div>
+                <textarea id="text-input" rows="2" placeholder="e.g., more action movies, less romance, something like Tom Cruise films..."></textarea>
+                <div class="text-steering-hint">
+                    Natural language steering: describe your preferences and we'll adjust the features automatically
+                </div>
+                <button class="btn btn-sm btn-primary mt-2" id="parse-text-btn">
+                    Apply Text Preferences
+                </button>
+                <div id="detected-tags-container" class="detected-tags"></div>
+            </div>
+            {% endif %}
+
+            <!-- Feature Sliders -->
+            {% if steering_mode == 'none' %}
+            <div class="mode-hint-box">
+                This approach uses likes/dislikes only. After you approve your current selections, click <strong>Get Recommendations</strong> to continue.
+            </div>
+            {% endif %}
+
+            {% if steering_mode != 'text' and steering_mode != 'none' %}
+            <div class="sliders-section" id="sliders-section">
+                {% if show_general_features %}
+                <div class="cluster-profile-section" id="cluster-profile-section">
+                    <div class="slider-section-header cluster-header">
+                        General Features
+                        <span class="section-count">{{ cluster_profile|length }}</span>
+                        <span class="text-muted" style="font-size:0.7em; margin-left:6px;">macro-level control</span>
+                    </div>
+                    <div class="cluster-grid" id="cluster-grid">
+                        {% for cluster in cluster_profile %}
+                        <div class="slider-card" id="cluster-card-{{ cluster.id }}">
+                            <div class="slider-label">{{ cluster.label }}</div>
+                            <div class="slider-category">{{ cluster.neuron_ids|length }} neurons</div>
+                            <div class="slider-description-snippet">{{ cluster.description or '' }}</div>
+                            <input type="range" class="slider-control cluster-slider"
+                                   id="slider-{{ cluster.id }}"
+                                   data-cluster-id="{{ cluster.id }}"
+                                   min="0" max="400" step="10" value="200">
+                            <div class="slider-value" id="slider-value-{{ cluster.id }}">0.00</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="sliders-label mt-3">
+                    <span>Fine-grained Features</span>
+                    <span class="text-muted small">(Discovered concepts -- drag to steer)</span>
+                </div>
+
+                <div class="sliders-grid" id="sliders-container">
+                    <!-- Dynamic Features (hidden in text-only mode) -->
+                    {% for feature in features %}
+                    <div class="slider-card role-activated" id="slider-card-{{ feature.id }}" title="{{ feature.description }}">
+                        <div class="slider-label" title="{{ feature.description }}">{{ feature.label }}</div>
+                        <div class="slider-description-snippet">{{ feature.description }}</div>
+                        <input 
+                            type="range" 
+                            class="slider-control" 
+                            id="slider-{{ feature.id }}"
+                            data-feature-id="{{ feature.id }}"
+                            min="0" 
+                            max="400" 
+                            step="10"
+                            value="200"
+                        >
+                        <div class="slider-value" id="slider-value-{{ feature.id }}">0</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Feature Search -->
+                <div class="feature-search-container" style="margin-top: 14px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="text" id="feature-search-input" class="form-control form-control-sm"
+                               placeholder="Search features by label..."
+                               style="max-width:300px; font-size:0.85em;">
+                        <span class="text-muted" style="font-size:0.75em;" id="feature-search-status"></span>
+                    </div>
+                    <div id="feature-search-results" class="sliders-grid" style="margin-top:8px;"></div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary btn-lg" id="apply-btn">
+                    Get Recommendations
+                </button>
+            </div>
+
+            <!-- Activity History (collapsed) -->
+            <div class="activity-history-panel" id="activity-history-panel" style="display:none;">
+                <div class="activity-header" onclick="toggleActivityHistory()">
+                    <span class="activity-toggle-icon" id="activity-toggle-icon">▶</span>
+                    <span class="activity-label">Your Steering History</span>
+                    <span class="activity-count badge bg-secondary" id="activity-count">0</span>
+                </div>
+                <div class="activity-body" id="activity-body" style="display:none;">
+                    <div class="activity-items" id="activity-items">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay hidden" id="loading-overlay">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+            <div>Generating recommendations...</div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            enableComparison: {{ 'true' if enable_comparison else 'false' }},
+            interactionMode: '{{ interaction_mode|default("cumulative") }}',
+            maxIterations: {{ max_iterations|default(3) }},
+            steeringMode: '{{ steering_mode|default("sliders") }}'
+        };
+
+        const featureAdjustments = {};
+        const sentAdjustments = {};   // tracks what was already sent to backend
+        let currentIteration = {{ iteration|default(1) }};
+        window.excludedMoviesFromText = [];
+        let preferencesApproved = {{ 'true' if preferences_approved else 'false' }};
+        let isStudyLocked = {{ 'true' if iteration_locked_final else 'false' }};
+        const searchInteractions = {};
+        let lastSearchQuery = '';
+        let lastSearchResultIds = [];
+        let searchResultsData = [];
+        let searchShowAll = false;
+
+        const likedMovies = {};
+        const dislikedMovies = {};
+
+        // Seed values are baked into the model's cumulative weights.
+        // Dynamic sliders always start at 0 (center) — they represent
+        // "how much MORE or LESS of this concept" from the current state.
+        const rawSeed = {{ seed_adjustments | tojson }};
+
+        // ------------------------------------------------------------------
+        // Sliders – range 0..400, center=200 → maps to [-1.0, +1.0]
+        // ------------------------------------------------------------------
+        const SLIDER_CENTER = 200;
+        const SLIDER_MAX    = 400;
+        const SLIDER_SCALE  = 200;  // half-range
+
+        function formatAdjustmentValue(value) {
+            const snapped = snapAdjustmentValue(value);
+            if (Math.abs(snapped) < 0.001) return '0.00';
+            return snapped > 0 ? `+${snapped.toFixed(2)}` : snapped.toFixed(2);
+        }
+
+        function setSteeringLocked(locked) {
+            const panel = document.getElementById('steering-panel');
+            if (panel) panel.classList.toggle('locked', locked);
+        }
+
+        function updateFinalLockMessage() {
+            const lockMessage = document.getElementById('steering-lock-message');
+            const recSection = document.querySelector('.recommendations-section');
+            if (!lockMessage || !recSection) return;
+            lockMessage.classList.toggle('visible', isStudyLocked);
+            recSection.classList.toggle('final-locked', isStudyLocked);
+        }
+
+        function updateApprovalUI() {
+            const approvalCard = document.getElementById('approval-card');
+            const approvalBtn = document.getElementById('approve-preferences-btn');
+            const applyBtn = document.getElementById('apply-btn');
+            const locked = isStudyLocked || !preferencesApproved;
+
+            if (approvalCard) {
+                approvalCard.classList.toggle('approved', preferencesApproved || isStudyLocked);
+                approvalCard.classList.toggle('completed', isStudyLocked);
+            }
+            if (approvalBtn) {
+                approvalBtn.classList.remove('btn-outline-primary', 'btn-success');
+                approvalBtn.classList.add((preferencesApproved || isStudyLocked) ? 'btn-success' : 'btn-outline-primary');
+                approvalBtn.classList.toggle('readonly-state', preferencesApproved || isStudyLocked);
+                approvalBtn.textContent = isStudyLocked
+                    ? 'Preferences locked for the final screen'
+                    : (preferencesApproved ? 'Steering is now unlocked.' : 'Preference selection approved');
+            }
+            if (applyBtn) applyBtn.disabled = isStudyLocked || !preferencesApproved;
+            setSteeringLocked(locked);
+            updateFinalLockMessage();
+        }
+
+        async function approvePreferences() {
+            if (isStudyLocked || preferencesApproved) return;
+            try {
+                await fetch('{{ url_for("sae_steering.approve_preferences") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        liked_movies: Object.keys(likedMovies).map(Number),
+                        disliked_movies: Object.keys(dislikedMovies).map(Number)
+                    })
+                });
+                preferencesApproved = true;
+                updateApprovalUI();
+                showToast('Preferences approved. Steering unlocked.');
+            } catch (error) {
+                console.error(error);
+                showToast('Could not approve preferences');
+            }
+        }
+
+        document.querySelectorAll('.slider-control:not(.cluster-slider)').forEach(slider => {
+            const featureId = slider.dataset.featureId;
+            featureAdjustments[featureId] = 0;
+            sentAdjustments[featureId] = 0;
+
+            slider.value = SLIDER_CENTER;
+            document.getElementById(`slider-value-${featureId}`).textContent = '0.00';
+
+            slider.addEventListener('input', (e) => {
+                const rawValue = parseFloat(e.target.value);
+                const value = adjustmentFromSliderRaw(rawValue);
+                e.target.value = sliderRawFromAdjustment(value);
+                featureAdjustments[featureId] = value;
+
+                document.getElementById(`slider-value-${featureId}`).textContent = formatAdjustmentValue(value);
+
+                const card = document.getElementById(`slider-card-${featureId}`);
+                card.classList.remove('active-boost', 'active-suppress');
+                if (value > 0.05) card.classList.add('active-boost');
+                else if (value < -0.05) card.classList.add('active-suppress');
+            });
+
+            const card = document.getElementById(`slider-card-${featureId}`);
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.closest('.slider-control')) return;
+                syncSlider(featureId, 0);
+                featureAdjustments[featureId] = 0;
+                showToast('Reset to zero');
+            });
+        });
+
+        // ------------------------------------------------------------------
+        // Cluster Profile Sliders
+        // ------------------------------------------------------------------
+        const clusterProfile = {{ cluster_profile | tojson }};
+        const initialClusterValues = {{ initial_cluster_values | default({}) | tojson }};
+        const clusterAdjustments = {};
+        const clusterNeuronMap = {};
+        clusterProfile.forEach(c => {
+            clusterAdjustments[c.id] = 0;
+            clusterNeuronMap[c.id] = c.neuron_ids || [];
+        });
+
+        document.querySelectorAll('.cluster-slider').forEach(slider => {
+            const cid = slider.dataset.clusterId;
+            // Already normalized to [-1, +1] by the server
+            const initClusterVal = Math.max(-1, Math.min(1, initialClusterValues[cid] || 0));
+            clusterAdjustments[cid] = 0;
+            sentAdjustments[cid] = 0;
+
+            if (Math.abs(initClusterVal) > 0.01) {
+                const initPos = sliderRawFromAdjustment(initClusterVal);
+                slider.value = initPos;
+                const snappedInit = snapAdjustmentValue(initClusterVal);
+                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(snappedInit);
+                const card = document.getElementById(`cluster-card-${cid}`);
+                if (snappedInit > 0.05) card.classList.add('active-boost');
+                else if (snappedInit < -0.05) card.classList.add('active-suppress');
+            }
+
+            slider.addEventListener('input', (e) => {
+                const rawValue = parseFloat(e.target.value);
+                const value = adjustmentFromSliderRaw(rawValue);
+                e.target.value = sliderRawFromAdjustment(value);
+                clusterAdjustments[cid] = value;
+                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(value);
+                const card = document.getElementById(`cluster-card-${cid}`);
+                card.classList.remove('active-boost', 'active-suppress');
+                if (value > 0.05) card.classList.add('active-boost');
+                else if (value < -0.05) card.classList.add('active-suppress');
+            });
+
+            const card = document.getElementById(`cluster-card-${cid}`);
+            card.addEventListener('dblclick', (e) => {
+                if (e.target.closest('.slider-control')) return;
+                slider.value = SLIDER_CENTER;
+                clusterAdjustments[cid] = 0;
+                document.getElementById(`slider-value-${cid}`).textContent = '0.00';
+                card.classList.remove('active-boost', 'active-suppress');
+                showToast('Cluster reset to zero');
+            });
+        });
+
+        // ------------------------------------------------------------------
+        // Feature label map (updated dynamically when sliders refresh)
+        // ------------------------------------------------------------------
+        const featureLabelMap = {
+            {% for feature in features %}
+            '{{ feature.id }}': '{{ feature.label }}',
+            {% endfor %}
+        };
+
+        const featureDescMap = {
+            {% for feature in features %}
+            '{{ feature.id }}': {{ feature.description | tojson }},
+            {% endfor %}
+        };
+
+        const featureMovieCountMap = {
+            {% for feature in features %}
+            '{{ feature.id }}': {{ feature.movie_count | default(0) }},
+            {% endfor %}
+        };
+
+        function snapAdjustmentValue(value) {
+            const clamped = Math.max(-1, Math.min(1, value));
+            return Math.round(clamped * 20) / 20;
+        }
+
+        function sliderRawFromAdjustment(value) {
+            return (snapAdjustmentValue(value) * SLIDER_SCALE) + SLIDER_CENTER;
+        }
+
+        function adjustmentFromSliderRaw(rawValue) {
+            return snapAdjustmentValue((rawValue - SLIDER_CENTER) / SLIDER_SCALE);
+        }
+
+        // ------------------------------------------------------------------
+        // Build adjustment payload (shared by both buttons)
+        // ------------------------------------------------------------------
+        function buildAdjustmentPayload() {
+            const deltaAdjustments = {};
+            const suppressedFeatures = [];
+
+            for (const [key, value] of Object.entries(featureAdjustments)) {
+                const prev = sentAdjustments[key] || 0;
+                const delta = value - prev;
+                if (featureLabelMap[key] && value <= -0.95) {
+                    suppressedFeatures.push(featureLabelMap[key]);
+                }
+                if (Math.abs(delta) > 0.001) {
+                    deltaAdjustments[key] = delta;
+                }
+            }
+
+            // Include cluster adjustments (server expands them to neuron-level)
+            for (const [cid, value] of Object.entries(clusterAdjustments)) {
+                const prev = sentAdjustments[cid] || 0;
+                const delta = value - prev;
+                if (Math.abs(delta) > 0.001) {
+                    deltaAdjustments[cid] = delta;
+                }
+            }
+
+            const allExcluded = [
+                ...(window.excludedMoviesFromText || []),
+                ...Object.keys(dislikedMovies).map(Number),
+                ...Object.keys(likedMovies).map(Number)
+            ];
+
+            return { filteredAdjustments: deltaAdjustments, suppressedFeatures, allExcluded };
+        }
+
+        function collectSearchContext() {
+            const adjusted = Object.entries(searchInteractions)
+                .filter(([, info]) => Math.abs(featureAdjustments[info.id] || 0) > 0.01)
+                .map(([, info]) => ({
+                    id: info.id,
+                    label: info.label,
+                    query: info.query
+                }));
+            return {
+                query: lastSearchQuery,
+                result_ids: lastSearchResultIds,
+                adjusted_features: adjusted
+            };
+        }
+
+        // ------------------------------------------------------------------
+        // Fetch & render recommendations
+        // ------------------------------------------------------------------
+        async function fetchAndRender() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.classList.remove('hidden');
+
+            try {
+                const { filteredAdjustments, suppressedFeatures, allExcluded } = buildAdjustmentPayload();
+
+                const response = await fetch('{{ url_for("sae_steering.adjust_features") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        adjustments: filteredAdjustments,
+                        interaction_mode: CONFIG.interactionMode,
+                        excluded_movies: allExcluded,
+                        suppressed_features: suppressedFeatures,
+                        liked_movies: Object.keys(likedMovies).map(Number),
+                        disliked_movies: Object.keys(dislikedMovies).map(Number),
+                        preferences_approved: preferencesApproved,
+                        search_context: collectSearchContext()
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    for (const [k, v] of Object.entries(featureAdjustments)) {
+                        sentAdjustments[k] = v;
+                    }
+                    for (const [k, v] of Object.entries(clusterAdjustments)) {
+                        sentAdjustments[k] = v;
+                    }
+
+                    // Update cluster slider positions from server response
+                    if (data.cluster_values) {
+                        for (const [cid, val] of Object.entries(data.cluster_values)) {
+                            const slider = document.getElementById(`slider-${cid}`);
+                            if (slider) {
+                                const clamped = snapAdjustmentValue(val);
+                                slider.value = sliderRawFromAdjustment(clamped);
+                                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(clamped);
+                                const card = document.getElementById(`cluster-card-${cid}`);
+                                if (card) {
+                                    card.classList.remove('active-boost', 'active-suppress');
+                                    if (clamped > 0.05) card.classList.add('active-boost');
+                                    else if (clamped < -0.05) card.classList.add('active-suppress');
+                                }
+                                clusterAdjustments[cid] = clamped;
+                                sentAdjustments[cid] = clamped;
+                            }
+                        }
+                    }
+
+                    recordActivity();
+
+                    if (CONFIG.enableComparison) {
+                        renderRecommendations('recs-model-a', data.recommendations_a || data.recommendations);
+                        renderRecommendations('recs-model-b', data.recommendations_b || data.recommendations);
+                    } else {
+                        renderRecommendations('recs-single', data.recommendations);
+                    }
+
+                    if (data.updated_features && CONFIG.steeringMode !== 'text') {
+                        rebuildSliderGrid(data.updated_features);
+                    }
+
+                    if (data.iteration) {
+                        currentIteration = data.iteration;
+                        const maxIter = {{ max_iterations }};
+                        const badge = document.getElementById('iteration-badge');
+                        if (currentIteration > maxIter) {
+                            badge.textContent = 'All iterations completed';
+                        } else {
+                            badge.innerHTML = 'Iteration <span id="current-iteration">' + currentIteration + '</span> of ' + maxIter;
+                        }
+                    }
+
+                    if (data.is_final_iteration) {
+                        isStudyLocked = true;
+                        preferencesApproved = false;
+                        document.getElementById('apply-btn').style.display = 'none';
+
+                        if (data.is_sequential) {
+                            const phaseDiv = document.getElementById('phase-complete-content');
+                            const studyDiv = document.getElementById('study-complete-content');
+                            if (phaseDiv && studyDiv) {
+                                if (data.is_final_of_study) {
+                                    phaseDiv.style.display = 'none';
+                                    studyDiv.style.display = 'block';
+                                } else {
+                                    phaseDiv.style.display = 'block';
+                                    studyDiv.style.display = 'none';
+                                }
+                            }
+                        }
+                    } else {
+                        preferencesApproved = false;
+                    }
+
+                    updateApprovalUI();
+                    lastSearchQuery = '';
+                    lastSearchResultIds = [];
+                    Object.keys(searchInteractions).forEach(key => delete searchInteractions[key]);
+                    const searchInput = document.getElementById('feature-search-input');
+                    const searchResults = document.getElementById('feature-search-results');
+                    const searchStatus = document.getElementById('feature-search-status');
+                    if (searchInput) searchInput.value = '';
+                    if (searchResults) searchResults.innerHTML = '';
+                    if (searchStatus) searchStatus.textContent = '';
+
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    showToast('Error: ' + (data.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error getting recommendations: ' + error.message);
+            } finally {
+                loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        document.getElementById('apply-btn').addEventListener('click', fetchAndRender);
+        document.getElementById('approve-preferences-btn')?.addEventListener('click', approvePreferences);
+
+        // ------------------------------------------------------------------
+        // Render recommendations with like/dislike & tooltip
+        // ------------------------------------------------------------------
+        function renderGenrePills(metadata) {
+            const genres = String(metadata || '')
+                .split('|')
+                .map(x => x.trim())
+                .filter(Boolean)
+                .slice(0, 5);
+            return genres.map(genre => `<span class="rec-genre-pill">${genre}</span>`).join('');
+        }
+
+        function renderRecommendations(containerId, recommendations) {
+            const container = document.getElementById(containerId);
+            if (!recommendations || recommendations.length === 0) {
+                container.innerHTML = '<div class="empty-recs"><p>No recommendations found</p></div>';
+                return;
+            }
+
+            container.innerHTML = recommendations.map((rec, idx) => {
+                const movieId = rec.movie_idx || rec.movie_id;
+                const isLiked = likedMovies[movieId];
+                const isDisliked = dislikedMovies[movieId];
+
+                let posterContent;
+                if (rec.url && rec.url !== 'None' && rec.url !== null && rec.url !== '') {
+                    posterContent = `<img src="${rec.url}" alt="${rec.title || ''}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<span style=\\'font-size:3em\\'>&#127916;</span>';" />`;
+                } else {
+                    posterContent = `<span style="font-size:3em;">&#127916;</span>`;
+                }
+
+                const safeOverview = (rec.overview || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+                const likedClass = isLiked ? ' liked' : (isDisliked ? ' disliked' : '');
+
+                return `
+                    <div class="rec-card${likedClass}" data-movie-id="${movieId}" data-overview="${safeOverview}">
+                        <div class="rec-poster">${posterContent}</div>
+                        <div class="rec-info">
+                            <div class="rec-title" title="${rec.title}">${rec.title}</div>
+                            <div class="rec-genres">${renderGenrePills(rec.metadata || '')}</div>
+                        </div>
+                        <div class="rec-actions">
+                            <button class="btn-like${isLiked ? ' active' : ''}"
+                                data-movie-id="${movieId}"
+                                data-title="${(rec.title||'').replace(/"/g,'&quot;')}"
+                                data-url="${rec.url||''}"
+                                data-meta="${(rec.metadata||'').replace(/"/g,'&quot;')}"
+                                onclick="toggleLikeFromBtn(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2V8H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.49 1.49 0 00-.44-1.06L13.17 0 6.59 6.59C6.22 6.95 6 7.45 6 8v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
+                            <button class="btn-dislike${isDisliked ? ' active' : ''}"
+                                onclick="toggleDislike(${movieId}, this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 4h-2v12h2V4zm-4 12a2 2 0 002-2V4a2 2 0 00-2-2H9c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2a2 2 0 002 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L13.17 22l6.58-6.59c.37-.36.59-.86.59-1.41z"/></svg></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            attachTooltips(container);
+        }
+
+        // ------------------------------------------------------------------
+        // Like / Dislike logic
+        // ------------------------------------------------------------------
+        function toggleLikeFromBtn(btn) {
+            const movieId = parseInt(btn.dataset.movieId);
+            const title = btn.dataset.title || '';
+            const url = btn.dataset.url || '';
+            const metadata = btn.dataset.meta || '';
+            toggleLike(movieId, btn, title, url, metadata);
+        }
+
+        function toggleLike(movieId, btn, title, url, metadata) {
+            if (isStudyLocked) return;
+            const card = btn.closest('.rec-card');
+            if (likedMovies[movieId]) {
+                delete likedMovies[movieId];
+                card.classList.remove('liked', 'liked-dimming');
+                btn.classList.remove('active');
+            } else {
+                delete dislikedMovies[movieId];
+                likedMovies[movieId] = { title, url, metadata };
+                card.classList.remove('disliked');
+                card.classList.add('liked');
+                btn.classList.add('active');
+                card.querySelector('.btn-dislike').classList.remove('active');
+                showToast(`Liked "${title}"`);
+                requestAnimationFrame(() => card.classList.add('liked-dimming'));
+            }
+            logFeedback(movieId, likedMovies[movieId] ? 'like' : 'neutral');
+            snapshotIterationFeedback();
+            renderActivityHistory();
+        }
+
+        function toggleDislike(movieId, btn) {
+            if (isStudyLocked) return;
+            const card = btn.closest('.rec-card');
+            const title = card.querySelector('.rec-title')?.textContent || '';
+            if (dislikedMovies[movieId]) {
+                delete dislikedMovies[movieId];
+                card.classList.remove('disliked');
+                btn.classList.remove('active');
+            } else {
+                delete likedMovies[movieId];
+                dislikedMovies[movieId] = { title };
+                card.classList.remove('liked', 'liked-dimming');
+                card.classList.add('disliked');
+                btn.classList.add('active');
+                card.querySelector('.btn-like').classList.remove('active');
+                showToast(`"${title}" hidden next round`);
+            }
+            logFeedback(movieId, dislikedMovies[movieId] ? 'dislike' : 'neutral');
+            snapshotIterationFeedback();
+            renderActivityHistory();
+        }
+
+        function logFeedback(movieId, action) {
+            fetch('{{ url_for("sae_steering.log_movie_feedback") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: JSON.stringify({ movie_id: movieId, action, iteration: currentIteration })
+            }).catch(() => {});
+        }
+
+        // ------------------------------------------------------------------
+        // Toast notifications
+        // ------------------------------------------------------------------
+        function showToast(msg, duration = 2500) {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            el.className = 'toast-msg';
+            el.textContent = msg;
+            container.appendChild(el);
+            setTimeout(() => { el.classList.add('fade-out'); }, duration);
+            setTimeout(() => { el.remove(); }, duration + 350);
+        }
+
+        // ------------------------------------------------------------------
+        // Tooltip: single global element on <body>, never clipped
+        // ------------------------------------------------------------------
+        const globalTip = document.createElement('div');
+        globalTip.className = 'rec-tooltip';
+        document.body.appendChild(globalTip);
+
+        function attachTooltips(container) {
+            container.querySelectorAll('.rec-card').forEach(card => {
+                card.addEventListener('mouseenter', () => {
+                    const text = card.dataset.overview;
+                    if (!text) return;
+                    globalTip.textContent = text;
+                    globalTip.style.display = 'block';
+                    const rect = card.getBoundingClientRect();
+                    let top = rect.top - globalTip.offsetHeight - 8;
+                    if (top < 4) top = rect.bottom + 8;
+                    let left = rect.left + rect.width / 2 - globalTip.offsetWidth / 2;
+                    left = Math.max(4, Math.min(left, window.innerWidth - globalTip.offsetWidth - 4));
+                    globalTip.style.top = top + 'px';
+                    globalTip.style.left = left + 'px';
+                });
+                card.addEventListener('mouseleave', () => {
+                    globalTip.style.display = 'none';
+                });
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // Text steering -> auto-fetch recommendations
+        // ------------------------------------------------------------------
+        const parseTextBtn = document.getElementById('parse-text-btn');
+        if (parseTextBtn) {
+            parseTextBtn.addEventListener('click', async () => {
+                const textInput = document.getElementById('text-input');
+                const text = textInput.value.trim();
+                if (!text) { showToast('Please enter some text describing your preferences.'); return; }
+
+                parseTextBtn.disabled = true;
+                parseTextBtn.textContent = 'Analyzing...';
+
+                try {
+                    const response = await fetch('{{ url_for("sae_steering.text_to_adjustments_endpoint") }}', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                        body: JSON.stringify({ text })
+                    });
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        // Show detected tags
+                        const tagsContainer = document.getElementById('detected-tags-container');
+                        if (data.matched_tags && data.matched_tags.length > 0) {
+                            tagsContainer.innerHTML = data.matched_tags.map(t => {
+                                const cssClass = t.direction === 'increase' ? 'boost' : 'suppress';
+                                const arrow = t.direction === 'increase' ? '↑' : '↓';
+                                return `<span class="detected-tag ${cssClass}">${arrow} ${t.tag}</span>`;
+                            }).join('');
+                        } else {
+                            tagsContainer.innerHTML = '<span class="text-muted small">No specific preferences detected</span>';
+                        }
+
+                        if (data.excluded_movies && data.excluded_movies.length > 0) {
+                            window.excludedMoviesFromText = data.excluded_movies;
+                        } else {
+                            window.excludedMoviesFromText = [];
+                        }
+
+                        // Merge text adjustments into featureAdjustments
+                        if (data.adjustments) {
+                            Object.entries(data.adjustments).forEach(([neuronId, value]) => {
+                                featureAdjustments[neuronId] = value;
+                                syncSlider(neuronId, value);
+                            });
+                        }
+
+                        // Auto-trigger recommendation fetch
+                        await fetchAndRender();
+                    } else {
+                        showToast('Error: ' + (data.message || 'Failed to parse text'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error parsing text: ' + error.message);
+                } finally {
+                    parseTextBtn.disabled = false;
+                    parseTextBtn.textContent = 'Apply Text Preferences';
+                }
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // Slider sync & active features panel
+        // ------------------------------------------------------------------
+        function syncSlider(neuronId, value) {
+            const slider = document.getElementById(`slider-${neuronId}`);
+            const clamped = snapAdjustmentValue(value);
+            const display = document.getElementById(`slider-value-${neuronId}`);
+            if (slider) slider.value = sliderRawFromAdjustment(clamped);
+            if (display) display.textContent = formatAdjustmentValue(clamped);
+            const card = document.getElementById(`slider-card-${neuronId}`);
+            if (card) {
+                card.classList.remove('active-boost', 'active-suppress');
+                if (value > 0.05) card.classList.add('active-boost');
+                else if (value < -0.05) card.classList.add('active-suppress');
+            }
+            const searchSlider = document.getElementById(`search-slider-${neuronId}`);
+            const searchValue = document.getElementById(`search-slider-value-${neuronId}`);
+            const searchCard = document.getElementById(`search-slider-card-${neuronId}`);
+            if (searchSlider) searchSlider.value = sliderRawFromAdjustment(clamped);
+            if (searchValue) searchValue.textContent = formatAdjustmentValue(clamped);
+            if (searchCard) {
+                searchCard.classList.remove('active-boost', 'active-suppress');
+                if (value > 0.05) searchCard.classList.add('active-boost');
+                else if (value < -0.05) searchCard.classList.add('active-suppress');
+            }
+        }
+
+        /**
+         * Rebuild the entire slider grid from updated_features returned by the server.
+         * - Keeps the current slider value for features the user has already adjusted.
+         * - New features get their initial value at 0 (center = 100 on the 0–200 range).
+         * - New features are highlighted briefly so the user notices the change.
+         */
+        function rebuildSliderGrid(features) {
+            if (!features || !features.length) return;
+            const container = document.getElementById('sliders-container');
+
+            // Snapshot current adjustment values
+            const savedValues = {};
+            for (const [k, v] of Object.entries(featureAdjustments)) {
+                savedValues[k] = v;
+            }
+
+            // Determine which feature IDs currently exist
+            const existingIds = new Set();
+            container.querySelectorAll('.slider-card').forEach(el => {
+                existingIds.add(el.id.replace('slider-card-', ''));
+            });
+
+            // Clear the grid
+            container.innerHTML = '';
+
+            // Also clear featureAdjustments (will re-populate)
+            for (const k of Object.keys(featureAdjustments)) {
+                delete featureAdjustments[k];
+            }
+
+            function renderFeatureCard(f, sectionClass) {
+                const fid = String(f.id);
+                const prevVal = savedValues[fid] !== undefined ? savedValues[fid] : 0;
+                const snappedVal = snapAdjustmentValue(prevVal);
+                const sliderVal = sliderRawFromAdjustment(snappedVal);
+                const displayVal = formatAdjustmentValue(snappedVal);
+                const boostCls = snappedVal > 0.05 ? ' active-boost' : (snappedVal < -0.05 ? ' active-suppress' : '');
+                const isNew = !existingIds.has(fid);
+                const desc = f.description || f.label || '';
+                const descSnippet = desc.length > 80 ? desc.substring(0, 80) + '…' : desc;
+
+                return `
+                    <div class="slider-card${boostCls}${isNew ? ' slider-new' : ''} ${sectionClass}"
+                         id="slider-card-${fid}"
+                         title="${desc}">
+                        <div class="slider-label" title="${desc}">${f.label || 'Neuron N' + fid}</div>
+                        <div class="slider-description-snippet">${descSnippet}</div>
+                        <input type="range" class="slider-control" id="slider-${fid}"
+                               data-feature-id="${fid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderVal}">
+                        <div class="slider-value" id="slider-value-${fid}">${displayVal}</div>
+                    </div>`;
+            }
+
+            if (features.length) {
+                features.forEach(f => {
+                    container.insertAdjacentHTML('beforeend', renderFeatureCard(f, 'role-activated'));
+                });
+            }
+
+            // Re-register adjustments and wire events for ALL features
+            features.forEach(f => {
+                const fid = String(f.id);
+                const prevVal = savedValues[fid] !== undefined ? savedValues[fid] : 0;
+                if (Math.abs(prevVal) > 0.001) {
+                    featureAdjustments[fid] = snapAdjustmentValue(prevVal);
+                }
+
+                const slider = document.getElementById(`slider-${fid}`);
+                slider.addEventListener('input', (e) => {
+                    const rawValue = parseFloat(e.target.value);
+                    const value = adjustmentFromSliderRaw(rawValue);
+                    e.target.value = sliderRawFromAdjustment(value);
+                    featureAdjustments[fid] = value;
+                    document.getElementById(`slider-value-${fid}`).textContent = formatAdjustmentValue(value);
+                    const card = document.getElementById(`slider-card-${fid}`);
+                    card.classList.remove('active-boost', 'active-suppress');
+                    if (value > 0.05) card.classList.add('active-boost');
+                    else if (value < -0.05) card.classList.add('active-suppress');
+                });
+
+                const cardEl = document.getElementById(`slider-card-${fid}`);
+                cardEl.addEventListener('dblclick', (e) => {
+                    if (e.target.closest('.slider-control')) return;
+                    syncSlider(fid, 0);
+                    featureAdjustments[fid] = 0;
+                    showToast('Reset to zero');
+                });
+            });
+
+            // Brief highlight on new sliders
+            container.querySelectorAll('.slider-new').forEach(el => {
+                setTimeout(() => el.classList.remove('slider-new'), 2000);
+            });
+
+            // Update the featureLabelMap
+            features.forEach(f => {
+                featureLabelMap[String(f.id)] = f.label || 'Neuron N' + f.id;
+                featureDescMap[String(f.id)] = f.description || f.label || '';
+                featureMovieCountMap[String(f.id)] = f.movie_count || 0;
+            });
+        }
+
+        function injectTextSliders(topFeatures) {
+            if (!topFeatures || !topFeatures.length) return;
+            const container = document.getElementById('sliders-container');
+
+            // Remove previously injected text sliders
+            container.querySelectorAll('.text-injected').forEach(el => {
+                const fid = el.id.replace('slider-card-', '');
+                delete featureAdjustments[fid];
+                el.remove();
+            });
+
+            // Remove old header if present
+            const oldHeader = container.querySelector('.text-slider-header');
+            if (oldHeader) oldHeader.remove();
+
+            container.insertAdjacentHTML('afterbegin',
+                `<div class="slider-section-header text-slider-header">Text-Matched Features <span class="section-count">${topFeatures.length}</span></div>`);
+
+            topFeatures.forEach(f => {
+                const nid = String(f.neuron_id);
+                if (document.getElementById(`slider-card-${nid}`)) {
+                    syncSlider(nid, f.weight);
+                    featureAdjustments[nid] = snapAdjustmentValue(f.weight);
+                    return;
+                }
+                const clamped = snapAdjustmentValue(f.weight);
+                const sliderVal = sliderRawFromAdjustment(clamped);
+                const display = formatAdjustmentValue(clamped);
+                const boostClass = clamped > 0.05 ? ' active-boost' : (clamped < -0.05 ? ' active-suppress' : '');
+                const arrow = f.direction === 'boost' ? '↑' : '↓';
+                const descSnippet = (f.description || '').substring(0, 120);
+
+                const html = `
+                    <div class="slider-card text-injected${boostClass}" id="slider-card-${nid}"
+                         title="${(f.description || '').replace(/"/g, '&quot;')}">
+                        <div class="slider-label" title="${(f.description || '').replace(/"/g, '&quot;')}">${arrow} ${f.label}</div>
+                        <div class="slider-description-snippet">${descSnippet}</div>
+                        <input type="range" class="slider-control" id="slider-${nid}"
+                               data-feature-id="${nid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderVal}">
+                        <div class="slider-value" id="slider-value-${nid}">${display}</div>
+                    </div>`;
+
+                // Insert after the header
+                const hdr = container.querySelector('.text-slider-header');
+                if (hdr) {
+                    hdr.insertAdjacentHTML('afterend', html);
+                } else {
+                    container.insertAdjacentHTML('afterbegin', html);
+                }
+                featureAdjustments[nid] = clamped;
+
+                const slider = document.getElementById(`slider-${nid}`);
+                slider.addEventListener('input', (e) => {
+                    const rawValue = parseFloat(e.target.value);
+                    const value = adjustmentFromSliderRaw(rawValue);
+                    e.target.value = sliderRawFromAdjustment(value);
+                    featureAdjustments[nid] = value;
+                    document.getElementById(`slider-value-${nid}`).textContent = formatAdjustmentValue(value);
+                    const card = document.getElementById(`slider-card-${nid}`);
+                    card.classList.remove('active-boost', 'active-suppress');
+                    if (value > 0.05) card.classList.add('active-boost');
+                    else if (value < -0.05) card.classList.add('active-suppress');
+                });
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // Activity History – iteration-based timeline with editable entries
+        // ------------------------------------------------------------------
+        // Structure: { iteration_number: { sliders: [...], liked: [...], disliked: [...] } }
+        const activityByIteration = {};
+
+        function toggleActivityHistory() {
+            const body = document.getElementById('activity-body');
+            const icon = document.getElementById('activity-toggle-icon');
+            const isOpen = body.style.display !== 'none';
+            body.style.display = isOpen ? 'none' : 'block';
+            icon.classList.toggle('open', !isOpen);
+        }
+
+        function ensureIterationEntry(iteration) {
+            if (!activityByIteration[iteration]) {
+                activityByIteration[iteration] = { sliders: [], liked: [], disliked: [] };
+            }
+            return activityByIteration[iteration];
+        }
+
+        function snapshotIterationFeedback(iteration = currentIteration) {
+            const entry = ensureIterationEntry(iteration);
+            entry.liked = Object.entries(likedMovies).map(([mid, info]) => ({
+                mid: parseInt(mid),
+                title: info.title || `Movie ${mid}`
+            }));
+            entry.disliked = Object.entries(dislikedMovies).map(([mid, info]) => ({
+                mid: parseInt(mid),
+                title: info.title || `Movie ${mid}`
+            }));
+        }
+
+        function recordActivity() {
+            const iteration = currentIteration;
+            const entry = ensureIterationEntry(iteration);
+
+            // Record non-zero slider adjustments
+            entry.sliders = [];
+            for (const [fid, val] of Object.entries(featureAdjustments)) {
+                if (Math.abs(val) > 0.01) {
+                    const label = featureLabelMap[fid] || `Neuron N${fid}`;
+                    entry.sliders.push({
+                        fid,
+                        label,
+                        value: val,
+                        description: featureDescMap[fid] || label,
+                        movie_count: featureMovieCountMap[fid] || 0,
+                    });
+                }
+            }
+
+            snapshotIterationFeedback(iteration);
+            renderActivityHistory();
+        }
+
+        function renderActivityHistory() {
+            const panel = document.getElementById('activity-history-panel');
+            const container = document.getElementById('activity-items');
+            const countBadge = document.getElementById('activity-count');
+
+            const hasContent = Object.keys(activityByIteration).length > 0;
+            if (!hasContent) {
+                panel.style.display = 'none';
+                return;
+            }
+            panel.style.display = 'block';
+
+            const totalEntries = Object.values(activityByIteration).reduce(
+                (sum, e) => sum + e.sliders.length + e.liked.length + e.disliked.length, 0
+            );
+            countBadge.textContent = totalEntries;
+
+            let html = '';
+
+            // Iteration sections (newest first)
+            const iterations = Object.keys(activityByIteration).map(Number).sort((a, b) => b - a);
+            for (const iter of iterations) {
+                const entry = activityByIteration[iter];
+                if (entry.sliders.length === 0 && entry.liked.length === 0 && entry.disliked.length === 0) continue;
+                const itemCount = entry.sliders.length + entry.liked.length + entry.disliked.length;
+
+                html += `<div class="history-iteration">
+                    <div class="history-iteration-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                        <span style="font-size:0.7em;">▶</span>
+                        Iteration ${iter}
+                        <span class="badge bg-secondary" style="font-size:0.65em;">${itemCount} items</span>
+                    </div>
+                    <div class="history-iteration-body" style="display:none;">`;
+
+                if (entry.liked.length > 0) {
+                    html += `<div class="history-subsection">
+                        <div class="history-subsection-label">Liked Movies</div>
+                        <div class="history-movie-list">`;
+                    for (const item of entry.liked) {
+                        html += `<span class="history-movie-tag" title="Click to remove like">
+                            ${item.title}
+                            <span class="toggle-dislike-btn" onclick="event.stopPropagation(); removeLikeFromHistory(${item.mid})" title="Remove like">&times;</span>
+                        </span>`;
+                    }
+                    html += `</div></div>`;
+                }
+
+                if (entry.disliked.length > 0) {
+                    html += `<div class="history-subsection">
+                        <div class="history-subsection-label">Disliked Movies</div>
+                        <div class="history-movie-list">`;
+                    for (const item of entry.disliked) {
+                        html += `<span class="history-movie-tag disliked-tag" title="Click to undo dislike">
+                            ${item.title}
+                            <span class="toggle-dislike-btn" onclick="event.stopPropagation(); removeDislikeFromHistory(${item.mid})" title="Undo dislike">&times;</span>
+                        </span>`;
+                    }
+                    html += `</div></div>`;
+                }
+
+                if (entry.sliders.length > 0) {
+                    html += `<div class="history-subsection">
+                        <div class="history-subsection-label">Feature Adjustments</div>
+                        <div class="activity-items" style="display:flex;flex-wrap:wrap;gap:4px;">`;
+                    for (const s of entry.sliders) {
+                        const cls = s.value > 0 ? 'boost' : 'suppress';
+                        const arrow = s.value > 0 ? '↑' : '↓';
+                        const valStr = `${s.value >= 0 ? '+' : ''}${s.value.toFixed(2)}`;
+                        const inGrid = !!document.getElementById(`slider-card-${s.fid}`);
+                        const safeLabel = (s.label || '').replace(/'/g,"\\'");
+                        const safeDesc = (s.description || '').replace(/'/g,"\\'");
+                        const action = inGrid
+                            ? `onclick="editActivitySlider('${s.fid}')" title="Click to scroll to slider"`
+                            : `onclick="restoreSliderFromHistory('${s.fid}', '${safeLabel}', '${safeDesc}', ${s.movie_count || 0}, ${s.value})" title="Click to re-add slider"`;
+                        const icon = inGrid ? '' : ' <span style="font-size:0.8em;opacity:0.5;">↩</span>';
+                        html += `<span class="activity-tag ${cls}" ${action}>
+                            ${arrow} ${s.label} ${valStr}${icon}
+                            <span class="activity-tag-close" onclick="event.stopPropagation(); resetActivitySlider('${s.fid}')">&times;</span>
+                        </span>`;
+                    }
+                    html += `</div></div>`;
+                }
+
+                html += `</div></div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function editActivitySlider(fid) {
+            const card = document.getElementById(`slider-card-${fid}`);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                card.style.boxShadow = '0 0 0 3px rgba(67,97,238,0.4)';
+                setTimeout(() => { card.style.boxShadow = ''; }, 2000);
+            }
+        }
+
+        function restoreSliderFromHistory(fid, label, description, movieCount, value) {
+            fid = String(fid);
+            const existing = document.getElementById(`slider-card-${fid}`);
+            if (existing) {
+                editActivitySlider(fid);
+                return;
+            }
+            const container = document.getElementById('sliders-container');
+            if (!container) return;
+
+            const snappedValue = snapAdjustmentValue(value);
+            const sliderVal = sliderRawFromAdjustment(snappedValue);
+            const displayVal = formatAdjustmentValue(snappedValue);
+            const boostCls = snappedValue > 0.05 ? ' active-boost' : (snappedValue < -0.05 ? ' active-suppress' : '');
+            const desc = description || label || '';
+            const descSnippet = desc.length > 80 ? desc.substring(0, 80) + '…' : desc;
+
+            const html = `
+                <div class="slider-card${boostCls} role-activated slider-new"
+                     id="slider-card-${fid}"
+                     title="${desc}">
+                    <div class="slider-label" title="${desc}">${label}</div>
+                    <div class="slider-description-snippet">${descSnippet}</div>
+                    <input type="range" class="slider-control" id="slider-${fid}"
+                           data-feature-id="${fid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderVal}">
+                    <div class="slider-value" id="slider-value-${fid}">${displayVal}</div>
+                </div>`;
+
+            container.insertAdjacentHTML('beforeend', html);
+
+            featureAdjustments[fid] = snappedValue;
+            featureLabelMap[fid] = label;
+            featureDescMap[fid] = desc;
+            featureMovieCountMap[fid] = movieCount || 0;
+
+            const slider = document.getElementById(`slider-${fid}`);
+            slider.addEventListener('input', (e) => {
+                const rawValue = parseFloat(e.target.value);
+                const val = adjustmentFromSliderRaw(rawValue);
+                e.target.value = sliderRawFromAdjustment(val);
+                featureAdjustments[fid] = val;
+                document.getElementById(`slider-value-${fid}`).textContent = formatAdjustmentValue(val);
+                const card = document.getElementById(`slider-card-${fid}`);
+                card.classList.remove('active-boost', 'active-suppress');
+                if (val > 0.05) card.classList.add('active-boost');
+                else if (val < -0.05) card.classList.add('active-suppress');
+            });
+
+            setTimeout(() => document.getElementById(`slider-card-${fid}`)?.classList.remove('slider-new'), 2000);
+            showToast(`Restored "${label}"`);
+            renderActivityHistory();
+        }
+
+        function resetActivitySlider(fid) {
+            syncSlider(fid, 0);
+            featureAdjustments[fid] = 0;
+            renderActivityHistory();
+        }
+
+        function removeLikeFromHistory(mid) {
+            delete likedMovies[mid];
+            logFeedback(mid, 'neutral');
+            snapshotIterationFeedback();
+            renderActivityHistory();
+            showToast('Like removed');
+        }
+
+        function removeDislikeFromHistory(mid) {
+            delete dislikedMovies[mid];
+            logFeedback(mid, 'neutral');
+            snapshotIterationFeedback();
+            renderActivityHistory();
+            showToast('Dislike removed');
+        }
+
+        // ------------------------------------------------------------------
+        // Feature Search – search all available SAE features by label
+        // ------------------------------------------------------------------
+        function renderSearchResults() {
+            const resultsContainer = document.getElementById('feature-search-results');
+            const status = document.getElementById('feature-search-status');
+            if (!resultsContainer || !status) return;
+
+            const visibleResults = searchShowAll ? searchResultsData : searchResultsData.slice(0, 8);
+            resultsContainer.innerHTML = visibleResults.map(f => {
+                const fid = String(f.id);
+                const currentValue = snapAdjustmentValue(featureAdjustments[fid] || 0);
+                const sliderValue = sliderRawFromAdjustment(currentValue);
+                            const displayValue = formatAdjustmentValue(currentValue);
+                const badge = f.already_shown
+                    ? '<span style="font-size:0.65em;color:#888;margin-left:4px;">(shown above)</span>'
+                    : '';
+                const desc = f.description || f.label || '';
+                const descSnippet = desc.length > 80 ? desc.substring(0, 80) + '…' : desc;
+                return `
+                    <div class="slider-card" id="search-slider-card-${fid}" title="${desc}">
+                        <div class="slider-label">${f.label}${badge}</div>
+                        <div class="slider-description-snippet">${descSnippet}</div>
+                        <input type="range" class="slider-control" id="search-slider-${fid}"
+                               data-search-feature-id="${fid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderValue}">
+                        <div class="slider-value" id="search-slider-value-${fid}">${displayValue}</div>
+                    </div>`;
+            }).join('');
+
+            if (searchResultsData.length > 8) {
+                const buttonLabel = searchShowAll ? 'Show less' : `Show more (${searchResultsData.length - 8} more)`;
+                resultsContainer.insertAdjacentHTML('beforeend', `
+                    <div style="grid-column:1 / -1; text-align:center; margin-top:4px;">
+                        <button class="btn btn-sm btn-link text-muted" id="search-show-more-btn">${buttonLabel}</button>
+                    </div>
+                `);
+                document.getElementById('search-show-more-btn')?.addEventListener('click', () => {
+                    searchShowAll = !searchShowAll;
+                    renderSearchResults();
+                });
+            }
+
+            visibleResults.forEach(f => {
+                const fid = String(f.id);
+                featureLabelMap[fid] = f.label;
+                featureDescMap[fid] = f.description || f.label;
+                featureMovieCountMap[fid] = f.movie_count || 0;
+                searchInteractions[fid] = { id: fid, label: f.label, query: lastSearchQuery };
+                const slider = document.getElementById(`search-slider-${fid}`);
+                if (!slider) return;
+                syncSlider(fid, featureAdjustments[fid] || 0);
+                slider.addEventListener('input', event => {
+                    const rawValue = parseFloat(event.target.value);
+                    const value = adjustmentFromSliderRaw(rawValue);
+                    featureAdjustments[fid] = value;
+                    searchInteractions[fid] = { id: fid, label: f.label, query: lastSearchQuery };
+                    syncSlider(fid, value);
+                });
+            });
+
+            if (searchResultsData.length) {
+                status.textContent += ' · sorted by label match, then by how many movies activate the feature';
+            }
+        }
+
+        (function setupFeatureSearch() {
+            const input = document.getElementById('feature-search-input');
+            const resultsContainer = document.getElementById('feature-search-results');
+            const status = document.getElementById('feature-search-status');
+            if (!input || !resultsContainer || !status) return;
+            let searchTimeout = null;
+
+            input.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                const q = input.value.trim();
+                if (q.length < 2) {
+                    resultsContainer.innerHTML = '';
+                    status.textContent = '';
+                    lastSearchQuery = '';
+                    lastSearchResultIds = [];
+                    searchResultsData = [];
+                    searchShowAll = false;
+                    return;
+                }
+                status.textContent = 'Searching...';
+                searchTimeout = setTimeout(async () => {
+                    try {
+                        const resp = await fetch(`{{ url_for("sae_steering.search_features") }}?q=${encodeURIComponent(q)}`);
+                        const data = await resp.json();
+                        lastSearchQuery = q;
+                        lastSearchResultIds = data.map(f => f.id);
+                        status.textContent = data.length ? `${data.length} results` : 'No matches';
+                        searchResultsData = data;
+                        searchShowAll = false;
+                        renderSearchResults();
+                    } catch (e) {
+                        status.textContent = 'Search error';
+                        console.error(e);
+                    }
+                }, 300);
+            });
+        })();
+
+        // ------------------------------------------------------------------
+        // Render initial recommendations from server-side data
+        // ------------------------------------------------------------------
+        (function renderInitial() {
+            const initialA = {{ initial_recs_a | tojson }};
+            const initialB = {{ initial_recs_b | tojson }};
+            const initialSingle = {{ initial_recs | tojson }};
+            if (CONFIG.enableComparison) {
+                if (initialA.length) renderRecommendations('recs-model-a', initialA);
+                if (initialB.length) renderRecommendations('recs-model-b', initialB);
+            } else {
+                if (initialSingle.length) renderRecommendations('recs-single', initialSingle);
+            }
+        })();
+
+        updateApprovalUI();
+    </script>
+</body>
+</html>

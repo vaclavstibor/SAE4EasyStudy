@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create SAE Steering Study</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .config-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .config-card .card-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+        }
+        .form-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .approach-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .approach-card {
+            border: 2px solid #e1e5ea;
+            border-radius: 12px;
+            padding: 16px;
+            background: #fafafa;
+        }
+        .approach-card h6 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .approach-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 0.85em;
+            font-weight: 700;
+            background: #0d6efd;
+        }
+        .neuron-picker {
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 320px;
+            overflow-y: auto;
+            background: #fff;
+        }
+        .neuron-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .neuron-item:hover {
+            background: #f0f0f0;
+        }
+        .neuron-item.selected {
+            background: #e7f1ff;
+            border: 1px solid #0d6efd;
+        }
+        .neuron-info {
+            flex: 1;
+        }
+        .neuron-label {
+            font-weight: 500;
+        }
+        .neuron-category {
+            font-size: 0.75em;
+            color: #666;
+        }
+        .selected-neurons-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .selected-neuron-tag {
+            background: #0d6efd;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .selected-neuron-tag .remove-btn {
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .selected-neuron-tag .remove-btn:hover {
+            opacity: 1;
+        }
+        .hint-box {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #555;
+            font-size: 0.9em;
+        }
+        .draft-note {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #fff8e1;
+            border: 1px solid #f1d58a;
+            color: #7a5a00;
+            font-size: 0.85em;
+        }
+        .questionnaire-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .questionnaire-item {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 12px 14px;
+            background: #fff;
+        }
+        .questionnaire-item-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>{{ title }}</h1>
+        <p class="lead">Create a new SAE-based steering study</p>
+
+        <form id="create-study-form">
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Dataset</h5>
+                </div>
+                <div class="card-body">
+                    <label for="dataset-select" class="form-label">{{ select_dataset }}</label>
+                    <select class="form-select" id="dataset-select" required>
+                        <option value="">Choose a dataset...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Approaches</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="approach-count" class="form-label">Number of approaches</label>
+                            <input type="number" class="form-control" id="approach-count" min="1" max="5" value="2">
+                            <div class="form-text">Use 1 for a single approach, 2 for A/B, 3+ for A/B/C...</div>
+                        </div>
+                        <div class="col-md-4" id="comparison-mode-wrapper">
+                            <label for="comparison-mode" class="form-label">Comparison layout</label>
+                            <select class="form-select" id="comparison-mode">
+                                <option value="sequential">Sequential</option>
+                                <option value="side_by_side">Side-by-side</option>
+                            </select>
+                            <div class="form-text" id="comparison-mode-help">Side-by-side is only available for exactly 2 approaches.</div>
+                        </div>
+                    </div>
+                    <div class="hint-box mb-3">
+                        An approach represents one experimental condition. You can vary steering mode, base recommender, SAE model, or use a no-steering baseline.
+                    </div>
+                    <div class="approach-grid" id="approach-configs"></div>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Steering Setup</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="interaction-mode" class="form-label">Interaction History Mode</label>
+                            <select class="form-select" id="interaction-mode">
+                                <option value="cumulative" selected>Cumulative (adjustments stack)</option>
+                                <option value="reset">Reset each iteration (fresh start)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="num-recommendations" class="form-label">Recommendations per approach</label>
+                            <input type="number" class="form-control" id="num-recommendations" value="10" min="5" max="30">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="num-iterations" class="form-label">Max iterations</label>
+                            <input type="number" class="form-control" id="num-iterations" value="3" min="1" max="10">
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch mt-4">
+                        <input class="form-check-input" type="checkbox" id="show-general-features" checked>
+                        <label class="form-check-label" for="show-general-features">
+                            Show General features (cluster sliders)
+                        </label>
+                    </div>
+                    <div class="hint-box mt-3">
+                        Cumulative is the recommended default for the current flow. General features control broad semantic directions; manual slider neurons pin specific features before auto-selection fills the rest.
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="form-label">Manual slider neurons</label>
+                        <div class="form-text mb-2">Optional. Selected neurons are pinned first and the chosen algorithm fills the remaining slots.</div>
+                        <div class="selected-neurons-preview" id="selected-neurons-preview"></div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#neuronPickerModal">
+                            + Add/Edit Neurons
+                        </button>
+                        <div class="draft-note" id="neuron-picker-note">
+                            Draft behavior: the neuron picker currently follows the first approach that uses slider-style steering. Mixed-model manual neuron selection is still a design proposal.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Study Flow</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="study-intro-text" class="form-label">Intro Page Text (HTML)</label>
+                            <textarea class="form-control" id="study-intro-text" rows="5"
+                                placeholder="Optional custom intro HTML. Leave empty to use the default study parts screen."></textarea>
+                            <div class="form-text">Shown before preference elicitation. Leave empty to keep the default styled intro screen. Supports HTML tags.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="time-estimate" class="form-label">Time Estimate</label>
+                            <input type="text" class="form-control" id="time-estimate" value="10-15 minutes"
+                                placeholder="e.g. 10-15 minutes">
+                            <div class="hint-box mt-3">
+                                Participation details are skipped for this study template. Users go directly to the study intro and the session keeps the study GUID and Prolific identifiers.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Approach Questionnaires (HTML files)</label>
+                        <div class="form-text">Optional. These stack automatically based on the selected number of approaches and each one is shown after its specific approach.</div>
+                        <div class="questionnaire-stack" id="approach-questionnaire-stack"></div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="questionnaire-file" class="form-label">Final Questionnaire (HTML file)</label>
+                            <input type="file" class="form-control" id="questionnaire-file" accept=".html,.htm">
+                            <div class="form-text">Shown once after all approaches are complete.</div>
+                            <div id="questionnaire-preview" class="mt-2" style="display:none;">
+                                <span class="badge bg-success">Final questionnaire uploaded</span>
+                                <span id="questionnaire-filename" class="text-muted small ms-2"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-5">
+                <button type="submit" class="btn btn-primary btn-lg">{{ create }}</button>
+                <a href="{{ url_for('main.administration') }}" class="btn btn-secondary btn-lg">{{ cancel }}</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="modal fade" id="neuronPickerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Select Neurons for Slider Steering</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="text" class="form-control mb-3" id="neuron-search" placeholder="Search neurons by label...">
+                    <div class="mb-2 text-muted small"><span id="neuron-count">0</span> neurons selected</div>
+                    <div class="neuron-picker" id="neuron-picker-list">
+                        <div class="text-center text-muted py-4">Loading neurons...</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirm-neurons-btn">Confirm Selection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let availableNeurons = [];
+        let selectedNeuronIds = [];
+        let saeModels = [];
+        let steeringModes = [];
+        let featureSelectionAlgorithms = [];
+        let approaches = [];
+        let uploadedQuestionnaire = null;
+
+        function preferredTopKModelId() {
+            const topk = saeModels.find(model => model.id === 'www_TopKSAE_8192');
+            return topk ? topk.id : (saeModels[0]?.id || '');
+        }
+
+        function usesSliderSettings(mode) {
+            return ['sliders', 'toggles', 'both'].includes(mode);
+        }
+
+        function approachLabel(index) {
+            if (index < 26) {
+                return `Approach ${String.fromCharCode(65 + index)}`;
+            }
+            return `Approach ${index + 1}`;
+        }
+
+        function defaultSteeringMode(index) {
+            if (index === 0) return 'sliders';
+            if (index === 1) return 'text';
+            return 'none';
+        }
+
+        function createApproach(index) {
+            return {
+                id: `approach_${index + 1}`,
+                name: approachLabel(index),
+                base: 'elsa',
+                sae: preferredTopKModelId(),
+                steering_mode: defaultSteeringMode(index),
+                feature_selection_algorithm: 'personalized_grouped_topk',
+                phase_questionnaire_file: ''
+            };
+        }
+
+        function ensureApproachCount() {
+            const count = Math.max(1, Math.min(5, parseInt(document.getElementById('approach-count').value || '1', 10)));
+            while (approaches.length < count) {
+                approaches.push(createApproach(approaches.length));
+            }
+            if (approaches.length > count) {
+                approaches = approaches.slice(0, count);
+            }
+            approaches = approaches.map((approach, index) => ({
+                ...approach,
+                id: approach.id || `approach_${index + 1}`,
+                name: approach.name || approachLabel(index),
+                phase_questionnaire_file: approach.phase_questionnaire_file || ''
+            }));
+            updateComparisonModeVisibility();
+            renderApproachQuestionnaireStack();
+            renderApproachCards();
+        }
+
+        function updateComparisonModeVisibility() {
+            const count = approaches.length;
+            const select = document.getElementById('comparison-mode');
+            const sideBySideOption = select.querySelector('option[value="side_by_side"]');
+            const help = document.getElementById('comparison-mode-help');
+            sideBySideOption.disabled = count !== 2;
+            if (count !== 2 && select.value === 'side_by_side') {
+                select.value = 'sequential';
+            }
+            help.textContent = count === 2
+                ? 'Sequential or side-by-side are both available for exactly 2 approaches.'
+                : 'Only sequential is available for the current number of approaches.';
+        }
+
+        function getNeuronSourceApproachIndex() {
+            const idx = approaches.findIndex(approach => usesSliderSettings(approach.steering_mode));
+            return idx >= 0 ? idx : 0;
+        }
+
+        function updateNeuronPickerNote() {
+            const note = document.getElementById('neuron-picker-note');
+            if (!note || !approaches.length) return;
+            const index = getNeuronSourceApproachIndex();
+            const approach = approaches[index];
+            note.textContent = `Draft behavior: the neuron picker currently follows ${approach.name || approachLabel(index)} and its selected SAE model. Mixed-model manual neuron selection is still a design proposal.`;
+        }
+
+        function renderApproachCards() {
+            const container = document.getElementById('approach-configs');
+            container.innerHTML = approaches.map((approach, index) => `
+                <div class="approach-card">
+                    <h6><span class="approach-badge">${String.fromCharCode(65 + index)}</span>${approachLabel(index)}</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Displayed name</label>
+                        <input type="text" class="form-control" value="${approach.name}" onchange="updateApproachField(${index}, 'name', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base recommender</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'base', this.value)">
+                            ${['elsa'].map(option => `
+                                <option value="${option}" ${approach.base === option ? 'selected' : ''}>
+                                    ELSA
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">SAE model</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'sae', this.value)">
+                            ${saeModels.map(model => `
+                                <option value="${model.id}" ${approach.sae === model.id ? 'selected' : ''}>${model.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Steering mode</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'steering_mode', this.value)">
+                            ${steeringModes.map(mode => `
+                                <option value="${mode.id}" ${approach.steering_mode === mode.id ? 'selected' : ''}>${mode.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div ${usesSliderSettings(approach.steering_mode) ? '' : 'style="display:none;"'}>
+                        <label class="form-label">Slider selection algorithm</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'feature_selection_algorithm', this.value)">
+                            ${featureSelectionAlgorithms.map(algorithm => `
+                                <option value="${algorithm.id}" ${approach.feature_selection_algorithm === algorithm.id ? 'selected' : ''}>
+                                    ${algorithm.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                        <div class="form-text">Used when the approach exposes slider controls.</div>
+                    </div>
+                    <div class="draft-note" ${usesSliderSettings(approach.steering_mode) ? 'style="display:none;"' : ''}>
+                        TODO: mode-specific configuration should mirror the selected steering mode. For now, slider-selection algorithms are hidden when this approach uses text or no steering.
+                    </div>
+                </div>
+            `).join('');
+            updateNeuronPickerNote();
+        }
+
+        function updateApproachField(index, field, value) {
+            approaches[index][field] = value;
+            if (field === 'sae' || field === 'steering_mode') {
+                loadAvailableNeurons();
+                renderApproachCards();
+            }
+        }
+
+        function renderApproachQuestionnaireStack() {
+            const container = document.getElementById('approach-questionnaire-stack');
+            if (!container) return;
+            container.innerHTML = approaches.map((approach, index) => `
+                <div class="questionnaire-item">
+                    <div class="questionnaire-item-title">${approach.name || approachLabel(index)} questionnaire</div>
+                    <input type="file" class="form-control" id="approach-questionnaire-file-${index}" accept=".html,.htm">
+                    <div class="form-text">Optional. Shown after this specific approach finishes.</div>
+                    <div id="approach-questionnaire-preview-${index}" class="mt-2" style="${approach.phase_questionnaire_file ? 'display:block;' : 'display:none;'}">
+                        <span class="badge bg-info">Questionnaire uploaded</span>
+                        <span id="approach-questionnaire-filename-${index}" class="text-muted small ms-2">${approach.phase_questionnaire_file ? 'uploaded file ready' : ''}</span>
+                    </div>
+                </div>
+            `).join('');
+
+            approaches.forEach((approach, index) => {
+                const input = document.getElementById(`approach-questionnaire-file-${index}`);
+                if (!input) return;
+                input.addEventListener('change', async () => {
+                    try {
+                        await uploadQuestionnaire(
+                            `approach-questionnaire-file-${index}`,
+                            `approach-questionnaire-preview-${index}`,
+                            `approach-questionnaire-filename-${index}`,
+                            value => {
+                                approaches[index].phase_questionnaire_file = value;
+                            }
+                        );
+                    } catch (error) {
+                        console.error(error);
+                        alert(`Failed to upload questionnaire for ${approach.name || approachLabel(index)}`);
+                    }
+                });
+            });
+        }
+
+        async function uploadQuestionnaire(inputId, previewId, nameId, assignCallback) {
+            const file = document.getElementById(inputId).files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('plugin_name', 'sae_steering');
+            const resp = await fetch('/utils/upload', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: formData
+            });
+            const data = await resp.json();
+            assignCallback(data.upload_name);
+            document.getElementById(previewId).style.display = 'block';
+            document.getElementById(nameId).textContent = file.name;
+        }
+
+        async function loadOptions() {
+            try {
+                const [datasetsResp, saeResp, modesResp, algorithmResp] = await Promise.all([
+                    fetch('{{ url_for("sae_steering.available_datasets") }}'),
+                    fetch('{{ url_for("sae_steering.available_sae_models") }}'),
+                    fetch('{{ url_for("sae_steering.available_steering_modes") }}'),
+                    fetch('{{ url_for("sae_steering.available_feature_selection_algorithms") }}')
+                ]);
+
+                const datasets = await datasetsResp.json();
+                saeModels = await saeResp.json();
+                steeringModes = await modesResp.json();
+                featureSelectionAlgorithms = await algorithmResp.json();
+
+                const datasetSelect = document.getElementById('dataset-select');
+                datasetSelect.innerHTML = '';
+                datasets.forEach(ds => {
+                    const option = document.createElement('option');
+                    option.value = ds.id;
+                    option.textContent = ds.name;
+                    datasetSelect.appendChild(option);
+                });
+                if (datasets.length > 0) datasetSelect.value = datasets[0].id;
+
+                approaches = [createApproach(0), createApproach(1)];
+                ensureApproachCount();
+                await loadAvailableNeurons();
+            } catch (error) {
+                console.error('Error loading options:', error);
+                alert('Error loading configuration options');
+            }
+        }
+
+        async function loadAvailableNeurons() {
+            try {
+                const sourceIndex = getNeuronSourceApproachIndex();
+                const modelId = approaches[sourceIndex]?.sae || preferredTopKModelId();
+                const resp = await fetch(`{{ url_for("sae_steering.available_neurons") }}?model_id=${encodeURIComponent(modelId)}`);
+                availableNeurons = await resp.json();
+                renderNeuronPicker(document.getElementById('neuron-search').value || '');
+                updateSelectedNeuronsPreview();
+                updateNeuronPickerNote();
+            } catch (error) {
+                console.error('Error loading neurons:', error);
+                document.getElementById('neuron-picker-list').innerHTML = '<div class="text-danger">Error loading neurons</div>';
+            }
+        }
+
+        function renderNeuronPicker(filter = '') {
+            const container = document.getElementById('neuron-picker-list');
+            const query = filter.toLowerCase();
+            const filtered = availableNeurons.filter(neuron =>
+                neuron.label.toLowerCase().includes(query) ||
+                (neuron.category || '').toLowerCase().includes(query)
+            );
+
+            if (!filtered.length) {
+                container.innerHTML = '<div class="text-muted text-center py-3">No neurons found</div>';
+                document.getElementById('neuron-count').textContent = selectedNeuronIds.length;
+                return;
+            }
+
+            container.innerHTML = filtered.map(neuron => `
+                <div class="neuron-item ${selectedNeuronIds.includes(neuron.id) ? 'selected' : ''}" onclick="toggleNeuron(${neuron.id})">
+                    <input type="checkbox" ${selectedNeuronIds.includes(neuron.id) ? 'checked' : ''} onclick="event.stopPropagation(); toggleNeuron(${neuron.id})">
+                    <div class="neuron-info">
+                        <div class="neuron-label">${neuron.label}</div>
+                        <div class="neuron-category">${neuron.category || 'latent'} · ID: ${neuron.id}</div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('neuron-count').textContent = selectedNeuronIds.length;
+        }
+
+        function toggleNeuron(neuronId) {
+            const idx = selectedNeuronIds.indexOf(neuronId);
+            if (idx > -1) {
+                selectedNeuronIds.splice(idx, 1);
+            } else {
+                selectedNeuronIds.push(neuronId);
+            }
+            renderNeuronPicker(document.getElementById('neuron-search').value || '');
+        }
+
+        function removeNeuron(neuronId) {
+            selectedNeuronIds = selectedNeuronIds.filter(id => id !== neuronId);
+            updateSelectedNeuronsPreview();
+            renderNeuronPicker(document.getElementById('neuron-search').value || '');
+        }
+
+        function updateSelectedNeuronsPreview() {
+            const container = document.getElementById('selected-neurons-preview');
+            const selected = availableNeurons.filter(neuron => selectedNeuronIds.includes(neuron.id));
+            if (!selected.length) {
+                container.innerHTML = '<span class="text-muted small">No neurons selected</span>';
+                return;
+            }
+            container.innerHTML = selected.map(neuron => `
+                <span class="selected-neuron-tag">
+                    ${neuron.label}
+                    <span class="remove-btn" onclick="removeNeuron(${neuron.id})">×</span>
+                </span>
+            `).join('');
+        }
+
+        document.getElementById('approach-count').addEventListener('input', ensureApproachCount);
+        document.getElementById('neuron-search').addEventListener('input', event => {
+            renderNeuronPicker(event.target.value);
+        });
+        document.getElementById('confirm-neurons-btn').addEventListener('click', () => {
+            updateSelectedNeuronsPreview();
+            bootstrap.Modal.getInstance(document.getElementById('neuronPickerModal')).hide();
+        });
+
+        document.getElementById('questionnaire-file').addEventListener('change', async () => {
+            try {
+                await uploadQuestionnaire('questionnaire-file', 'questionnaire-preview', 'questionnaire-filename', value => {
+                    uploadedQuestionnaire = value;
+                });
+            } catch (error) {
+                console.error(error);
+                alert('Failed to upload final questionnaire file');
+            }
+        });
+
+        document.getElementById('create-study-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const approachCount = approaches.length;
+            const comparisonMode = approachCount === 1
+                ? 'none'
+                : (approachCount === 2 ? document.getElementById('comparison-mode').value : 'sequential');
+            const studyIntroText = document.getElementById('study-intro-text').value.trim();
+            const timeEstimate = document.getElementById('time-estimate').value.trim();
+
+            const models = approaches.map((approach, index) => ({
+                id: approach.id,
+                name: approach.name || approachLabel(index),
+                base: approach.base,
+                sae: approach.sae || preferredTopKModelId(),
+                steering_mode: approach.steering_mode,
+                feature_selection_algorithm: approach.feature_selection_algorithm,
+                phase_questionnaire_file: approach.phase_questionnaire_file || undefined
+            }));
+
+            const configData = {
+                dataset: document.getElementById('dataset-select').value,
+                enable_comparison: approachCount > 1,
+                comparison_mode: comparisonMode,
+                approach_count: approachCount,
+                models,
+                steering_mode: models[0]?.steering_mode || 'sliders',
+                feature_selection_algorithm: models[0]?.feature_selection_algorithm || 'personalized_grouped_topk',
+                interaction_mode: document.getElementById('interaction-mode').value,
+                num_recommendations: parseInt(document.getElementById('num-recommendations').value, 10),
+                num_iterations: parseInt(document.getElementById('num-iterations').value, 10),
+                selected_neurons: selectedNeuronIds,
+                show_general_features: document.getElementById('show-general-features').checked,
+                skip_participation_details: true,
+                disable_demographics: true,
+                time_estimate: timeEstimate || '10-15 minutes'
+            };
+
+            if (studyIntroText) {
+                configData.text_overrides = { study_intro: studyIntroText };
+            }
+            if (uploadedQuestionnaire) {
+                configData.questionnaire_file = uploadedQuestionnaire;
+            }
+
+            try {
+                const response = await fetch('/create-user-study', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        parent_plugin: 'sae_steering',
+                        config: configData
+                    }),
+                    redirect: 'follow'
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+
+                const text = await response.text();
+                if (response.ok) {
+                    window.location.href = '{{ url_for("main.administration") }}';
+                } else {
+                    alert('Error creating study: ' + text);
+                }
+            } catch (error) {
+                console.error('Error creating study:', error);
+                alert('Error creating study. Please try again.');
+            }
+        });
+
+        loadOptions();
+    </script>
+</body>
+</html>

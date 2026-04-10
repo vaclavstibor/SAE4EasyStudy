@@ -10,3 +10,35 @@ server/instance/
 *.sqlite
 img
 cache
+
+# Models 
+*.pt
+*ckpt
+*.sha256
+
+# Environments
+server/.venv39_tmp/
+server/.venv39/
+server/.venv/
+
+# Proposal and specification
+texs/
+
+# Research
+research/
+
+# Notes from meetings
+notes/
+
+# Root files
+.secrets.toml
+PROJECT_SUMMARY.txt
+QUICKSTART.txt
+README_with_architecture.md
+RESEARCH_CONTRIBUTION.md
+run.md
+sae_steering_architecture.txt
+SHOWCASE_WALKTHROUGH.md
+todo.md
+TRAINING_PIPELINE.md
+tutorial.txt

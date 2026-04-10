@@ -1,0 +1,463 @@
+<!--
+  SAE Steering Study — Final Questionnaire (post-study)
+  ======================================================
+  Shown ONCE at the very end, after all phases are complete.
+  This is the comprehensive questionnaire covering:
+
+  ┌────────────────────────────────────────────────────────────────────┐
+  │  Sec 1  Approach Comparison        (Preference, Quality, Control) │
+  │  Sec 2  Trust & Confidence         (Trust, Confidence, Scrutiny)  │
+  │  Sec 3  Intention to Use           (Adoption, Recommendation)     │
+  │  Sec 4  Steering Strategy          (How users approached the task)│
+  │  Sec 5  Feature Interpretability   (Deep dive into SAE labels)    │
+  │  Sec 6  About You                  (Demographics, RS experience)  │
+  │  Sec 7  Open Feedback              (Strengths, weaknesses, ideas) │
+  └────────────────────────────────────────────────────────────────────┘
+
+  Theoretical grounding:
+  - ResQue (Pu et al., 2011): Satisfaction, Trust, Intention to Use
+  - Knijnenburg et al. (2012): User Experience framework for RS
+  - Tintarev & Masthoff (2007/2015): Explanation goals (Transparency,
+    Scrutability, Trust, Effectiveness, Persuasiveness, Efficiency)
+  - Shin (2020): Algorithmic transparency & trust
+  - SeqSAE / RecSAE / PopSteer: SAE-specific steering evaluation
+
+  All Likert items use 7-point scale for within-subjects sensitivity.
+  Bootstrap 4 + CSS-injection trick.
+-->
+
+<div class="q-wrap">
+
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+     style="display:none"
+     onload="
+(function(){
+  if(document.getElementById('fq-injected-css')) return;
+  var s=document.createElement('style');
+  s.id='fq-injected-css';
+  s.textContent=`
+  .q-wrap{max-width:720px;margin:0 auto 32px;text-align:left}
+  .q-wrap .form-group{margin-bottom:1.3rem}
+  .q-wrap .likert-row{display:flex;flex-wrap:nowrap;gap:0;border:1px solid #dee2e6;border-radius:.25rem;overflow:hidden;background:#f8f9fa}
+  .q-wrap .likert-row label{flex:1 1 0;text-align:center;padding:10px 4px;cursor:pointer;font-size:.85em;font-weight:500;color:#495057;border-right:1px solid #dee2e6;user-select:none;margin:0;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+  .q-wrap .likert-row label:last-child{border-right:none}
+  .q-wrap .likert-row label:hover{background:#e2e6ea;color:#212529}
+  .q-wrap .likert-row input[type=radio]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .q-wrap .likert-row input[type=radio]:checked+span{font-weight:700;color:#007bff}
+  .q-wrap .likert-row label.lk-sel{background:#cce5ff;color:#004085}
+  .q-wrap .likert-anchors{display:flex;justify-content:space-between;font-size:.72em;color:#6c757d;margin-top:4px;padding:0 2px}
+  .q-wrap .custom-select{max-width:440px}
+  .q-wrap .q-hint{font-size:.78em;color:#6c757d;margin-top:-0.3rem;margin-bottom:0.5rem}
+  .q-wrap .q-section-note{font-size:.8em;color:#6c757d;margin-bottom:0.8rem;font-style:italic}
+  `;
+  document.head.appendChild(s);
+  document.addEventListener('change',function(e){
+    if(e.target.type==='radio'&&e.target.closest('.likert-row')){
+      var ls=e.target.closest('.likert-row').querySelectorAll('label');
+      for(var i=0;i<ls.length;i++) ls[i].classList.remove('lk-sel');
+      e.target.closest('label').classList.add('lk-sel');
+    }
+  });
+})();
+">
+
+<!-- Header -->
+<div class="text-center mb-4">
+  <h4 class="font-weight-bold">Final Questionnaire</h4>
+  <p class="text-muted small">Now that you have tried both approaches, please answer the following questions.<br>
+  There are no right or wrong answers — we value your honest experience.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1 — Approach Comparison (within-subjects A vs B)       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Approach Comparison</div>
+  <div class="card-body">
+    <p class="q-section-note">Think back to Approach A (first) and Approach B (second).</p>
+
+    <!-- F1: Overall preference -->
+    <div class="form-group">
+      <label class="font-weight-bold">F1. Which approach did you prefer overall?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f1_preference" value="A_strongly" required><span>Strongly prefer A</span></label>
+        <label><input type="radio" name="f1_preference" value="A_slightly"><span>Slightly prefer A</span></label>
+        <label><input type="radio" name="f1_preference" value="no_preference"><span>No preference</span></label>
+        <label><input type="radio" name="f1_preference" value="B_slightly"><span>Slightly prefer B</span></label>
+        <label><input type="radio" name="f1_preference" value="B_strongly"><span>Strongly prefer B</span></label>
+      </div>
+    </div>
+
+    <!-- F2: Better recommendations -->
+    <div class="form-group">
+      <label class="font-weight-bold">F2. Which approach gave you better movie recommendations?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f2_better_recs" value="A_clearly" required><span>A — clearly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="A_slightly"><span>A — slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f2_better_recs" value="B_slightly"><span>B — slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="B_clearly"><span>B — clearly</span></label>
+      </div>
+    </div>
+
+    <!-- F3: More control -->
+    <div class="form-group">
+      <label class="font-weight-bold">F3. Which approach gave you more control over the recommendations?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f3_more_control" value="A_clearly" required><span>A — clearly</span></label>
+        <label><input type="radio" name="f3_more_control" value="A_slightly"><span>A — slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f3_more_control" value="B_slightly"><span>B — slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="B_clearly"><span>B — clearly</span></label>
+      </div>
+    </div>
+
+    <!-- F4: More responsive -->
+    <div class="form-group">
+      <label class="font-weight-bold">F4. Which approach felt more responsive to your adjustments?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f4_more_responsive" value="A_clearly" required><span>A — clearly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="A_slightly"><span>A — slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="B_slightly"><span>B — slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="B_clearly"><span>B — clearly</span></label>
+      </div>
+    </div>
+
+    <!-- F5: Better labels -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F5. Which approach had more understandable feature labels?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f5_better_labels" value="A_clearly" required><span>A — clearly</span></label>
+        <label><input type="radio" name="f5_better_labels" value="A_slightly"><span>A — slightly</span></label>
+        <label><input type="radio" name="f5_better_labels" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f5_better_labels" value="B_slightly"><span>B — slightly</span></label>
+        <label><input type="radio" name="f5_better_labels" value="B_clearly"><span>B — clearly</span></label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2 — Trust & Confidence (ResQue; Shin 2020)             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Trust &amp; Confidence</div>
+  <div class="card-body">
+    <p class="q-section-note">Think about the overall study experience (both approaches combined).</p>
+
+    <!-- F6: Trust (ResQue Q14) -->
+    <div class="form-group">
+      <label class="font-weight-bold">F6. I trust this type of system to recommend movies I would enjoy.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f6_trust" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f6_trust" value="2"><span>2</span></label>
+        <label><input type="radio" name="f6_trust" value="3"><span>3</span></label>
+        <label><input type="radio" name="f6_trust" value="4"><span>4</span></label>
+        <label><input type="radio" name="f6_trust" value="5"><span>5</span></label>
+        <label><input type="radio" name="f6_trust" value="6"><span>6</span></label>
+        <label><input type="radio" name="f6_trust" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F7: Confidence in choices (ResQue Q15) -->
+    <div class="form-group">
+      <label class="font-weight-bold">F7. The system made me more confident about my movie choices.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f7_confidence" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f7_confidence" value="2"><span>2</span></label>
+        <label><input type="radio" name="f7_confidence" value="3"><span>3</span></label>
+        <label><input type="radio" name="f7_confidence" value="4"><span>4</span></label>
+        <label><input type="radio" name="f7_confidence" value="5"><span>5</span></label>
+        <label><input type="radio" name="f7_confidence" value="6"><span>6</span></label>
+        <label><input type="radio" name="f7_confidence" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F8: Scrutability (Tintarev & Masthoff: can user correct the system?) -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F8. When the recommendations were not right, I could effectively correct them using the steering controls.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f8_scrutability" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f8_scrutability" value="2"><span>2</span></label>
+        <label><input type="radio" name="f8_scrutability" value="3"><span>3</span></label>
+        <label><input type="radio" name="f8_scrutability" value="4"><span>4</span></label>
+        <label><input type="radio" name="f8_scrutability" value="5"><span>5</span></label>
+        <label><input type="radio" name="f8_scrutability" value="6"><span>6</span></label>
+        <label><input type="radio" name="f8_scrutability" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3 — Intention to Use (ResQue; TAM — Davis 1989)        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Intention to Use</div>
+  <div class="card-body">
+
+    <!-- F9: Reuse (ResQue Q16) -->
+    <div class="form-group">
+      <label class="font-weight-bold">F9. I would use a system like this again to discover movies.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f9_reuse" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f9_reuse" value="2"><span>2</span></label>
+        <label><input type="radio" name="f9_reuse" value="3"><span>3</span></label>
+        <label><input type="radio" name="f9_reuse" value="4"><span>4</span></label>
+        <label><input type="radio" name="f9_reuse" value="5"><span>5</span></label>
+        <label><input type="radio" name="f9_reuse" value="6"><span>6</span></label>
+        <label><input type="radio" name="f9_reuse" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F10: Recommend to others -->
+    <div class="form-group">
+      <label class="font-weight-bold">F10. I would recommend this system to a friend who is looking for movies.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f10_recommend" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f10_recommend" value="2"><span>2</span></label>
+        <label><input type="radio" name="f10_recommend" value="3"><span>3</span></label>
+        <label><input type="radio" name="f10_recommend" value="4"><span>4</span></label>
+        <label><input type="radio" name="f10_recommend" value="5"><span>5</span></label>
+        <label><input type="radio" name="f10_recommend" value="6"><span>6</span></label>
+        <label><input type="radio" name="f10_recommend" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F11: Preference over traditional (Netflix-style) -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F11. I would prefer this steering approach over traditional genre-based filtering (e.g., Netflix categories).</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f11_vs_traditional" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="2"><span>2</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="3"><span>3</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="4"><span>4</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="5"><span>5</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="6"><span>6</span></label>
+        <label><input type="radio" name="f11_vs_traditional" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4 — Steering Strategy (qualitative + quantitative)     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Your Steering Strategy</div>
+  <div class="card-body">
+    <p class="q-section-note">We are interested in how you approached the steering task.</p>
+
+    <!-- F12: Strategy used -->
+    <div class="form-group">
+      <label class="font-weight-bold" for="f12_strategy">F12. How did you primarily decide which sliders to adjust?</label>
+      <select class="custom-select" name="f12_strategy" id="f12_strategy" required>
+        <option value="">— Select —</option>
+        <option value="label_meaning">Based on what the feature label described</option>
+        <option value="trial_error">Trial and error — adjusted and observed</option>
+        <option value="movie_examples">Based on the example movies shown for each feature</option>
+        <option value="description_text">Based on the feature description text</option>
+        <option value="combination">A combination of the above</option>
+        <option value="random">I adjusted somewhat randomly</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+    <!-- F13: How many features actually used -->
+    <div class="form-group">
+      <label class="font-weight-bold" for="f13_features_used">F13. Roughly how many features did you actively adjust per iteration?</label>
+      <select class="custom-select" name="f13_features_used" id="f13_features_used" required>
+        <option value="">— Select —</option>
+        <option value="0">None — I mostly just browsed</option>
+        <option value="1-2">1–2 features</option>
+        <option value="3-5">3–5 features</option>
+        <option value="6-10">6–10 features</option>
+        <option value="10+">More than 10</option>
+      </select>
+    </div>
+
+    <!-- F14: Boost vs suppress -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F14. Did you tend to boost (increase) features, suppress (decrease) them, or both equally?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f14_boost_suppress" value="mostly_boost" required><span>Mostly boost</span></label>
+        <label><input type="radio" name="f14_boost_suppress" value="both_equally"><span>Both equally</span></label>
+        <label><input type="radio" name="f14_boost_suppress" value="mostly_suppress"><span>Mostly suppress</span></label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5 — Feature Interpretability Deep-dive (RQ2; RecSAE)   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Feature Interpretability</div>
+  <div class="card-body">
+    <p class="q-section-note">The sliders represented "latent features" discovered by the AI model.</p>
+
+    <!-- F15: Feature granularity -->
+    <div class="form-group">
+      <label class="font-weight-bold">F15. The features were at the right level of detail — not too broad, not too narrow.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f15_granularity" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f15_granularity" value="2"><span>2</span></label>
+        <label><input type="radio" name="f15_granularity" value="3"><span>3</span></label>
+        <label><input type="radio" name="f15_granularity" value="4"><span>4</span></label>
+        <label><input type="radio" name="f15_granularity" value="5"><span>5</span></label>
+        <label><input type="radio" name="f15_granularity" value="6"><span>6</span></label>
+        <label><input type="radio" name="f15_granularity" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F16: Feature overlap -->
+    <div class="form-group">
+      <label class="font-weight-bold">F16. Some features felt redundant or too similar to each other.</label>
+      <p class="q-hint"><em>Higher = more overlap perceived — reverse-coded item.</em></p>
+      <div class="likert-row">
+        <label><input type="radio" name="f16_overlap" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f16_overlap" value="2"><span>2</span></label>
+        <label><input type="radio" name="f16_overlap" value="3"><span>3</span></label>
+        <label><input type="radio" name="f16_overlap" value="4"><span>4</span></label>
+        <label><input type="radio" name="f16_overlap" value="5"><span>5</span></label>
+        <label><input type="radio" name="f16_overlap" value="6"><span>6</span></label>
+        <label><input type="radio" name="f16_overlap" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <!-- F17: Concept type preference -->
+    <div class="form-group">
+      <label class="font-weight-bold" for="f17_concept_type">F17. Which type of features were most useful for steering?</label>
+      <select class="custom-select" name="f17_concept_type" id="f17_concept_type" required>
+        <option value="">— Select —</option>
+        <option value="genre_like">Genre-like features (e.g., "Action Thrillers")</option>
+        <option value="mood_tone">Mood/tone features (e.g., "Dark Emotional Journeys")</option>
+        <option value="era_style">Era/style features (e.g., "90s Family Comedies")</option>
+        <option value="all_equally">All types were equally useful</option>
+        <option value="none_useful">None were particularly useful</option>
+        <option value="unsure">Hard to say</option>
+      </select>
+    </div>
+
+    <!-- F18: Missing concepts -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold" for="f18_missing">F18. Were there movie aspects you wanted to steer but couldn't find a feature for?</label>
+      <textarea class="form-control" name="f18_missing" id="f18_missing" rows="2" placeholder="e.g., 'I wanted a slider for movie length' or 'I wanted to filter by director' (optional)"></textarea>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6 — About You (Demographics & RS experience)           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">About You <small class="text-muted font-weight-normal">(optional but helpful for analysis)</small></div>
+  <div class="card-body">
+
+    <!-- F19: Movie familiarity -->
+    <div class="form-group">
+      <label class="font-weight-bold">F19. How familiar are you with movies in general?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f19_movie_familiarity" value="1"><span>1</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="2"><span>2</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="3"><span>3</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="4"><span>4</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="5"><span>5</span></label>
+      </div>
+      <div class="likert-anchors"><span>Rarely watch movies</span><span>Movie enthusiast</span></div>
+    </div>
+
+    <!-- F20: RS usage frequency -->
+    <div class="form-group">
+      <label class="font-weight-bold" for="f20_rs_frequency">F20. How often do you use recommendation services (Netflix, Spotify, YouTube, etc.)?</label>
+      <select class="custom-select" name="f20_rs_frequency" id="f20_rs_frequency">
+        <option value="">— Select —</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">A few times per week</option>
+        <option value="monthly">A few times per month</option>
+        <option value="rarely">Rarely</option>
+        <option value="never">Never</option>
+      </select>
+    </div>
+
+    <!-- F21: AI/ML familiarity -->
+    <div class="form-group">
+      <label class="font-weight-bold">F21. How familiar are you with AI / machine-learning concepts?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f21_ml_familiarity" value="1"><span>1</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="2"><span>2</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="3"><span>3</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="4"><span>4</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="5"><span>5</span></label>
+      </div>
+      <div class="likert-anchors"><span>Not at all familiar</span><span>Expert</span></div>
+    </div>
+
+    <!-- F22: Age group -->
+    <div class="form-group">
+      <label class="font-weight-bold" for="f22_age">F22. Age group:</label>
+      <select class="custom-select" name="f22_age" id="f22_age">
+        <option value="">— Prefer not to say —</option>
+        <option value="18-24">18–24</option>
+        <option value="25-34">25–34</option>
+        <option value="35-44">35–44</option>
+        <option value="45-54">45–54</option>
+        <option value="55+">55+</option>
+      </select>
+    </div>
+
+    <!-- F23: Gender -->
+    <div class="form-group mb-0">
+      <label class="font-weight-bold" for="f23_gender">F23. Gender:</label>
+      <select class="custom-select" name="f23_gender" id="f23_gender">
+        <option value="">— Prefer not to say —</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="non_binary">Non-binary</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SECTION 7 — Open Feedback                                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div class="card mb-4">
+  <div class="card-header font-weight-bold text-primary">Open Feedback</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold" for="f24_liked_most">F24. What did you like most about the steering experience?</label>
+      <textarea class="form-control" name="f24_liked_most" id="f24_liked_most" rows="3" placeholder="Your answer…"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold" for="f25_improvement">F25. What would you improve or change?</label>
+      <textarea class="form-control" name="f25_improvement" id="f25_improvement" rows="3" placeholder="Your answer…"></textarea>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold" for="f26_other">F26. Any other comments?</label>
+      <textarea class="form-control" name="f26_other" id="f26_other" rows="3" placeholder="(optional)"></textarea>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /.q-wrap -->

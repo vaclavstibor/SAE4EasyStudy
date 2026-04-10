@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .intro-container {
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .intro-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+        }
+        .intro-header {
+            background: #007bff;
+            color: white;
+            padding: 36px 36px 28px;
+            text-align: center;
+        }
+        .intro-header h1 {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .intro-header p {
+            opacity: 0.9;
+            font-size: 1.05em;
+            margin: 0;
+        }
+        .intro-body {
+            padding: 32px 36px;
+        }
+        .intro-body h3 {
+            font-size: 1.15em;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        .intro-body p, .intro-body li {
+            color: #555;
+            line-height: 1.7;
+            font-size: 0.95em;
+        }
+        .intro-body ul {
+            padding-left: 20px;
+        }
+        .intro-body ul li {
+            margin-bottom: 6px;
+        }
+        .step-list {
+            list-style: none;
+            padding: 0;
+            counter-reset: steps;
+        }
+        .step-list li {
+            counter-increment: steps;
+            padding: 12px 16px 12px 52px;
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border: 1px solid #dee2e6;
+        }
+        .step-list li::before {
+            content: counter(steps);
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 28px;
+            height: 28px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85em;
+        }
+        .intro-footer {
+            padding: 24px 36px 32px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+        }
+        .parts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .part-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 14px 16px;
+        }
+        .part-card h4 {
+            font-size: 0.95em;
+            margin-bottom: 8px;
+            color: #0d6efd;
+        }
+        .state-summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .state-chip {
+            background: #eef5ff;
+            color: #0d6efd;
+            border-radius: 999px;
+            padding: 6px 14px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .btn-start {
+            background: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+            padding: 0 28px;
+            min-height: 42px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            text-decoration: none;
+        }
+        .btn-start:hover {
+            background: #0069d9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.35);
+            color: white;
+        }
+        .time-estimate {
+            display: inline-block;
+            background: #e7f1ff;
+            color: #007bff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="intro-container">
+        <div class="intro-card">
+            <div class="intro-header">
+                <h1>{{ title }}</h1>
+                <p>{{ subtitle|default('Interactive Recommendation Study') }}</p>
+            </div>
+
+            <div class="intro-body">
+                {% if custom_intro_html %}
+                    {{ custom_intro_html|safe }}
+                {% else %}
+                    {% if time_estimate %}
+                    <div class="text-center">
+                        <span class="time-estimate">Estimated time: {{ time_estimate }}</span>
+                    </div>
+                    {% endif %}
+
+                    <h3>What is this study about?</h3>
+                    <p>
+                        In this study, you will interact with a movie recommendation system.
+                        You will be able to <strong>steer</strong> the recommendations by adjusting
+                        interpretable features that represent movie characteristics.
+                    </p>
+
+                    <h3>Study Parts</h3>
+                    <div class="parts-grid">
+                        {% for part in study_parts %}
+                        <div class="part-card">
+                            <h4>{{ part.title }}</h4>
+                            <p>{{ part.description }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="state-summary">
+                        <span class="state-chip">{{ num_phases }} approach{% if num_phases != 1 %}es{% endif %}</span>
+                        <span class="state-chip">{{ num_iterations }} iteration{% if num_iterations != 1 %}s{% endif %} per approach</span>
+                        {% if has_questionnaire %}
+                        <span class="state-chip">Questionnaire included</span>
+                        {% endif %}
+                    </div>
+
+                    <h3>What will you do?</h3>
+                    <ol class="step-list">
+                        <li>
+                            <strong>Select movies you like</strong> so the system knows your baseline preferences.
+                        </li>
+                        {% if num_phases > 1 %}
+                        <li>
+                            <strong>Steer recommendations with Approach A</strong> &mdash;
+                            adjust features over {{ num_iterations }} rounds using {{ steering_label_a|default('the first method') }}.
+                        </li>
+                        <li>
+                            <strong>Steer recommendations with Approach B</strong> &mdash;
+                            adjust features over {{ num_iterations }} rounds using {{ steering_label_b|default('the second method') }}.
+                        </li>
+                        {% else %}
+                        <li>
+                            <strong>Steer recommendations</strong> &mdash;
+                            adjust features over {{ num_iterations }} rounds to refine your results.
+                        </li>
+                        {% endif %}
+                        {% if has_questionnaire %}
+                        <li>
+                            <strong>Fill out a short questionnaire</strong> about your experience.
+                        </li>
+                        {% endif %}
+                    </ol>
+
+                    {% if notes %}
+                    <h3>Good to know</h3>
+                    <ul>
+                        {% for note in notes %}
+                        <li>{{ note }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="intro-footer">
+                <a href="{{ continuation_url }}" class="btn btn-start">
+                    {{ start_button_text|default("Let's Start") }}
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

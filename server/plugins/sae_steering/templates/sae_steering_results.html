@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAE Steering Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --text-primary: #1a1a1a;
+            --text-secondary: #5c5c5c;
+            --text-muted: #8a8a8a;
+            --border-color: #e5e5e5;
+            --bg-subtle: #fafafa;
+            --accent-positive: #2d7d46;
+            --accent-negative: #c23c3c;
+            --accent-neutral: #4a6fa5;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #fff;
+            color: var(--text-primary);
+            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+        
+        /* Header */
+        .page-header {
+            margin-bottom: 48px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            margin: 0 0 8px 0;
+            color: var(--text-primary);
+        }
+        
+        .page-header .subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        
+        .page-header .guid {
+            font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+            background: var(--bg-subtle);
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-left: 12px;
+        }
+        
+        .header-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: #fff;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:hover {
+            background: var(--bg-subtle);
+            border-color: #ccc;
+        }
+        
+        .btn-primary {
+            background: var(--text-primary);
+            color: #fff;
+            border-color: var(--text-primary);
+        }
+        
+        .btn-primary:hover {
+            background: #333;
+        }
+        
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            background: var(--border-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 48px;
+        }
+        
+        .stat-item {
+            background: #fff;
+            padding: 24px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.2;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        
+        /* Sections */
+        .section {
+            margin-bottom: 48px;
+        }
+        
+        .section-header {
+            margin-bottom: 24px;
+        }
+        
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 4px 0;
+        }
+        
+        .section-header p {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        
+        /* Chart Grid */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+        
+        .chart-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            background: #fff;
+        }
+        
+        .chart-card.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .chart-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        
+        .chart-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 280px;
+        }
+        
+        .chart-container.tall {
+            height: 360px;
+        }
+        
+        .chart-container.short {
+            height: 200px;
+        }
+        
+        /* Data Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .data-table th {
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-muted);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-subtle);
+        }
+        
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background: var(--bg-subtle);
+        }
+        
+        .mono {
+            font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+            font-size: 12px;
+        }
+        
+        .value-positive {
+            color: var(--accent-positive);
+        }
+        
+        .value-negative {
+            color: var(--accent-negative);
+        }
+        
+        /* Mini bar visualization */
+        .mini-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .mini-bar-track {
+            width: 80px;
+            height: 4px;
+            background: #eee;
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mini-bar-center {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #ccc;
+        }
+        
+        .mini-bar-fill {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            border-radius: 2px;
+        }
+        
+        .mini-bar-fill.positive {
+            left: 50%;
+            background: var(--accent-positive);
+        }
+        
+        .mini-bar-fill.negative {
+            right: 50%;
+            background: var(--accent-negative);
+        }
+        
+        /* Demographics */
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+        
+        .demo-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .demo-title {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+        
+        .demo-chart {
+            height: 160px;
+            position: relative;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 48px;
+            color: var(--text-muted);
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px;
+            color: var(--text-muted);
+        }
+        
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--text-primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 12px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .chart-grid { grid-template-columns: 1fr; }
+            .demo-grid { grid-template-columns: repeat(2, 1fr); }
+            .stats-row { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        @media (max-width: 576px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .demo-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>
+                Study Results
+                <span class="guid">{{ guid }}</span>
+            </h1>
+            <p class="subtitle">Aggregate analysis of participant steering behavior</p>
+            <div class="header-actions">
+                <a href="{{ url_for('main.administration') }}" class="btn">Back to Administration</a>
+                <button id="export-btn" class="btn btn-primary">Export Data (JSON)</button>
+            </div>
+        </div>
+        
+        <!-- Stats Row -->
+        <div class="stats-row" id="stats-row">
+            <div class="stat-item">
+                <div class="stat-value" id="stat-n">—</div>
+                <div class="stat-label">Participants (n)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-completed">—</div>
+                <div class="stat-label">Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-iterations">—</div>
+                <div class="stat-label">Mean Iterations</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-duration">—</div>
+                <div class="stat-label">Mean Duration</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="stat-features">—</div>
+                <div class="stat-label">Features Adjusted</div>
+            </div>
+        </div>
+        
+        <!-- Feature Adjustments Analysis -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Feature Adjustment Distribution</h2>
+                <p>Mean adjustment values across all participants, sorted by absolute magnitude</p>
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-card full-width">
+                    <div class="chart-title">Mean Feature Adjustments</div>
+                    <div class="chart-subtitle">Positive values indicate boosting, negative indicate suppression</div>
+                    <div class="chart-container tall">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">Adjustment Frequency</div>
+                    <div class="chart-subtitle">Number of times each feature was adjusted (non-zero values)</div>
+                    <div class="chart-container">
+                        <canvas id="frequencyChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">Adjustment Intensity Over Iterations</div>
+                    <div class="chart-subtitle">Mean absolute adjustment value per iteration</div>
+                    <div class="chart-container">
+                        <canvas id="iterationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Steering Patterns -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Steering Patterns</h2>
+                <p>Analysis of boosting vs suppression behavior</p>
+            </div>
+            
+            <div class="chart-grid">
+                <div class="chart-card">
+                    <div class="chart-title">Boost vs Suppress Ratio</div>
+                    <div class="chart-subtitle">Distribution of adjustment directions</div>
+                    <div class="chart-container short">
+                        <canvas id="ratioChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <div class="chart-title">Adjustment Value Distribution</div>
+                    <div class="chart-subtitle">Histogram of all adjustment values</div>
+                    <div class="chart-container short">
+                        <canvas id="histogramChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Demographics -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Participant Demographics</h2>
+                <p>Distribution of participant characteristics</p>
+            </div>
+            
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <div class="demo-title">Age Group</div>
+                    <div class="demo-chart">
+                        <canvas id="ageChart"></canvas>
+                    </div>
+                </div>
+                <div class="demo-card">
+                    <div class="demo-title">Gender</div>
+                    <div class="demo-chart">
+                        <canvas id="genderChart"></canvas>
+                    </div>
+                </div>
+                <div class="demo-card">
+                    <div class="demo-title">Education</div>
+                    <div class="demo-chart">
+                        <canvas id="educationChart"></canvas>
+                    </div>
+                </div>
+                <div class="demo-card">
+                    <div class="demo-title">ML Familiarity</div>
+                    <div class="demo-chart">
+                        <canvas id="mlChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Feature Table -->
+        <div class="section">
+            <div class="section-header">
+                <h2>Feature Statistics</h2>
+                <p>Detailed breakdown of all adjusted features</p>
+            </div>
+            
+            <div class="chart-card">
+                <div id="features-table-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Loading data...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let resultsData = null;
+        
+        // Chart.js configuration
+        Chart.defaults.font.family = "'IBM Plex Sans', -apple-system, sans-serif";
+        Chart.defaults.font.size = 11;
+        Chart.defaults.color = '#8a8a8a';
+        Chart.defaults.plugins.legend.display = false;
+        
+        const chartColors = {
+            positive: '#2d7d46',
+            negative: '#c23c3c',
+            neutral: '#4a6fa5',
+            grid: '#f0f0f0',
+            border: '#e5e5e5'
+        };
+        
+        async function loadResults() {
+            try {
+                const response = await fetch('{{ fetch_results_url }}');
+                const data = await response.json();
+                resultsData = data;
+                
+                renderStats(data);
+                renderCharts(data);
+                renderDemographics(data);
+                renderFeaturesTable(data);
+                
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        function renderStats(data) {
+            const participants = data.participants || [];
+            const stats = data.aggregate_stats || {};
+            
+            document.getElementById('stat-n').textContent = data.total_participants || 0;
+            document.getElementById('stat-completed').textContent = participants.length;
+            
+            if (participants.length > 0) {
+                const avgIter = participants.reduce((sum, p) => sum + (p.total_iterations || 0), 0) / participants.length;
+                document.getElementById('stat-iterations').textContent = avgIter.toFixed(1);
+            }
+            
+            const durations = participants
+                .filter(p => p.time_joined && p.time_finished)
+                .map(p => new Date(p.time_finished) - new Date(p.time_joined));
+            
+            if (durations.length > 0) {
+                const avgMin = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length / 60000);
+                document.getElementById('stat-duration').textContent = avgMin + 'min';
+            }
+            
+            document.getElementById('stat-features').textContent = Object.keys(stats.avg_adjustments || {}).length;
+        }
+        
+        function renderCharts(data) {
+            const stats = data.aggregate_stats || {};
+            const avgAdjustments = stats.avg_adjustments || {};
+            const counts = stats.adjustment_counts || {};
+            
+            const features = Object.entries(avgAdjustments);
+            if (features.length === 0) return;
+            
+            // Distribution Chart
+            const sorted = [...features].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 25);
+            new Chart(document.getElementById('distributionChart'), {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(f => formatFeatureName(f[0])),
+                    datasets: [{
+                        data: sorted.map(f => f[1]),
+                        backgroundColor: sorted.map(f => f[1] >= 0 ? chartColors.positive : chartColors.negative),
+                        borderRadius: 2,
+                        barThickness: 16
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: chartColors.grid, drawBorder: false },
+                            ticks: { callback: v => v.toFixed(2) }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 } }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `Mean: ${ctx.raw >= 0 ? '+' : ''}${ctx.raw.toFixed(4)}`
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Frequency Chart
+            const byCount = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
+            new Chart(document.getElementById('frequencyChart'), {
+                type: 'bar',
+                data: {
+                    labels: byCount.map(f => formatFeatureName(f[0])),
+                    datasets: [{
+                        data: byCount.map(f => f[1]),
+                        backgroundColor: chartColors.neutral,
+                        borderRadius: 2,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: chartColors.grid, drawBorder: false } },
+                        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+            
+            // Iteration Chart
+            const iterationData = analyzeByIteration(data.participants);
+            if (iterationData.labels.length > 0) {
+                new Chart(document.getElementById('iterationChart'), {
+                    type: 'line',
+                    data: {
+                        labels: iterationData.labels,
+                        datasets: [{
+                            data: iterationData.avgIntensity,
+                            borderColor: chartColors.neutral,
+                            backgroundColor: 'rgba(74, 111, 165, 0.1)',
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#fff',
+                            pointBorderWidth: 2,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                grid: { color: chartColors.grid, drawBorder: false },
+                                ticks: { callback: v => v.toFixed(2) }
+                            },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+            
+            // Ratio Chart
+            const allValues = getAllAdjustmentValues(data.participants);
+            const positiveCount = allValues.filter(v => v > 0.01).length;
+            const negativeCount = allValues.filter(v => v < -0.01).length;
+            const neutralCount = allValues.length - positiveCount - negativeCount;
+            
+            new Chart(document.getElementById('ratioChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Boost', 'Suppress', 'Neutral'],
+                    datasets: [{
+                        data: [positiveCount, negativeCount, neutralCount],
+                        backgroundColor: [chartColors.positive, chartColors.negative, '#ccc'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: { boxWidth: 12, padding: 12, font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+            
+            // Histogram
+            const bins = createHistogramBins(allValues, 20);
+            new Chart(document.getElementById('histogramChart'), {
+                type: 'bar',
+                data: {
+                    labels: bins.labels,
+                    datasets: [{
+                        data: bins.counts,
+                        backgroundColor: bins.labels.map(l => {
+                            const val = parseFloat(l);
+                            return val > 0 ? chartColors.positive : val < 0 ? chartColors.negative : '#ccc';
+                        }),
+                        borderRadius: 1,
+                        barPercentage: 1,
+                        categoryPercentage: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            grid: { color: chartColors.grid, drawBorder: false },
+                            ticks: { stepSize: 1 }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { 
+                                maxRotation: 0,
+                                callback: (val, idx) => idx % 4 === 0 ? bins.labels[idx] : ''
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function getAllAdjustmentValues(participants) {
+            const values = [];
+            participants.forEach(p => {
+                (p.feature_adjustments || []).forEach(adj => {
+                    Object.values(adj.adjustments || {}).forEach(v => values.push(v));
+                });
+            });
+            return values;
+        }
+        
+        function createHistogramBins(values, numBins) {
+            if (values.length === 0) return { labels: [], counts: [] };
+            
+            const min = Math.min(...values, -1);
+            const max = Math.max(...values, 1);
+            const binWidth = (max - min) / numBins;
+            
+            const counts = new Array(numBins).fill(0);
+            const labels = [];
+            
+            for (let i = 0; i < numBins; i++) {
+                const binStart = min + i * binWidth;
+                labels.push(binStart.toFixed(2));
+            }
+            
+            values.forEach(v => {
+                const binIdx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
+                counts[binIdx]++;
+            });
+            
+            return { labels, counts };
+        }
+        
+        function analyzeByIteration(participants) {
+            const iterationMap = {};
+            
+            participants.forEach(p => {
+                (p.feature_adjustments || []).forEach(adj => {
+                    const iter = adj.iteration || 1;
+                    if (!iterationMap[iter]) iterationMap[iter] = [];
+                    
+                    const values = Object.values(adj.adjustments || {});
+                    if (values.length > 0) {
+                        const intensity = values.reduce((sum, v) => sum + Math.abs(v), 0) / values.length;
+                        iterationMap[iter].push(intensity);
+                    }
+                });
+            });
+            
+            const keys = Object.keys(iterationMap).sort((a, b) => a - b);
+            return {
+                labels: keys.map(i => `Iter ${i}`),
+                avgIntensity: keys.map(k => {
+                    const vals = iterationMap[k];
+                    return vals.reduce((a, b) => a + b, 0) / vals.length;
+                })
+            };
+        }
+        
+        function renderDemographics(data) {
+            const participants = data.participants || [];
+            
+            const ageCounts = {}, genderCounts = {}, eduCounts = {};
+            const mlCounts = { 'Familiar': 0, 'Not familiar': 0 };
+            
+            participants.forEach(p => {
+                const d = p.demographics || {};
+                if (d.age_group) ageCounts[d.age_group] = (ageCounts[d.age_group] || 0) + 1;
+                if (d.gender) genderCounts[d.gender] = (genderCounts[d.gender] || 0) + 1;
+                if (d.education) eduCounts[d.education] = (eduCounts[d.education] || 0) + 1;
+                mlCounts[d.ml_familiar ? 'Familiar' : 'Not familiar']++;
+            });
+            
+            const demoColors = ['#4a6fa5', '#6b8cbe', '#8da8d4', '#aec5ea', '#d0e1f9'];
+            
+            const demoOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { boxWidth: 8, padding: 8, font: { size: 10 } }
+                    }
+                }
+            };
+            
+            if (Object.keys(ageCounts).length) {
+                new Chart(document.getElementById('ageChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(ageCounts),
+                        datasets: [{ data: Object.values(ageCounts), backgroundColor: demoColors, borderWidth: 0 }]
+                    },
+                    options: { ...demoOptions, cutout: '50%' }
+                });
+            }
+            
+            if (Object.keys(genderCounts).length) {
+                new Chart(document.getElementById('genderChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(genderCounts),
+                        datasets: [{ data: Object.values(genderCounts), backgroundColor: demoColors, borderWidth: 0 }]
+                    },
+                    options: { ...demoOptions, cutout: '50%' }
+                });
+            }
+            
+            if (Object.keys(eduCounts).length) {
+                new Chart(document.getElementById('educationChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(eduCounts),
+                        datasets: [{ data: Object.values(eduCounts), backgroundColor: demoColors, borderWidth: 0 }]
+                    },
+                    options: { ...demoOptions, cutout: '50%' }
+                });
+            }
+            
+            new Chart(document.getElementById('mlChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(mlCounts),
+                    datasets: [{ data: Object.values(mlCounts), backgroundColor: [chartColors.positive, '#ccc'], borderWidth: 0 }]
+                },
+                options: { ...demoOptions, cutout: '50%' }
+            });
+        }
+        
+        function renderFeaturesTable(data) {
+            const container = document.getElementById('features-table-container');
+            const stats = data.aggregate_stats || {};
+            const avgAdjustments = stats.avg_adjustments || {};
+            const counts = stats.adjustment_counts || {};
+            
+            const features = Object.entries(avgAdjustments).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+            
+            if (features.length === 0) {
+                container.innerHTML = '<div class="empty-state">No feature data available</div>';
+                return;
+            }
+            
+            const maxAbs = Math.max(...features.map(f => Math.abs(f[1])));
+            
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px">#</th>
+                            <th>Feature</th>
+                            <th style="width: 100px">Mean</th>
+                            <th style="width: 120px">Distribution</th>
+                            <th style="width: 80px">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${features.map((f, idx) => {
+                            const [name, value] = f;
+                            const isPositive = value >= 0;
+                            const barWidth = (Math.abs(value) / maxAbs) * 50;
+                            const valueClass = value > 0.001 ? 'value-positive' : (value < -0.001 ? 'value-negative' : '');
+                            const displayValue = value >= 0 ? `+${value.toFixed(4)}` : value.toFixed(4);
+                            
+                            return `
+                                <tr>
+                                    <td class="mono" style="color: var(--text-muted)">${idx + 1}</td>
+                                    <td>${formatFeatureName(name)}</td>
+                                    <td class="mono ${valueClass}">${displayValue}</td>
+                                    <td>
+                                        <div class="mini-bar">
+                                            <div class="mini-bar-track">
+                                                <div class="mini-bar-center"></div>
+                                                <div class="mini-bar-fill ${isPositive ? 'positive' : 'negative'}" 
+                                                     style="width: ${barWidth}%;"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="mono">${counts[name] || 0}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function formatFeatureName(name) {
+            if (name.startsWith('neuron_')) return 'Neuron ' + name.replace('neuron_', '');
+            return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
+        }
+        
+        // Export
+        document.getElementById('export-btn').addEventListener('click', () => {
+            if (!resultsData) return;
+            const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `results_${resultsData.study_guid || 'export'}.json`;
+            a.click();
+        });
+        
+        loadResults();
+    </script>
+</body>
+</html>
