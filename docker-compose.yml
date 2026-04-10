@@ -25,6 +25,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       DATABASE_URL: sqlite:////app/instance/db.sqlite
+      DATASET_BOOTSTRAP: "${DATASET_BOOTSTRAP:-1}"
+      DATASET_GITHUB_REPO: "${DATASET_GITHUB_REPO:-vaclavstibor/SAE4EasyStudy}"
+      DATASET_RELEASE_TAG: "${DATASET_RELEASE_TAG:-latest}"
+      ML_LATEST_DATASET_ASSET: "${ML_LATEST_DATASET_ASSET:-ml-latest.zip}"
       SAE_BOOTSTRAP_MODEL: "${SAE_BOOTSTRAP_MODEL:-1}"
       SAE_MODEL_GITHUB_REPO: "${SAE_MODEL_GITHUB_REPO:-vaclavstibor/SAE4EasyStudy}"
       SAE_MODEL_RELEASE_TAG: "${SAE_MODEL_RELEASE_TAG:-latest}"

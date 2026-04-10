@@ -3,6 +3,11 @@ set -eu
 
 mkdir -p /app/instance /app/cache /app/plugins/sae_steering/models
 
+if [ "${DATASET_BOOTSTRAP:-1}" = "1" ]; then
+  echo "Bootstrapping MovieLens dataset assets..."
+  python bootstrap_datasets.py
+fi
+
 if [ "${SAE_BOOTSTRAP_MODEL:-1}" = "1" ]; then
   echo "Bootstrapping SAE steering model from GitHub Releases..."
   python plugins/sae_steering/bootstrap_model.py
