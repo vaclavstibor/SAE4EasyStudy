@@ -1,0 +1,42 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - redis-data:/data
+
+  app:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      DATABASE_URL: sqlite:////app/instance/db.sqlite
+      SAE_BOOTSTRAP_MODEL: "${SAE_BOOTSTRAP_MODEL:-1}"
+      SAE_MODEL_GITHUB_REPO: "${SAE_MODEL_GITHUB_REPO:-vaclavstibor/SAE4EasyStudy}"
+      SAE_MODEL_RELEASE_TAG: "${SAE_MODEL_RELEASE_TAG:-latest}"
+      GUNICORN_WORKERS: "${GUNICORN_WORKERS:-1}"
+      GUNICORN_LOG_LEVEL: "${GUNICORN_LOG_LEVEL:-info}"
+    volumes:
+      - app-instance:/app/instance
+      - app-cache:/app/cache
+      - sae-models:/app/plugins/sae_steering/models
+
+volumes:
+  redis-data:
+  app-instance:
+  app-cache:
+  sae-models:

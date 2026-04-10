@@ -51,6 +51,33 @@ cd server
 python plugins/sae_steering/bootstrap_model.py --asset-name model.pkl
 ```
 
+## Docker Compose
+
+For a CPU-only deployment, the repository now includes a `docker-compose.yml` that starts both the EasyStudy server and Redis. The container bootstraps the `WWW TopKSAE-8192` checkpoint from GitHub Releases on first start, so you do not need to copy the model into the image manually.
+
+```bash
+# If clone complains about git-lfs, either install git-lfs
+# or clone once with:
+# GIT_LFS_SKIP_SMUDGE=1 git clone https://github.com/vaclavstibor/SAE4EasyStudy.git
+
+git clone https://github.com/vaclavstibor/SAE4EasyStudy.git
+cd SAE4EasyStudy
+docker compose up --build
+```
+
+Useful environment overrides:
+
+```bash
+SAE_MODEL_RELEASE_TAG=v1.0 docker compose up --build
+SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy docker compose up --build
+```
+
+Persistent Docker volumes are used for:
+
+- SQLite data in `/app/instance`
+- runtime cache in `/app/cache`
+- downloaded SAE models in `/app/plugins/sae_steering/models`
+
 ## EasyStudy Framework
 
 Built on [EasyStudy](https://github.com/pdokoupil/EasyStudy) by [Patrik Dokoupil](mailto:patrik.dokoupil@matfyz.cuni.cz) and [Ladislav Peska](mailto:ladislav.peska@matfyz.cuni.cz). For deployment details, dataset setup, and Docker configuration, refer to the original [documentation](https://github.com/pdokoupil/EasyStudy#readme).

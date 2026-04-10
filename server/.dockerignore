@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+.venv39/
+.venv39_tmp/
+.playwright-browsers/
+cache/
+instance/
+plugins/sae_steering/models/*
+!plugins/sae_steering/models/.gitkeep
+static/datasets/kaggle-tmdb/
+static/datasets/ml-latest/img 2/
+static/datasets/ml-latest/ml-latest.zip
+static/datasets/ml-latest/tmdb_data.json

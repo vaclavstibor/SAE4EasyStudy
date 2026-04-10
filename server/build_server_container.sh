@@ -1,1 +1,1 @@
-docker build -t easy-study .
+docker compose -f ../docker-compose.yml build

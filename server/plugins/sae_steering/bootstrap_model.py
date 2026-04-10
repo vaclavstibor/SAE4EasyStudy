@@ -36,7 +36,7 @@ except ImportError:
     )
 
 
-DEFAULT_GITHUB_REPO = os.environ.get("SAE_MODEL_GITHUB_REPO", "vaclavstibor/EasyStudy")
+DEFAULT_GITHUB_REPO = os.environ.get("SAE_MODEL_GITHUB_REPO", "vaclavstibor/SAE4EasyStudy")
 DEFAULT_RELEASE_TAG = os.environ.get("SAE_MODEL_RELEASE_TAG", "latest")
 DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("SAE_MODEL_DOWNLOAD_TIMEOUT", "60"))
 
