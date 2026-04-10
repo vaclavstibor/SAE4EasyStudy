@@ -22,7 +22,10 @@ tf.config.set_visible_devices([], 'GPU') # Disable GPU because of adagrad issues
 
 from popularity_sampling import PopularitySamplingElicitation, PopularitySamplingFromBucketsElicitation
 from multi_obj_sampling import MultiObjectiveSamplingFromBucketsElicitation
-from tfrs_model import get_model_mf
+try:
+    from tfrs_model import get_model_mf
+except (ImportError, TypeError):
+    get_model_mf = None
 
 import time
 from sklearn.preprocessing import QuantileTransformer
@@ -160,12 +163,22 @@ def load_data_2(elicitation_movies):
     loader = load_ml_dataset()
 
     # Get list of items
-    data = PopularitySamplingElicitation(loader.rating_matrix, n_samples=16).get_initial_data([int(x["movie_idx"]) for x in elicitation_movies])
+    # Rename columns to match expected format and map movieId to item indices
+    ratings_df_renamed = loader.ratings_df.rename(columns={"userId": "user"})
+    # Map movieId to sequential indices (item column) as expected by PopularitySamplingElicitation
+    ratings_df_renamed["item"] = ratings_df_renamed["movieId"].map(loader.movie_id_to_index)
+    data = PopularitySamplingElicitation(ratings_df_renamed, n_samples=16, k=0.5).get_initial_data([int(x["movie_idx"]) for x in elicitation_movies])
 
-    # TODO use unrich_results instead
+    # TODO use enrich_results instead
     res = [loader.movie_index_to_description[movie_idx] for movie_idx in data]
     res_url = [loader.get_image(movie_idx) for movie_idx in data]
-    result = [{"movie": movie, "url": url, "movie_idx": str(movie_idx)} for movie, url, movie_idx in zip(res, res_url, data)]
+    # Get genres for each movie
+    movie_ids = [loader.movie_index_to_id[movie_idx] for movie_idx in data]
+    genres_list = [loader.movies_df_indexed.loc[movie_id].genres.split("|") for movie_id in movie_ids]
+    genres_list = [g if g != ["(no genres listed)"] else [] for g in genres_list]
+    
+    result = [{"movie": movie, "url": url, "movie_idx": str(movie_idx), "genres": genres} 
+              for movie, url, movie_idx, genres in zip(res, res_url, data, genres_list)]
     # Result is a list of movies, each movie being a dict (JSON object)
     return result
 

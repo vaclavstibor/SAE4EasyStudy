@@ -4,6 +4,7 @@ function preference_elicitation() {
 }
 
 var updatedOnce = false;
+const DEFAULT_VISIBLE_BATCH_SIZE = 20;
 
 function elicitation_ctx_lambda() {
     return {
@@ -39,9 +40,21 @@ window.app = new Vue({
         disableNextStep: false,
         searchMovieName: null,
         itemsBackup: null,
+        displayedCountBackup: null,
         rowsBackup: null,
-        busy: false
+        busy: false,
+        visibleBatchSize: 0,
+        loadingMore: false,
+        displayedCount: 0
     }
+    },
+    computed: {
+        visibleItems() {
+            return Array.isArray(this.items) ? this.items.slice(0, this.displayedCount || this.items.length) : [];
+        },
+        hasActiveSearch() {
+            return this.itemsBackup !== null;
+        }
     },
     async mounted() {
         const btns = document.querySelectorAll(".btn");
@@ -49,11 +62,8 @@ window.app = new Vue({
         // This was used for reporting as previously reporting endpoints were defined inside plugin
 
         // Get the number of items user is supposed to select
-        let data = await fetch(initial_data_url + "?impl=" + this.impl + "&i=0").then((resp) => resp.json()).then((resp) => resp);
-        
-        res = this.prepareTable(data);
-        this.rows = res["rows"];
-        this.items = res["items"];
+        await this.ensureVisibleItems(DEFAULT_VISIBLE_BATCH_SIZE, true);
+        this.visibleBatchSize = Math.min(DEFAULT_VISIBLE_BATCH_SIZE, this.items.length);
 
         // Register the handlers for event reporting
         startViewportChangeReportingWithLimit(`/utils/changed-viewport`, csrfToken, 1.0, true, elicitation_ctx_lambda);
@@ -71,24 +81,60 @@ window.app = new Vue({
         }, 5000);
     },
     methods: {
+        parseMovieMeta(dat) {
+            const rawTitle = dat["movie"] || "";
+            const genres = Array.isArray(dat["genres"])
+                ? dat["genres"].filter((genre) => genre && genre !== "(no genres listed)")
+                : [];
+
+            let displayTitle = rawTitle.replace(/\s*\(no genres listed\)\s*$/i, "").trim();
+            if (genres.length > 0) {
+                const yearMatch = displayTitle.match(/^(.*\(\d{4}\))/);
+                if (yearMatch) {
+                    displayTitle = yearMatch[1];
+                }
+                const suffix = " " + genres.join("|");
+                if (displayTitle.endsWith(suffix)) {
+                    displayTitle = displayTitle.slice(0, displayTitle.length - suffix.length);
+                }
+            }
+
+            return {
+                "displayTitle": displayTitle.trim(),
+                "genreList": genres
+            };
+        },
         async handlePrefixSearch(movieName) {
             let foundMovies = await fetch(search_item_url + "?attrib=movie&pattern="+movieName).then(resp => resp.json());
             return foundMovies;
         },
         makeItem(dat) {
+            const meta = this.parseMovieMeta(dat);
             return {
                 "movieName": dat["movie"],
+                "displayTitle": meta["displayTitle"] || dat["movie"],
+                "genreList": meta["genreList"],
                 "movie": {
                     "idx": dat["movie_idx"],
                     "url": dat["url"]
                 }
             };
         },
+        hasPoster(dat) {
+            return !!(dat && dat["url"] && String(dat["url"]).trim().length > 0);
+        },
+        async fetchElicitationData(isInitial=false) {
+            const suffix = isInitial ? "&i=0" : "";
+            return await fetch(initial_data_url + "?impl=" + this.impl + suffix).then((resp) => resp.json()).then((resp) => resp);
+        },
         prepareTable(data, fromSearch=false) {
             let row = [];
             let rows = [];
             let items = [];
             for (var k in data) {
+                if (!this.hasPoster(data[k])) {
+                    continue;
+                }
                 let it = this.makeItem(data[k]);
                 let rw = this.makeItem(data[k]);
                 
@@ -110,6 +156,28 @@ window.app = new Vue({
 
             return {"rows": rows, "items": items };
         },
+        async ensureVisibleItems(targetCount, isInitial=false) {
+            let res = {"rows": this.rows, "items": this.items};
+            let previousVisibleCount = -1;
+
+            for (let attempt = 0; attempt < 8; attempt++) {
+                const data = await this.fetchElicitationData(isInitial && attempt === 0);
+                res = this.prepareTable(data);
+                this.rows = res["rows"];
+                this.items = res["items"];
+                this.displayedCount = Math.min(targetCount, this.items.length);
+
+                if (this.items.length >= targetCount) {
+                    break;
+                }
+                if (this.items.length === previousVisibleCount) {
+                    break;
+                }
+                previousVisibleCount = this.items.length;
+            }
+
+            return res;
+        },
         async onClickSearch(event) {
             let data = await this.handlePrefixSearch(this.searchMovieName);
             let res = this.prepareTable(data, true);
@@ -118,22 +186,13 @@ window.app = new Vue({
             // Do not overwrite backups when doing repeated search
             if (this.itemsBackup === null) {
                 this.itemsBackup = this.items;
+                this.displayedCountBackup = this.displayedCount;
                 this.rowsBackup = this.rows;
             }
 
             this.rows = res["rows"];
             this.items = res["items"];
-
-            // VUE is reusing dom and dropping classes, add them back
-            this.$nextTick(() => {
-                for (let i in this.selected) {
-                    let el = document.getElementById(this.selected[i].movie.idx);
-                    if (el) {
-                        el.classList.remove("selected");
-                        el.classList.add("selected");
-                    }
-                }
-            });
+            this.displayedCount = this.items.length;
         },
         onKeyDownSearchMovieName(e) {
             if (e.key === "Enter") {
@@ -142,39 +201,28 @@ window.app = new Vue({
         },
         onClickCancelSearch() {
             this.items = this.itemsBackup;
+            this.displayedCount = this.displayedCountBackup;
             this.rows = this.rowsBackup;
             this.itemsBackup = null;
+            this.displayedCountBackup = null;
             this.rowsBackup = null;
-
-            // VUE is reusing dom and dropping classes, add them back
-            this.$nextTick(() => {
-                for (let i in this.selected) {
-                    let el = document.getElementById(this.selected[i].movie.idx);
-                    if (el) {
-                        el.classList.remove("selected");
-                        el.classList.add("selected");
-                    }
-                }
-            });
         },
         async onClickLoadMore() {
-            let data = await fetch(initial_data_url + "?impl=" + this.impl).then((resp) => resp.json()).then((resp) => resp);
-            res = this.prepareTable(data);
-            this.rows = res["rows"];
-            this.items = res["items"];
+            const previousCount = this.displayedCount || this.items.length;
+            const targetIncrease = this.visibleBatchSize || previousCount || 1;
+            const targetCount = previousCount + targetIncrease;
 
-            // VUE is reusing dom and dropping classes, add them back
-            this.$nextTick(() => {
-                for (let i in this.selected) {
-                    let el = document.getElementById(this.selected[i].movie.idx);
-                    if (el) {
-                        el.classList.remove("selected");
-                        el.classList.add("selected");
-                    }
-                }
-            });
+            this.loadingMore = true;
+            try {
+                await this.ensureVisibleItems(targetCount, false);
+            } finally {
+                this.loadingMore = false;
+            }
         },
         onUpdateSearchMovieName(newValue) {
+        },
+        isMovieSelected(item) {
+            return this.movieIndexOf(this.selected, item) > -1;
         },
         movieIndexOf(arr, item) {
             for (let idx in arr) {
@@ -193,12 +241,10 @@ window.app = new Vue({
             if (index > -1) {
                 // Already there, remove it
                 this.selected.splice(index, 1);
-                event.srcElement.classList.remove("selected");
                 reportDeselectedItem(`/utils/deselected-item`, csrfToken, item, this.selected);
             } else {
                 // Not there, insert
                 this.selected.push(item);
-                event.srcElement.classList.add("selected");
                 reportSelectedItem(`/utils/selected-item`, csrfToken, item, this.selected);
             }
         },

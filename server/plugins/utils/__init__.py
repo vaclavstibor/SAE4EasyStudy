@@ -480,7 +480,14 @@ def final_questionnaire():
     params["hint"] = tr("questionnaire_hint")
     params["continuation_url"] = request.args.get("continuation_url")
     params["finish"] = tr("questionnaire_finish")
-    params["questionnaire_file"] =  f"cache/{user_study.parent_plugin}/{user_study.guid}/{conf['questionnaire_file']}"
+
+    explicit_file = request.args.get("questionnaire_file")
+    if explicit_file:
+        params["questionnaire_file"] = f"cache/{user_study.parent_plugin}/{user_study.guid}/{explicit_file}"
+    else:
+        # Allow plugins to specify which config key holds the questionnaire filename
+        q_key = request.args.get("questionnaire_key", "questionnaire_file")
+        params["questionnaire_file"] =  f"cache/{user_study.parent_plugin}/{user_study.guid}/{conf[q_key]}"
 
     # Handle overrides
     params["footer_override"] = None

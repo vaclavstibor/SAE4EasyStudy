@@ -1,27 +1,470 @@
 {% include 'header.html' %}
+<style>
+  body {
+    background: #f8f9fa;
+    color: #243447;
+  }
+
+  .footerDiv {
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+  }
+
+  .elicitation-shell {
+    max-width: 1560px;
+    margin: 0 auto;
+    padding: 28px 20px 32px;
+  }
+
+  .elicitation-hero,
+  .toolbar-card,
+  .gallery-card,
+  .actions-card {
+    background: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  }
+
+  .elicitation-hero {
+    padding: 24px 26px;
+    margin-bottom: 18px;
+  }
+
+  .hero-title {
+    font-size: 1.9rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .hero-lead {
+    color: #556274;
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  .hero-copy,
+  .hero-copy p:last-child {
+    margin-bottom: 0;
+  }
+
+  .selection-summary {
+    margin-top: 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .summary-chip {
+    min-width: 180px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+  }
+
+  .summary-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+
+  .summary-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #111827;
+    text-align: center;
+  }
+
+  .summary-help {
+    color: #556274;
+    font-size: 0.9rem;
+    text-align: center;
+  }
+
+  .ui-btn-primary,
+  .ui-btn-secondary,
+  .ui-btn-outline {
+    min-height: 42px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    padding: 0 16px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  }
+
+  .ui-btn-primary {
+    background: #007bff;
+    border-color: #007bff;
+    color: #ffffff !important;
+  }
+
+  .ui-btn-primary:hover {
+    background: #0069d9;
+    border-color: #0069d9;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.22);
+  }
+
+  .ui-btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+    color: #ffffff !important;
+  }
+
+  .ui-btn-secondary:hover {
+    background: #5c6670;
+    border-color: #5c6670;
+    color: #ffffff !important;
+  }
+
+  .ui-btn-outline {
+    background: #ffffff;
+    border-color: #ced4da;
+    color: #526071 !important;
+  }
+
+  .ui-btn-outline:hover {
+    background: #f3f5f7;
+    color: #243447 !important;
+  }
+
+  .toolbar-card {
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+
+  .toolbar-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .toolbar-label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .toolbar-hint {
+    margin-top: 10px;
+    color: #64748b;
+    font-size: 0.88rem;
+  }
+
+  .toolbar-card .form-control {
+    min-height: 46px;
+    border-radius: 12px;
+    border-color: #d7deea;
+    box-shadow: none;
+  }
+
+  .toolbar-card .btn {
+    min-width: 140px;
+    min-height: 42px;
+  }
+
+  .gallery-card {
+    padding: 20px;
+  }
+
+  .gallery-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+    margin-bottom: 18px;
+  }
+
+  .gallery-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .gallery-subtitle {
+    color: #64748b;
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  .movie-grid {
+    display: grid;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .movie-card {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #d6dde8;
+    border-radius: 8px;
+    background: #ffffff;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+
+  .movie-card:hover {
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .movie-card:focus {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  .movie-card.selected {
+    border-width: 2px;
+    border-color: #198754;
+    background: #eaf8ef;
+    box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.28);
+  }
+
+  .movie-card.selected .movie-poster {
+    box-shadow: 0 0 0 3px #198754;
+  }
+
+  .movie-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    display: block;
+    background: #eef2f7;
+  }
+
+  .movie-hover-info {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 10px 10px 12px;
+    background: linear-gradient(180deg, rgba(9, 15, 28, 0) 0%, rgba(9, 15, 28, 0.82) 45%, rgba(9, 15, 28, 0.96) 100%);
+    color: #ffffff;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+  }
+
+  .movie-card:hover .movie-hover-info,
+  .movie-card:focus .movie-hover-info,
+  .movie-card.selected .movie-hover-info {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .movie-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.35;
+    min-height: 0;
+  }
+
+  .movie-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .genre-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+
+  .selected-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #198754;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
+  }
+
+  .actions-card {
+    margin-top: 18px;
+    padding: 18px 20px;
+  }
+
+  .gallery-footer {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .gallery-footer .btn {
+    min-width: 170px;
+    min-height: 42px;
+  }
+
+  .fade-slide-enter-active,
+  .fade-slide-leave-active {
+    transition: opacity 0.18s ease, transform 0.18s ease;
+  }
+
+  .fade-slide-enter,
+  .fade-slide-leave-to {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  .actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .actions-copy {
+    color: #556274;
+    font-size: 0.92rem;
+  }
+
+  .actions-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .actions-buttons .btn {
+    min-width: 170px;
+    min-height: 42px;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+    text-align: center;
+    color: #64748b;
+    border: 1px dashed #d6dde8;
+    border-radius: 14px;
+    background: #fafcff;
+  }
+
+  @media (max-width: 992px) {
+    .toolbar-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 1280px) {
+    .movie-grid {
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 1120px) {
+    .movie-grid {
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 920px) {
+    .movie-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 768px) {
+    .elicitation-shell {
+      padding: 18px 14px 24px;
+    }
+
+    .elicitation-hero,
+    .toolbar-card,
+    .gallery-card,
+    .actions-card {
+      border-radius: 14px;
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .movie-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .toolbar-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .toolbar-actions {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .movie-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+</style>
 <div id="app">
-<b-container fluid>
-    {% if elicitation_hint_override is defined and elicitation_hint_override is not none  %}
-    <div class="jumbotron smallJumbotron">
-      {{ elicitation_hint_override | safe }}
+  <div class="elicitation-shell">
+    <div class="elicitation-hero">
+      {% if elicitation_hint_override is defined and elicitation_hint_override is not none %}
+      <div class="hero-copy">
+        {{ elicitation_hint_override | safe }}
+      </div>
+      {% else %}
+      <div class="hero-title">{{ header }}</div>
+      <div class="hero-lead">{{ hint_lead }}</div>
+      <div class="hero-copy">{{ hint }}</div>
+      {% endif %}
+
+      <div class="selection-summary">
+        <div class="summary-chip">
+          <div class="summary-label">Selected Movies</div>
+          <div class="summary-value">[[ selected.length ]]</div>
+        </div>
+        <div class="summary-chip">
+          <div class="summary-label">Continue Threshold</div>
+          <div class="summary-value">5 - 10</div>
+        </div>
+      </div>
     </div>
-    {% else %}
-    <b-jumbotron lead="{{hint_lead}}" class="smallJumbotron" header="{{header}}">
-      {{hint}}
-    </b-jumbotron>
-    {% endif %}
-    <!-- <i class="{{impl}}" id="impl"></i> -->
-    <!-- <b-form method="POST" action="{{continuation_url}}"> -->
+
     <b-form name="theForm" method="GET" action="{{continuation_url}}">
-      <b-form-group
-        horizontal
-      >
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <!-- <input type="hidden" name="impl" value="{{ impl }}" /> -->
-          <b-row>
-            
-          </b-row>
-      </b-form-group>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
     </b-form>
 
     <div>
@@ -36,58 +479,116 @@
       </b-modal>
     </div>
 
-    <b-row class="mb-3" align-h="center">
-      <b-col>
-        
-      </b-col>
-      <b-col align-h="center">
-        <b-row>
-          <b-col><b-input @update="onUpdateSearchMovieName" @keydown="onKeyDownSearchMovieName" v-model="searchMovieName" type="search" placeholder="{{enter_name}}"></b-input></b-col>
-        </b-row>
-      </b-col>
-      <b-col align-h="start">
-        <b-row>
-          <div class="mr-1">
-            <b-btn name="search" v-on:click="onClickSearch" variant="secondary">{{search}}</b-btn>
-          </div>
-          <div class="mr-5">
-            <b-btn name="cancel_search" :disabled="!itemsBackup" v-on:click="onClickCancelSearch" variant="warning">{{cancel_search}}</b-btn>
-          </div>
-        </b-row>
-      </b-col>
-    </b-row>
-
-    <!-- Row and col based implementation -->
-    <!-- Important: setting key prevents vue from aggresively reuse DOM elements
-    See https://stackoverflow.com/questions/46758441/preventing-vue-from-aggresively-reusing-dom-elements -->
-    <b-row class="mb-3" align-h="center" align-content="center" v-for="row in rows">
-      <b-col class="mb-3" class="align-middle" v-for="col in row">
-        <b-img @mouseenter="itemMouseEnter" @mouseleave="itemMouseLeave" :key="col.movie.idx" class="mb-3" style="width: 175px; height: auto;" center :src="col.movie.url" v-on:click="onSelectMovie($event, col)" :id="col.movie.idx" :alt="col.movieName" v-b-tooltip.hover :title="col.movieName" />
-      </b-col>
-    </b-row>
-    <b-row align-h="center">
-      <b-col cols="2" align-h="start">
+    <div class="toolbar-card">
+      <div class="toolbar-grid">
         <div>
-          <b-btn name="load_more" :disabled="itemsBackup" v-on:click="onClickLoadMore" variant="secondary">{{load_more}}</b-btn>
+          <label class="toolbar-label" for="movie-search">{{ enter_name }}</label>
+          <b-input
+            id="movie-search"
+            @update="onUpdateSearchMovieName"
+            @keydown="onKeyDownSearchMovieName"
+            v-model="searchMovieName"
+            type="search"
+            placeholder="{{enter_name}}"
+          ></b-input>
         </div>
-      </b-col>
-      <b-col cols="3" align-h="center">
-        <b-overlay
-          :show="busy"
-          rounded
-          opacity="0.6"
-          spinner-small
-          spinner-variant="primary"
-          class="d-inline-block"
+        <div class="toolbar-actions">
+          <transition name="fade-slide">
+            <b-btn
+              v-show="hasActiveSearch"
+              name="cancel_search"
+              v-on:click="onClickCancelSearch"
+              class="ui-btn-outline"
+            >
+              {{cancel_search}}
+            </b-btn>
+          </transition>
+          <b-btn name="search" v-on:click="onClickSearch" class="ui-btn-secondary">{{search}}</b-btn>
+        </div>
+      </div>
+      <div class="toolbar-hint">
+        Search keeps the same study flow and logging. You can return to the sampled set any time.
+      </div>
+    </div>
+
+    <div class="gallery-card">
+      <div class="gallery-header">
+        <div>
+          <p class="gallery-title mb-1">Choose films you would enjoy</p>
+          <p class="gallery-subtitle">Your selections seed the next recommendation stage.</p>
+        </div>
+        <div class="summary-help">[[ visibleItems.length ]] items currently shown</div>
+      </div>
+
+      <div v-if="visibleItems.length === 0" class="empty-state">
+        No items to show right now. Try searching or load more items.
+      </div>
+
+      <div v-else class="movie-grid">
+        <div
+          v-for="item in visibleItems"
+          :key="`${item.movie.idx}-${item.movieName}`"
+          class="movie-card"
+          role="button"
+          tabindex="0"
+          :class="{ selected: isMovieSelected(item) }"
+          @click="onSelectMovie($event, item)"
+          @keydown.enter.prevent="onSelectMovie($event, item)"
+          @keydown.space.prevent="onSelectMovie($event, item)"
         >
-          <b-btn name="finish_elicitation" block v-on:Click="onElicitationFinish(theForm)" :disabled="disableNextStep" variant="primary">{{finish}}</b-btn>
-        </b-overlay>
-      </b-col>
-    </b-row>
-    <!-- <b-row>
-      [[ selected ]]
-    </b-row> -->
-</b-container>
+          <div v-if="isMovieSelected(item)" class="selected-badge">Selected</div>
+          <img
+            @mouseenter="itemMouseEnter"
+            @mouseleave="itemMouseLeave"
+            class="movie-poster"
+            :id="item.movie.idx"
+            :src="item.movie.url"
+            :alt="item.displayTitle"
+          >
+          <div class="movie-hover-info">
+            <div class="movie-title">[[ item.displayTitle ]]</div>
+            <div v-if="item.genreList.length" class="movie-genres">
+              <span class="genre-pill" v-for="genre in item.genreList.slice(0, 3)" :key="genre">[[ genre ]]</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="gallery-footer">
+        <div class="actions-copy">
+          Use <strong>Show more movies</strong> to reveal more candidates without resetting your current choices.
+        </div>
+        <b-btn
+          name="load_more"
+          :disabled="itemsBackup || busy || loadingMore"
+          v-on:click="onClickLoadMore"
+          class="ui-btn-secondary"
+        >
+          [[ loadingMore ? 'Loading more movies...' : 'Show more movies' ]]
+        </b-btn>
+      </div>
+    </div>
+
+    <div class="actions-card">
+      <div class="actions-row">
+        <div class="actions-copy">
+          Continue once you have selected at least five movies you like.
+        </div>
+        <div class="actions-buttons">
+          <b-overlay
+            :show="busy"
+            rounded
+            opacity="0.6"
+            spinner-small
+            spinner-variant="primary"
+            class="d-inline-block"
+          >
+            <b-btn name="finish_elicitation" v-on:click="onElicitationFinish(theForm)" :disabled="disableNextStep" class="ui-btn-primary">{{finish}}</b-btn>
+          </b-overlay>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type='text/javascript'>

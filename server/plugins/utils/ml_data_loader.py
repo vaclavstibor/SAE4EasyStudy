@@ -142,8 +142,18 @@ class LinkFilter:
         loader.links_df = loader.links_df[loader.links_df.index.isin((loader.movies_df.movieId))]
 
 class MLDataLoader:
-    def __init__(self, ratings_path, movies_path, tags_path, links_path,
-        filters = None, rating_matrix_path = None, img_dir_path = None, descriptions_path = None):
+    def __init__(
+        self,
+        ratings_path,
+        movies_path,
+        tags_path,
+        links_path,
+        filters=None,
+        rating_matrix_path=None,
+        img_dir_path=None,
+        descriptions_path=None,
+        skip_matrices: bool = False,
+    ):
 
         self.ratings_path = ratings_path
         self.movies_path = movies_path
@@ -176,6 +186,9 @@ class MLDataLoader:
         self.trailer_urls = None
         self.plots = None
 
+        # Optional: skip building rating/similarity matrices (for large datasets)
+        self.skip_matrices = skip_matrices
+
     def _get_image(self, imdbId):
         try:
             return self.access.get_movie(imdbId)["full-size cover url"]
@@ -192,6 +205,44 @@ class MLDataLoader:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.access = Cinemagoer()
+        # Reload image mappings after unpickling from cache
+        # This ensures movie_index_to_url is up to date even if cache is old
+        if self.img_dir_path and os.path.exists(self.img_dir_path):
+            print(f"[DEBUG __setstate__] Reloading image mappings from {self.img_dir_path}")
+            self.movie_index_to_url = dict()
+            already_downloaded = os.listdir(self.img_dir_path)
+            jpg_files = [f for f in already_downloaded if f.endswith('.jpg') and not f.startswith('.')]
+            print(f"[DEBUG __setstate__] Found {len(jpg_files)} JPG files on disk")
+            
+            # Check if movie_id_to_index exists
+            if not hasattr(self, 'movie_id_to_index'):
+                print(f"[DEBUG __setstate__] WARNING: movie_id_to_index not found! Cannot map images.")
+                return
+            
+            print(f"[DEBUG __setstate__] movie_id_to_index has {len(self.movie_id_to_index)} entries")
+            
+            mapped_count = 0
+            not_in_index_count = 0
+            sample_not_mapped = []
+            
+            for img_name in jpg_files:
+                try:
+                    movie_id = int(img_name.split(".jpg")[0])
+                    if movie_id in self.movie_id_to_index:
+                        movie_idx = self.movie_id_to_index[movie_id]
+                        self.movie_index_to_url[movie_idx] = os.path.join(self.img_dir_path, img_name)
+                        mapped_count += 1
+                    else:
+                        not_in_index_count += 1
+                        if len(sample_not_mapped) < 5:
+                            sample_not_mapped.append(movie_id)
+                except (ValueError, IndexError):
+                    continue
+            
+            print(f"[DEBUG __setstate__] Mapped {mapped_count} images to movie_index_to_url (out of {len(jpg_files)} total)")
+            if not_in_index_count > 0:
+                print(f"[DEBUG __setstate__] {not_in_index_count} images NOT mapped (movie_id not in movie_id_to_index)")
+                print(f"[DEBUG __setstate__] Sample unmapped movie_ids: {sample_not_mapped}")
 
     def get_trailer_url(self, movie_idx):
         movie_id = str(self.movie_index_to_id[movie_idx])
@@ -253,36 +304,21 @@ class MLDataLoader:
 
     def get_image(self, movie_idx):
         if self.img_dir_path and has_app_context():
-            if movie_idx not in self.movie_index_to_url:
-                # Download it first if it is missing
-                movie_id = self.movie_index_to_id[movie_idx]
-                imdbId = self.links_df.loc[movie_id].imdbId
-                remote_url = self._get_image(imdbId)
-                
-                err = False
-                try:
-                    resp = requests.get(remote_url, stream=True)
-                except:
-                    err = True
+            movie_id = self.movie_index_to_id[movie_idx]
+            img_path = os.path.join(self.img_dir_path, f'{movie_id}.jpg')
+            
+            # If image exists on disk, use it immediately
+            if os.path.exists(img_path):
+                item_id = self.movie_index_to_id[movie_idx]
+                return url_for('static', filename=f'datasets/ml-latest/img/{item_id}.jpg')
+            
+            # Image doesn't exist — return None immediately.
+            # Never block the request thread with an IMDb download.
+            return None
 
-                if err or resp.status_code != 200:
-                    print(f"Failed download image for movie with id={movie_id}")
-                else:
-                    img = Image.open(BytesIO(resp.content))
-                    width, height = img.size
-                    TARGET_WIDTH = 200
-                    coef = TARGET_WIDTH / width
-                    new_height = int(height * coef)
-                    img = img.resize((TARGET_WIDTH, new_height), Image.LANCZOS).convert('RGB')
-                    img.save(os.path.join(self.img_dir_path, f'{movie_id}.jpg'), quality=90)
-
-            # Use local version of images
-            item_id = self.movie_index_to_id[movie_idx]
-            return url_for('static', filename=f'datasets/ml-latest/img/{item_id}.jpg')
-
-        return self.movie_index_to_url[movie_idx]
-        #movie_id = self.movie_index_to_id[movie_idx]
-        #return self._get_image(self.links_df.loc[movie_id].imdbId)
+        if movie_idx in self.movie_index_to_url:
+            return self.movie_index_to_url[movie_idx]
+        return None
 
     def apply_tag_filter(self, tag_filter, *args, **kwargs):
         self.tags_df = tag_filter(self.tags_df, *args, **kwargs)
@@ -340,15 +376,19 @@ class MLDataLoader:
         num_users = unique_users.size
         
         self.user_to_user_index = dict(zip(unique_users, range(num_users)))
-
-        ratings_df_i = self.ratings_df.copy()
-        ratings_df_i.userId = ratings_df_i.userId.map(self.user_to_user_index)
-        ratings_df_i.movieId = ratings_df_i.movieId.map(self.movie_id_to_index)
-        self.rating_matrix = self.ratings_df.pivot(index='userId', columns='movieId', values="rating").fillna(0).values
-        #self.similarity_matrix = 1.0 - np.float32(squareform(pdist(self.rating_matrix.T, "cosine")))
-        # Faster, tensorflow-based implementation
-        self.similarity_matrix = cos_sim_np(self.rating_matrix.T)
-        self.distance_matrix = 1.0 - self.similarity_matrix
+        
+        if not self.skip_matrices:
+            ratings_df_i = self.ratings_df.copy()
+            ratings_df_i.userId = ratings_df_i.userId.map(self.user_to_user_index)
+            ratings_df_i.movieId = ratings_df_i.movieId.map(self.movie_id_to_index)
+            self.rating_matrix = self.ratings_df.pivot(index='userId', columns='movieId', values="rating").fillna(0).values
+            # Faster, tensorflow-based implementation
+            self.similarity_matrix = cos_sim_np(self.rating_matrix.T)
+            self.distance_matrix = 1.0 - self.similarity_matrix
+        else:
+            self.rating_matrix = None
+            self.similarity_matrix = None
+            self.distance_matrix = None
         
         # Maps movie index to text description
         self.movies_df["description"] = self.movies_df.title + ' ' + self.movies_df.genres
@@ -365,12 +405,31 @@ class MLDataLoader:
                 self.plots = {movie_id: records["plot"] for movie_id, records in data.items()}
 
         # First check which images are downloaded so far
+        print(f"[DEBUG load] Checking images in img_dir_path: {self.img_dir_path}")
+        print(f"[DEBUG load] img_dir_path exists: {os.path.exists(self.img_dir_path)}")
+        
         already_downloaded = [] if not os.path.exists(self.img_dir_path) else os.listdir(self.img_dir_path)
+        print(f"[DEBUG load] Found {len(already_downloaded)} files in img_dir_path")
+        
+        # Skip system files
+        jpg_files = [f for f in already_downloaded if f.endswith('.jpg') and not f.startswith('.')]
+        print(f"[DEBUG load] Found {len(jpg_files)} JPG files (after filtering)")
+        
         self.movie_index_to_url = dict()
-        for img_name in already_downloaded:
-            movie_id = int(img_name.split(".jpg")[0])
-            if movie_id in self.movie_id_to_index: # It could be possible we have more images than movies (due to filtering)
-                self.movie_index_to_url[self.movie_id_to_index[movie_id]] = os.path.join(self.img_dir_path, img_name)
-
-        print(f"Already downloaded images for: {len(self.movie_index_to_url)} movies")
+        mapped_count = 0
+        for img_name in jpg_files:
+            try:
+                movie_id = int(img_name.split(".jpg")[0])
+                if movie_id in self.movie_id_to_index: # It could be possible we have more images than movies (due to filtering)
+                    movie_idx = self.movie_id_to_index[movie_id]
+                    self.movie_index_to_url[movie_idx] = os.path.join(self.img_dir_path, img_name)
+                    mapped_count += 1
+            except (ValueError, IndexError) as e:
+                print(f"[DEBUG load] Could not parse movie_id from {img_name}: {e}")
+                continue
+        
+        print(f"[DEBUG load] Already downloaded images for: {len(self.movie_index_to_url)} movies (mapped {mapped_count} files)")
+        if len(self.movie_index_to_url) > 0:
+            sample_keys = list(self.movie_index_to_url.keys())[:3]
+            print(f"[DEBUG load] Sample movie_index_to_url keys: {sample_keys}")
         return self

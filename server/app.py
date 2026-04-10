@@ -14,16 +14,6 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-#from werkzeug.middleware.profiler import ProfilerMiddleware
-import redis
-
-import os
-import random
-import sys
-import numpy as np
-import tensorflow as tf
-
-#from werkzeug.middleware.profiler import ProfilerMiddleware
 import redis
 
 from sqlalchemy import MetaData, event
@@ -44,16 +34,6 @@ csrf = CSRFProtect()
 
 sess = Session()
 rds = redis.Redis(host='localhost', port=6379)
-
-from models import *
-
-# This is needed to ensure foreign keys and corresponding cascade deletion work as
-# expected when SQLite is used as backend for SQLAlchemy
-@event.listens_for(Engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
 
 from models import *
 
@@ -113,9 +93,9 @@ def create_app():
     app.config["SESSION_TYPE"] = "sqlalchemy"
     app.config["SESSION_SQLALCHEMY"] = db
 
-    sess.init_app(app)
-
     db.init_app(app)
+
+    sess.init_app(app)
 
     migrate.init_app(app, db, render_as_batch=True)
 

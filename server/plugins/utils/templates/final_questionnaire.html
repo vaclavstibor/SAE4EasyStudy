@@ -7,17 +7,17 @@
         </b-jumbotron>
     
         <b-row align-h="center">
-            <b-col class="text-center">
+            <b-col>
                 <b-form method="POST" action="{{continuation_url}}">
                     <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
                     <input type="hidden" name="final_questionnaire_data" value="final_questionnaire_data"/>
                     {{ include_file(questionnaire_file) }}
-                    <b-button variant="success" type="submit">{{finish}}</b-button>
+                    <div class="text-center" style="margin-top:24px;margin-bottom:32px;">
+                        <b-button variant="success" type="submit" size="lg">{{finish}}</b-button>
+                    </div>
                 </b-form>
             </b-col>
         </b-row>
-        
-    
 
     </b-container>
 </div>

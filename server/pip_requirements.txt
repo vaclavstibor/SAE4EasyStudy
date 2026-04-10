@@ -1,6 +1,8 @@
+numpy
 Flask-PluginKit
 Flask-Session
 Flask-Migrate
+polars
 is-safe-url
 tensorflow
 tensorflow-recommenders
@@ -11,3 +13,9 @@ BeautifulSoup4
 cachelib
 pytest
 jmetalpy
+Flask-WTF
+cinemagoer
+cachetools
+tf-keras
+torch
+sentence-transformers

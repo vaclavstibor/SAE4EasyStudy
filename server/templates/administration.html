@@ -31,139 +31,596 @@
     <!-- <script src="https://unpkg.com/bootstrap-vue@2.22.0/dist/bootstrap-vue.js"></script> -->
     <script src="{{ url_for('static', filename='bootstrap-vue.js') }}"></script>
     <script src="https://unpkg.com/bootstrap-vue@2.22.0/dist/bootstrap-vue-icons.js"></script> <!-- Needed just for the Icons -->
+    <style>
+      body {
+        background: #f8f9fa;
+        color: #243447;
+      }
+
+      .admin-shell {
+        max-width: 1480px;
+        margin: 0 auto;
+        padding: 28px 20px 40px;
+      }
+
+      .hero-card,
+      .section-card,
+      .stat-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      }
+
+      .hero-card {
+        padding: 28px;
+        margin-bottom: 18px;
+      }
+
+      .hero-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-start;
+      }
+
+      .hero-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .hero-copy {
+        color: #556274;
+        max-width: 760px;
+        margin-bottom: 6px;
+      }
+
+      .hero-subcopy {
+        color: #7b8794;
+        font-size: 0.92rem;
+        margin-bottom: 20px;
+      }
+
+      .hero-toolbar {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 12px;
+        min-width: 280px;
+      }
+
+      .hero-button-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .hero-button-row .btn {
+        min-width: 116px;
+        min-height: 34px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.82rem;
+      }
+
+      .hero-btn-primary {
+        background: #007bff;
+        border-color: #007bff;
+        color: #ffffff !important;
+      }
+
+      .hero-btn-secondary {
+        background: #6c757d;
+        border-color: #6c757d;
+        color: #ffffff !important;
+      }
+
+      .hero-btn-primary:hover,
+      .hero-btn-secondary:hover {
+        filter: brightness(0.96);
+        color: #ffffff !important;
+      }
+
+      .signed-in-badge {
+        color: #526071;
+        font-size: 0.92rem;
+        text-align: right;
+      }
+
+      .signed-in-badge strong {
+        color: #243447;
+        font-weight: 700;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .stat-card {
+        padding: 18px 20px;
+      }
+
+      .stat-label {
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+
+      .stat-value {
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      .section-card {
+        padding: 20px;
+        margin-bottom: 18px;
+      }
+
+      .section-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: baseline;
+        margin-bottom: 16px;
+      }
+
+      .section-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .section-copy {
+        color: #64748b;
+        font-size: 0.92rem;
+        margin: 0;
+      }
+
+      .status-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .participants-pill {
+        min-width: 136px;
+      }
+
+      .status-ready {
+        background: #e8f7ee;
+        color: #18794e;
+      }
+
+      .status-pending {
+        background: #fff4db;
+        color: #9a6700;
+      }
+
+      .status-inactive {
+        background: #eef2f7;
+        color: #526071;
+      }
+
+      .status-active {
+        background: #e7f1ff;
+        color: #0b57d0;
+      }
+
+      .status-error {
+        background: #fdebec;
+        color: #b42318;
+      }
+
+      .styled-table {
+        margin-bottom: 0;
+      }
+
+      .styled-table .table {
+        margin-bottom: 0;
+        color: #243447;
+      }
+
+      .styled-table thead th {
+        background: #f8fafc;
+        border-top: 0;
+        border-bottom: 1px solid #e5e7eb;
+        color: #64748b;
+        font-size: 0.76rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
+      }
+
+      .styled-table tbody td {
+        vertical-align: middle;
+        padding-top: 14px;
+        padding-bottom: 14px;
+      }
+
+      .cell-center {
+        text-align: center;
+      }
+
+      .table-main {
+        font-weight: 600;
+        color: #111827;
+      }
+
+      .table-sub {
+        color: #64748b;
+        font-size: 0.82rem;
+        margin-top: 2px;
+      }
+
+      .table-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        text-align: center;
+      }
+
+      .action-cluster {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .btn-sm {
+        min-width: 94px;
+        min-height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.82rem;
+      }
+
+      .study-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .table-action-btn {
+        background: transparent !important;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+      }
+
+      .btn-filled-primary {
+        color: #0d6efd !important;
+        border-color: #0d6efd !important;
+      }
+
+      .btn-filled-secondary {
+        color: #6c757d !important;
+        border-color: #6c757d !important;
+      }
+
+      .btn-filled-success {
+        color: #198754 !important;
+        border-color: #198754 !important;
+      }
+
+      .btn-filled-warning {
+        color: #d97706 !important;
+        border-color: #d97706 !important;
+      }
+
+      .btn-filled-danger {
+        color: #dc3545 !important;
+        border-color: #dc3545 !important;
+      }
+
+      .table-action-btn.btn-filled-primary:hover {
+        background: #0d6efd !important;
+        color: #ffffff !important;
+      }
+
+      .table-action-btn.btn-filled-secondary:hover {
+        background: #6c757d !important;
+        color: #ffffff !important;
+      }
+
+      .table-action-btn.btn-filled-success:hover {
+        background: #198754 !important;
+        color: #ffffff !important;
+      }
+
+      .table-action-btn.btn-filled-warning:hover {
+        background: #d97706 !important;
+        color: #ffffff !important;
+      }
+
+      .table-action-btn.btn-filled-danger:hover {
+        background: #dc3545 !important;
+        color: #ffffff !important;
+      }
+
+      .empty-copy {
+        color: #64748b;
+      }
+
+      @media (max-width: 768px) {
+        .admin-shell {
+          padding: 18px 12px 28px;
+        }
+
+        .hero-card,
+        .section-card,
+        .stat-card {
+          border-radius: 14px;
+        }
+
+        .hero-toolbar {
+          align-items: flex-start;
+          min-width: 0;
+        }
+
+        .hero-button-row {
+          justify-content: flex-start;
+        }
+
+        .signed-in-badge {
+          text-align: left;
+        }
+      }
+    </style>
   </head>
   <body>
     <!-- Our application root element -->
     <div id="app">
-      <b-container fluid align-h="center">
-        <b-jumbotron header="EasyStudy Administration" lead="Manage templates and user studies.">
-          <b-row>
-            <b-col cols="10">
-              <p>A framework for Easy Deployment of User Studies on Recommender Systems</p>
-              <p>Contact information: Hidden due to <strong>Anonymization</strong></p>
-              <b-btn variant="primary" href="https://bit.ly/EasyStudyRepo">Github repository</b-btn>
-            </b-col>
-            <b-col cols="2" class="text-center">
-              <p>
-                <strong>
-                  Signed in as {{ current_user }}
-                </strong>
-              </p>
-              <b-form action="/logout">
-                <b-button variant="warning" type="submit">Logout</b-button>
-              </form>
-            </b-col>
-          </b-row>
-          </b-jumbotron>
-      
-
-        <div>
-          <b-row align-h="center">
-              <h1>Available templates</h1>
-          </b-row>
-          <b-row align-h="center">
-              <b-col cols="8">
-                <b-table responsive show-empty :items="availableTemplates" :fields="availableTemplatesFields">
-                  <template #cell()="data">
-                      <i>[[ data.value ]]</i>
-                  </template>
-
-                  <template #cell(create_url)="data">
-                      <b-btn variant="primary" :href="data.value">Create</b-btn>
-                  </template>
-                  
-                </b-table>
-              </b-col>
-          </b-row>
-          <b-row align-h="center">
-              <h1>Existing user studies</h1>
-          </b-row>
-          <b-row align-h="center">
-              <b-col cols="8">
-                <b-table responsive show-empty :items="existingUserStudies">
-                  <template #cell()="data">
-                    <!-- [[ data.value.url ]] -->
-                    <p>
-                      <i>[[ data.value ]]</i>
-                    </p>
-                    <!-- <img width="60" height="60" v-on:click="handleRecommendationClick($event)" :id="data.value.id" :src="data.value.url"/> -->
-                  </template>
-
-                  <template #cell(join_url)="data">
-                    <div style="min-width: 60px;">
-                      <a :href="[[ data.value ]]">Link</a>
-                      <b-icon class="ml-2" :id=data.value v-on:click="copyClipboard($event, existingUserStudies.indexOf(data.item))" :icon="icons[existingUserStudies.indexOf(data.item)]"></b-icon>
-                      <b-tooltip :target=data.value triggers="hover">
-                        [[ tooltipTexts[existingUserStudies.indexOf(data.item)] ]]
-                      </b-tooltip>
-                    </div>
-
-                    
-                    <!-- <b-button v-on:click="notify(existingUserStudies.indexOf(data.item))" class="ml-2" size="sm" variant="primary" v-b-tooltip.hover title="Select users to notify via e-mail">Notify</b-button> -->
-                      <!-- <span v-b-tooltip.hover :title=data.value>[[ data.value ]]</span> -->
-                  </template>
-
-                  <template #cell(results)="data">
-                    <div style="min-width: 60px;">
-                      <a v-if="data.item.initialized" target="_blank" :href="[[ data.value ]]">Results</a>
-                    </div>
-
-                    
-                    <!-- <b-button v-on:click="notify(existingUserStudies.indexOf(data.item))" class="ml-2" size="sm" variant="primary" v-b-tooltip.hover title="Select users to notify via e-mail">Notify</b-button> -->
-                      <!-- <span v-b-tooltip.hover :title=data.value>[[ data.value ]]</span> -->
-                  </template>
-
-                  <template align-h="center" #cell(initialized)="data">
-                    <p style="text-transform:uppercase;">
-                      <strong>[[data.value]]</strong>
-                    </p>
-                  </template>
-
-                  <template align-h="center" #cell(active)="data">
-                    <p style="text-transform:uppercase;">
-                      <strong>[[data.value]]</strong>
-                    </p>
-
-                    <b-overlay class="d-inline-block ml-1" :show="aboutToDelete">
-                      <div :hidden="!data.item.initialized && !data.item.error">
-                        <b-button v-if="data.value" @click="onDeactivate(existingUserStudies.indexOf(data.item))" variant="warning">
-                          Deactivate
-                        </b-button>
-                        <b-button v-else-if="!data.item.error && !data.value" style="min-width: 100px" @click="onActivate(existingUserStudies.indexOf(data.item))" variant="success">
-                          Activate
-                        </b-button>
-                        <b-button @click="onDelete(existingUserStudies.indexOf(data.item))" class="mt-3" style="min-width: 100px" variant="danger">
-                          Delete
-                        </b-button>
-                      </div>
-                      <template #overlay>
-                        <div
-                          v-if="existingUserStudies.indexOf(data.item) == deletingIndex"
-                          ref="dialog"
-                          tabindex="-1"
-                          role="dialog"
-                          aria-modal="false"
-                          aria-labelledby="form-confirm-label"
-                          class="text-center p-3"
-                        >
-                          <p><strong id="form-confirm-label">Are you sure?</strong></p>
-                          <div class="d-flex">
-                            <b-button variant="outline-danger" class="mr-3" @click="onCancel">
-                              Cancel
-                            </b-button>
-                            <b-button variant="outline-success" @click="onOK">OK</b-button>
-                          </div>
-                        </div>
-                      </template>
-                    </b-overlay>
-                    
-                  </template>                  
-
-              </b-table>
-              </b-col>
-          </b-row>
+      <div class="admin-shell">
+        <div class="hero-card">
+          <div class="hero-header">
+            <div>
+              <div class="hero-title">EasyStudy Administration</div>
+              <div class="hero-copy">
+                A framework for Easy Deployment of User Studies on Recommender Systems.
+              </div>
+              <div class="hero-subcopy">Contact information: Hidden due to <strong>Anonymization</strong></div>
+            </div>
+            <div class="hero-toolbar">
+              <span class="signed-in-badge">Signed in as <strong>{{ current_user }}</strong></span>
+              <div class="hero-button-row">
+                <b-btn class="hero-btn-primary" href="https://bit.ly/EasyStudyRepo">
+                  <b-icon icon="github" class="mr-1"></b-icon>
+                  Repository
+                </b-btn>
+                <b-form action="/logout">
+                  <b-button class="hero-btn-secondary" type="submit">
+                    <b-icon icon="box-arrow-right" class="mr-1"></b-icon>
+                    Logout
+                  </b-button>
+                </b-form>
+              </div>
+            </div>
+          </div>
         </div>
-      </b-container>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Templates</div>
+            <div class="stat-value">[[ availableTemplatesCount ]]</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Studies</div>
+            <div class="stat-value">[[ existingStudiesCount ]]</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active</div>
+            <div class="stat-value">[[ activeStudiesCount ]]</div>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <p class="section-title">Available templates</p>
+              <p class="section-copy">Create a new study from any enabled plugin template.</p>
+            </div>
+          </div>
+
+          <b-table
+            class="styled-table"
+            responsive
+            show-empty
+            empty-text="No templates are available."
+            :items="availableTemplates"
+            :fields="availableTemplatesFields"
+          >
+            <template #cell(plugin_name)="data">
+              <div class="table-main">[[ humanizeLabel(data.value) ]]</div>
+            </template>
+
+            <template #cell(plugin_description)="data">
+              <div class="table-sub">[[ data.value ]]</div>
+            </template>
+
+            <template #cell(plugin_version)="data">
+              <span class="status-pill status-inactive">v[[ data.value ]]</span>
+            </template>
+
+            <template #cell(plugin_author)="data">
+              <div class="table-sub">[[ data.value ]]</div>
+            </template>
+
+            <template #cell(create_url)="data">
+              <b-btn size="sm" class="table-action-btn btn-filled-primary" :href="data.value">Create</b-btn>
+            </template>
+          </b-table>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <div>
+              <p class="section-title">Existing user studies</p>
+              <p class="section-copy">Monitor initialization, open participant links, and manage study state.</p>
+            </div>
+            <div class="status-legend">
+              <span class="status-pill status-ready">Ready</span>
+              <span class="status-pill status-pending">Initializing</span>
+              <span class="status-pill status-inactive">Inactive</span>
+              <span class="status-pill status-error">Error</span>
+            </div>
+          </div>
+
+          <b-table
+            class="styled-table"
+            responsive
+            show-empty
+            empty-text="No user studies created yet."
+            :items="existingUserStudies"
+            :fields="existingUserStudiesFields"
+          >
+            <template #cell(parent_plugin)="data">
+              <div class="table-main">[[ humanizeLabel(data.value) ]]</div>
+              <div class="table-sub">GUID: [[ data.item.guid ]]</div>
+              <div class="table-sub">Creator: [[ data.item.creator || 'Unknown' ]]</div>
+            </template>
+
+            <template #cell(participants)="data">
+              <span class="status-pill status-inactive participants-pill">[[ data.value ]] participants</span>
+            </template>
+
+            <template #cell(time_created)="data">
+              <div class="table-sub">[[ formatDate(data.value) ]]</div>
+            </template>
+
+            <template #cell(initialized)="data">
+              <span
+                class="status-pill"
+                :class="data.item.error ? 'status-error' : (data.value ? 'status-ready' : 'status-pending')"
+              >
+                [[ data.item.error ? 'Error' : (data.value ? 'Ready' : 'Initializing') ]]
+              </span>
+            </template>
+
+            <template #cell(active)="data">
+              <div class="table-stack">
+                <span
+                  class="status-pill"
+                  :class="data.value ? 'status-active' : 'status-inactive'"
+                >
+                  [[ data.value ? 'Active' : 'Inactive' ]]
+                </span>
+              </div>
+            </template>
+
+            <template #cell(actions)="data">
+              <div class="table-stack">
+                <b-overlay class="d-inline-block" :show="aboutToDelete">
+                  <div class="study-actions" :hidden="!data.item.initialized && !data.item.error">
+                    <b-button
+                      v-if="data.value"
+                      size="sm"
+                      class="table-action-btn btn-filled-warning"
+                      @click="onDeactivate(existingUserStudies.indexOf(data.item))"
+                    >
+                      Deactivate
+                    </b-button>
+                    <b-button
+                      v-else-if="!data.item.error && !data.value"
+                      size="sm"
+                      class="table-action-btn btn-filled-success"
+                      @click="onActivate(existingUserStudies.indexOf(data.item))"
+                    >
+                      Activate
+                    </b-button>
+                    <b-button
+                      size="sm"
+                      class="table-action-btn btn-filled-danger"
+                      @click="onDelete(existingUserStudies.indexOf(data.item))"
+                    >
+                      Delete
+                    </b-button>
+                  </div>
+
+                  <template #overlay>
+                    <div
+                      v-if="existingUserStudies.indexOf(data.item) == deletingIndex"
+                      ref="dialog"
+                      tabindex="-1"
+                      role="dialog"
+                      aria-modal="false"
+                      aria-labelledby="form-confirm-label"
+                      class="text-center p-3"
+                    >
+                      <p><strong id="form-confirm-label">Are you sure?</strong></p>
+                      <div class="d-flex justify-content-center" style="gap:10px;">
+                        <b-button size="sm" class="table-action-btn btn-filled-secondary" @click="onCancel">Cancel</b-button>
+                        <b-button size="sm" class="table-action-btn btn-filled-success" @click="onOK">OK</b-button>
+                      </div>
+                    </div>
+                  </template>
+                </b-overlay>
+              </div>
+            </template>
+
+            <template #cell(join_url)="data">
+              <div class="action-cluster">
+                <a class="btn btn-sm table-action-btn btn-filled-primary" target="_blank" :href="data.value">Open</a>
+                <button
+                  type="button"
+                  class="btn btn-sm table-action-btn btn-filled-secondary"
+                  :id="'copy-link-' + existingUserStudies.indexOf(data.item)"
+                  @click="copyClipboard(existingUserStudies.indexOf(data.item))"
+                >
+                  <b-icon class="mr-1" :icon="icons[existingUserStudies.indexOf(data.item)]"></b-icon>
+                  Copy
+                </button>
+                <b-tooltip :target="'copy-link-' + existingUserStudies.indexOf(data.item)" triggers="hover">
+                  [[ tooltipTexts[existingUserStudies.indexOf(data.item)] ]]
+                </b-tooltip>
+              </div>
+            </template>
+
+            <template #cell(results)="data">
+              <div class="action-cluster">
+                <a
+                  v-if="data.item.initialized"
+                  class="btn btn-sm table-action-btn btn-filled-secondary"
+                  target="_blank"
+                  :href="data.value"
+                >
+                  Results
+                </a>
+                <span v-else class="empty-copy">Unavailable</span>
+              </div>
+            </template>
+          </b-table>
+        </div>
+      </div>
     </div>
 
     <!-- Start running your app -->
@@ -179,19 +636,41 @@
         data: function() {
             return {
                 availableTemplatesFields: [
-                    {key: "plugin_name", label: "Name"},
+                    {key: "plugin_name", label: "Template"},
                     {key: "plugin_description", label: "Description"},
-                    {key: "plugin_version", label: "Version"},
+                    {key: "plugin_version", label: "Version", thClass: "cell-center", tdClass: "cell-center"},
                     {key: "plugin_author", label: "Author"},
-                    {key: "create_url", label: "Create"}
+                    {key: "create_url", label: "Create", thClass: "cell-center", tdClass: "cell-center"}
                 ],
-                availableTemplates: {}, // Query server for loaded plugins
-                existingUserStudies: {}, // Query (-> server -> database) for existing user studies,
+                existingUserStudiesFields: [
+                    {key: "parent_plugin", label: "Study"},
+                    {key: "participants", label: "Participants", thClass: "cell-center", tdClass: "cell-center"},
+                    {key: "time_created", label: "Created"},
+                    {key: "initialized", label: "Initialization", thClass: "cell-center", tdClass: "cell-center"},
+                    {key: "join_url", label: "Participant Link", thClass: "cell-center", tdClass: "cell-center"},
+                    {key: "active", label: "State", thClass: "cell-center", tdClass: "cell-center"},
+                    {key: "actions", label: "Actions", thClass: "cell-center", tdClass: "cell-center"},
+                    {key: "results", label: "Results", thClass: "cell-center", tdClass: "cell-center"}
+                ],
+                availableTemplates: [], // Query server for loaded plugins
+                existingUserStudies: [], // Query (-> server -> database) for existing user studies,
                 tooltipTexts: [],
                 icons: [],
                 aboutToDelete: false,
                 deletingIndex: null
             }
+        },
+        computed: {
+          availableTemplatesCount() {
+            return Array.isArray(this.availableTemplates) ? this.availableTemplates.length : 0;
+          },
+          existingStudiesCount() {
+            return Array.isArray(this.existingUserStudies) ? this.existingUserStudies.length : 0;
+          },
+          activeStudiesCount() {
+            if (!Array.isArray(this.existingUserStudies)) return 0;
+            return this.existingUserStudies.filter((study) => study.active).length;
+          }
         },
         async mounted() {
           this.availableTemplates = await fetch("/loaded-plugins").then((resp) => resp.json());
@@ -203,7 +682,19 @@
           }, 15000); // Every 15 seconds we check for newly activated user studies
         },
         methods: {
-          copyClipboard(event, idx) {
+          humanizeLabel(value) {
+            if (!value) return "";
+            return String(value).replace(/_/g, " ");
+          },
+          formatDate(value) {
+            if (!value) return "Unknown";
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) {
+              return value;
+            }
+            return parsed.toLocaleString();
+          },
+          copyClipboard(idx) {
             navigator.clipboard.writeText(this.existingUserStudies[idx]["join_url"]);
             this.tooltipTexts[idx] = TOOLTIP_COPIED_TEXT;
             this.icons[idx] = TOOLTIP_CHECK_ICON;
@@ -267,7 +758,7 @@
             this.existingUserStudies = await fetch("/existing-user-studies").then((resp) => resp.json());
             this.icons = [];
             this.tooltipTexts = [];
-            for (i in this.existingUserStudies) {
+            for (const i in this.existingUserStudies) {
               this.icons.push(TOOLTIP_STICKIES_ICON);
               this.tooltipTexts.push(TOOLTIP_COPY_TEXT);
               if (this.existingUserStudies[i].error) {
