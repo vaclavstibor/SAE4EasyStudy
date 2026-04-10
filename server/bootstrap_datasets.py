@@ -3,7 +3,8 @@
 Download and extract the MovieLens dataset assets required by EasyStudy.
 
 Expected release assets by default:
-  - ml-latest.zip
+  - ml-latest.zip containing the MovieLens CSVs, genome files,
+    descriptions/TMDB metadata, and the img directory
 """
 
 import argparse
@@ -31,7 +32,16 @@ DEFAULT_RELEASE_TAG = os.environ.get(
 )
 DEFAULT_DATASET_ASSET = os.environ.get("ML_LATEST_DATASET_ASSET", "ml-latest.zip")
 DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("DATASET_DOWNLOAD_TIMEOUT", "60"))
-REQUIRED_DATASET_FILES = ("ratings.csv", "movies.csv", "tags.csv", "links.csv")
+REQUIRED_DATASET_FILES = (
+    "ratings.csv",
+    "movies.csv",
+    "tags.csv",
+    "links.csv",
+    "genome-tags.csv",
+    "genome-scores.csv",
+    "descriptions.json",
+    "tmdb_data.json",
+)
 
 
 def _github_headers(token: str = "") -> dict:
@@ -123,7 +133,7 @@ def _ensure_zip_asset(local_zip: Path, release: dict, asset_name: str, headers: 
 
 def _ensure_dataset_files(release: dict, headers: dict, timeout: int, dataset_asset: str) -> None:
     if _dataset_ready() and _images_ready():
-        print(f"MovieLens dataset and poster images already present in {ML_LATEST_DIR}")
+        print(f"MovieLens dataset, metadata, and poster images already present in {ML_LATEST_DIR}")
         return
 
     local_zip = ML_LATEST_DIR / Path(dataset_asset).name
@@ -148,7 +158,7 @@ def parse_args():
     parser.add_argument(
         "--dataset-asset",
         default=DEFAULT_DATASET_ASSET,
-        help="Zip asset containing the ml-latest dataset and the img directory",
+        help="Zip asset containing ml-latest CSVs, metadata files, and the img directory",
     )
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""), help="Optional GitHub token")
     return parser.parse_args()

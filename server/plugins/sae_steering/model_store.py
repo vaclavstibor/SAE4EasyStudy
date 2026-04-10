@@ -3,12 +3,14 @@ from pathlib import Path
 
 DEFAULT_TOPK_SAE_MODEL_ID = "www_TopKSAE_8192"
 DEFAULT_LOCAL_MODEL_FILENAME = f"{DEFAULT_TOPK_SAE_MODEL_ID}.ckpt"
+DEFAULT_RUNTIME_FEATURES_FILENAME = f"item_sae_features_{DEFAULT_TOPK_SAE_MODEL_ID}.pt"
 DEFAULT_BOOTSTRAP_COMMAND = "cd server && python plugins/sae_steering/bootstrap_model.py"
 
 PLUGIN_DIR = Path(__file__).resolve().parent
 MODELS_DIR = PLUGIN_DIR / "models"
+DATA_DIR = PLUGIN_DIR / "data"
 
-REMOTE_ASSET_CANDIDATES = (
+REMOTE_MODEL_ASSET_CANDIDATES = (
     f"{DEFAULT_TOPK_SAE_MODEL_ID}.ckpt",
     f"{DEFAULT_TOPK_SAE_MODEL_ID}.pt",
     "model.ckpt",
@@ -16,10 +18,31 @@ REMOTE_ASSET_CANDIDATES = (
     "model.pkl",
 )
 
+REMOTE_RUNTIME_ASSET_CANDIDATES = (
+    DEFAULT_RUNTIME_FEATURES_FILENAME,
+    f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.xz",
+    f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.gz",
+    f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.zip",
+    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt",
+    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt.xz",
+    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt.gz",
+    "item_sae_features.pt",
+    "item_sae_features.pt.xz",
+    "item_sae_features.pt.gz",
+    "runtime_features.pt",
+    "runtime_features.pt.xz",
+    "runtime_features.pt.gz",
+)
+
 
 def ensure_models_dir() -> Path:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     return MODELS_DIR
+
+
+def ensure_data_dir() -> Path:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    return DATA_DIR
 
 
 def iter_local_model_paths(model_id: str = DEFAULT_TOPK_SAE_MODEL_ID):

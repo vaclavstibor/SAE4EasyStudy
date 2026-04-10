@@ -23,7 +23,7 @@ The [sae_steering](./server/plugins/sae_steering/) plugin provides:
 
 ## Quick Start
 
-Requires Python 3.9 and Redis. The SAE checkpoint is downloaded separately from GitHub Releases into `server/plugins/sae_steering/models/`.
+Requires Python 3.9 and Redis. The SAE bootstrap downloads both the `WWW TopKSAE-8192` checkpoint into `server/plugins/sae_steering/models/` and the precomputed runtime item features into `server/plugins/sae_steering/data/`.
 
 ```bash
 # Setup
@@ -31,7 +31,7 @@ cd server
 python3.9 -m venv .venv39 && source .venv39/bin/activate
 pip install -r pip_requirements.txt
 
-# Download the required SAE model
+# Download the required SAE assets
 python plugins/sae_steering/bootstrap_model.py
 
 # Start Redis (in separate terminal)
@@ -53,7 +53,7 @@ python plugins/sae_steering/bootstrap_model.py --asset-name model.pkl
 
 ## Docker Compose
 
-For a CPU-only deployment, the repository now includes a `docker-compose.yml` that starts both the EasyStudy server and Redis. The container bootstraps the `WWW TopKSAE-8192` checkpoint from GitHub Releases on first start, and it can also download and extract the required `ml-latest` dataset asset automatically.
+For a CPU-only deployment, the repository now includes a `docker-compose.yml` that starts both the EasyStudy server and Redis. The container bootstraps the `WWW TopKSAE-8192` checkpoint, the precomputed SAE runtime features, and the required `ml-latest` dataset asset from GitHub Releases on first start.
 
 ```bash
 # If clone complains about git-lfs, either install git-lfs
@@ -68,7 +68,24 @@ docker compose up --build
 By default, the container looks for these release assets:
 
 - `www_TopKSAE_8192.ckpt`
+- `item_sae_features_www_TopKSAE_8192.pt`
 - `ml-latest.zip`
+
+If the runtime features file is too large to upload directly, you can upload a compressed asset such as `item_sae_features_www_TopKSAE_8192.pt.xz` instead. The bootstrap script now detects `.xz`, `.gz`, and single-file `.zip` runtime assets and extracts them automatically into `server/plugins/sae_steering/data/`.
+
+Important:
+
+- `git clone` downloads the source repository only
+- `git lfs pull` downloads Git LFS objects tracked in git, but it does **not** download GitHub Release assets
+- `www_TopKSAE_8192.ckpt`, `item_sae_features_www_TopKSAE_8192.pt`, and `ml-latest.zip` are fetched from the GitHub release at container startup by the bootstrap scripts
+
+If you want to test the release downloads without Docker, run:
+
+```bash
+cd server
+python bootstrap_datasets.py --tag v1.0
+python plugins/sae_steering/bootstrap_model.py --tag v1.0
+```
 
 Useful environment overrides:
 
@@ -84,7 +101,30 @@ Persistent Docker volumes are used for:
 - runtime cache in `/app/cache`
 - downloaded SAE models in `/app/plugins/sae_steering/models`
 
-The `ml-latest.zip` asset should already contain the `img/` directory with poster JPGs. It is extracted into `/app/static/datasets/ml-latest`, so the resulting structure contains both the CSV files and `/app/static/datasets/ml-latest/img`.
+The `ml-latest.zip` asset should already contain:
+
+- the MovieLens CSV files
+- `genome-tags.csv` and `genome-scores.csv`
+- `descriptions.json`
+- `tmdb_data.json`
+- the `img/` directory with poster JPGs
+
+It is extracted into `/app/static/datasets/ml-latest`, so the resulting structure contains the dataset, metadata, and poster images expected by the app.
+
+## Release Checklist
+
+Upload these GitHub Release assets for a fresh machine to behave the same way as the development machine:
+
+- `www_TopKSAE_8192.ckpt`
+- `item_sae_features_www_TopKSAE_8192.pt`
+- `ml-latest.zip`
+
+The `item_sae_features_www_TopKSAE_8192.pt` file lives in `server/plugins/sae_steering/data/`. If you need to compress it for release upload, run:
+
+```bash
+cd server/plugins/sae_steering/data
+xz -T0 -9 -k item_sae_features_www_TopKSAE_8192.pt
+```
 
 ## EasyStudy Framework
 

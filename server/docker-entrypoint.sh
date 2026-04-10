@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-mkdir -p /app/instance /app/cache /app/plugins/sae_steering/models
+mkdir -p /app/instance /app/cache /app/plugins/sae_steering/models /app/plugins/sae_steering/data
 
 if [ "${DATASET_BOOTSTRAP:-1}" = "1" ]; then
   echo "Bootstrapping MovieLens dataset assets..."

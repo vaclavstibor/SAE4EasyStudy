@@ -1258,6 +1258,76 @@ def item_search():
 # Feature Display & Steering
 # ============================================================================
 
+def _load_cached_model_labels(model_id: str = None) -> dict:
+    """Load pre-generated label caches without requiring runtime SAE activations."""
+    data_dir = Path(__file__).parent / "data"
+    resolved_model_id = model_id or DEFAULT_TOPK_SAE_MODEL_ID
+    labels: dict = {}
+
+    def _candidate_paths(pattern: str, specific_name: str) -> list:
+        specific = data_dir / specific_name
+        if specific.exists():
+            return [specific]
+        return sorted(data_dir.glob(pattern))
+
+    def _merge_from_paths(paths: list) -> None:
+        for path in paths:
+            try:
+                with open(path, "r", encoding="utf-8") as handle:
+                    raw = json.load(handle)
+                for nid_str, info in raw.items():
+                    try:
+                        nid = int(nid_str)
+                    except (TypeError, ValueError):
+                        continue
+                    if nid in labels:
+                        continue
+                    label = (info.get("label") or "").strip()
+                    if not label:
+                        continue
+                    labels[nid] = {
+                        "label": label,
+                        "description": info.get("description", ""),
+                        "activation_count": info.get("activation_count", 0),
+                        "selectivity": info.get("selectivity", 0.0),
+                        "tags": info.get("tags", []),
+                        "genres": info.get("genres", []),
+                    }
+            except Exception as exc:
+                print(f"[_load_cached_model_labels] Failed to read {path.name}: {exc}")
+
+    _merge_from_paths(_candidate_paths("llm_labels_*_llm.json", f"llm_labels_{resolved_model_id}_llm.json"))
+    _merge_from_paths(_candidate_paths("dynamic_labels_*_v*.json", f"dynamic_labels_{resolved_model_id}_v2.json"))
+    return labels
+
+
+def _get_cached_sae_features(top_k: int = 21, model_id: str = None) -> list:
+    """Build a feature list from cached label catalogs when SAE runtime data is absent."""
+    try:
+        from .dynamic_labeling import select_features_for_display
+
+        cached_labels = _load_cached_model_labels(model_id=model_id)
+        if not cached_labels:
+            return []
+
+        features = select_features_for_display(cached_labels, top_k=top_k)
+        for feature in features:
+            info = cached_labels.get(int(feature["id"]), {})
+            if info.get("description"):
+                feature["description"] = info["description"]
+            if info.get("activation_count"):
+                feature["movie_count"] = info["activation_count"]
+        if features:
+            print(
+                f"[_get_cached_sae_features] Using cached labels for "
+                f"{model_id or DEFAULT_TOPK_SAE_MODEL_ID}: {len(features)} features"
+            )
+        return features
+    except Exception as exc:
+        print(f"[_get_cached_sae_features] Failed: {exc}")
+        return []
+
+
 def get_sae_features(top_k: int = 21, model_id: str = None) -> list:
     """
     Select the most interpretable SAE neurons as user-facing features.
@@ -1314,10 +1384,17 @@ def get_sae_features(top_k: int = 21, model_id: str = None) -> list:
                             f['description'] = info['description']
                     return features
 
+        cached_features = _get_cached_sae_features(top_k=top_k, model_id=model_id)
+        if cached_features:
+            return cached_features
+
         print("[get_sae_features] Dynamic labeling unavailable, trying static fallback")
 
     except Exception as e:
         print(f"[get_sae_features] Dynamic labeling failed: {e}")
+        cached_features = _get_cached_sae_features(top_k=top_k, model_id=model_id)
+        if cached_features:
+            return cached_features
         traceback.print_exc()
 
     # --- Static fallback is only safe for the legacy prediction-aware model ---
@@ -2064,6 +2141,14 @@ def get_neurons_by_ids(neuron_ids, model_id: str = None):
 
     # --- Try LLM labels first ---
     all_labels: dict = {}  # neuron_id (int) -> label info dict
+    cached_labels = _load_cached_model_labels(model_id=model_id)
+    if cached_labels:
+        all_labels.update({
+            int(nid): cached_labels[int(nid)]
+            for nid in neuron_ids
+            if int(nid) in cached_labels
+        })
+
     try:
         from .sae_recommender import get_sae_recommender
         from .llm_labeling import label_neurons_by_ids_llm
@@ -2588,6 +2673,13 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
         # Get recommender for the specific SAE model (supports A/B comparison)
         recommender = get_sae_recommender(model_id=sae_model_id)
         recommender.load()
+
+        if recommender.item_features is None or recommender.item_ids is None:
+            print(
+                "[generate_steered_recommendations_for_model] SAE runtime activations "
+                "missing; falling back to metadata-based recommendations"
+            )
+            return _fallback_genre_recommendations(loader, selected_movies, feature_adjustments, k)
         
         print(f"[generate_steered_recommendations_for_model] Using SAE model: {sae_model_id}")
         print(f"[generate_steered_recommendations_for_model] Feature adjustments: {feature_adjustments}")
@@ -2680,13 +2772,7 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
                 skipped_missing_meta.append(movie_id)
                 continue
 
-            # TODO: properly resolve missing posters — either download all
-            #       posters from TMDB upfront, or fall back to TMDB image URL
-            #       at runtime.  Until then, skip movies without a poster
-            #       (and overview) so the UI never shows empty placeholder cards.
             overview_text = overviews.get(movie_id, "")
-            if not image_url or not overview_text:
-                continue
 
             # Skip if movie has a suppressed genre
             if suppressed_genres:
@@ -2702,7 +2788,7 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
                 "matched_features": rec.get('matched_features', {}),
                 "model": model_config.get("id", "unknown"),
                 "url": image_url,
-                "overview": overviews.get(movie_id, "")
+                "overview": overview_text
             })
             
             if len(results) >= k:
@@ -2795,10 +2881,6 @@ def _fallback_genre_recommendations(loader, selected_movies, feature_adjustments
                 image_url = loader.get_image(movie_idx)
             except (KeyError, AttributeError):
                 image_url = None
-
-            # TODO: same as above — skip movies without poster/overview
-            if not image_url:
-                continue
 
             scored_movies.append({
                 "title": title,
