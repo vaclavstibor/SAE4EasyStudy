@@ -23,6 +23,12 @@ def administration():
         return flask.render_template("administration.html", current_user=current_user.email)
     else:
         return flask.redirect(flask.url_for('auth.login'))
+
+@main.route("/", methods=["GET"])
+def index():
+    if current_user.is_authenticated:
+        return flask.redirect(flask.url_for('main.administration'))
+    return flask.redirect(flask.url_for('auth.login'))
     
 # @main.route("/", methods=["GET"])
 # def index():
