@@ -253,6 +253,42 @@ def _ensure_asset(
     print(f"{purpose}: SHA256 {actual_sha}")
 
 
+def _optional_asset_download(
+    *,
+    release: dict,
+    assets: list,
+    headers: dict,
+    timeout: int,
+    purpose: str,
+    asset_name: str,
+    candidates: tuple[str, ...],
+    output_path: Path,
+    force: bool,
+    require_checksum: bool,
+    checksum_aliases: tuple[str, ...] = (),
+    optional: bool = False,
+) -> None:
+    try:
+        _ensure_asset(
+            release=release,
+            assets=assets,
+            headers=headers,
+            timeout=timeout,
+            purpose=purpose,
+            asset_name=asset_name,
+            candidates=candidates,
+            output_path=output_path,
+            force=force,
+            require_checksum=require_checksum,
+            checksum_aliases=checksum_aliases,
+        )
+    except RuntimeError as exc:
+        if optional:
+            print(f"[bootstrap_model] Optional asset missing: {purpose}: {exc}")
+            return
+        raise
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Download the SAE steering model checkpoint and runtime features from GitHub Releases."
@@ -284,6 +320,23 @@ def parse_args():
         dest="runtime_output",
         default="",
         help=f"Runtime features destination; defaults to plugins/sae_steering/data/{DEFAULT_RUNTIME_FEATURES_FILENAME}",
+    )
+    parser.add_argument(
+        "--label-asset-name",
+        dest="label_asset_name",
+        default=os.environ.get("SAE_LABEL_ASSET_NAME", ""),
+        help="Exact LLM label cache asset name; defaults to auto-detection",
+    )
+    parser.add_argument(
+        "--label-output",
+        dest="label_output",
+        default="",
+        help="Label cache destination; defaults to plugins/sae_steering/data/llm_labels_<model>_llm.json",
+    )
+    parser.add_argument(
+        "--label-optional",
+        action="store_true",
+        help="Do not fail if the label cache asset is missing",
     )
     parser.add_argument(
         "--skip-runtime-features",
@@ -354,6 +407,29 @@ def main() -> int:
                     f"{Path(DEFAULT_RUNTIME_FEATURES_FILENAME).stem}.sha256",
                 ),
             )
+
+        label_output = (
+            Path(args.label_output).expanduser().resolve()
+            if args.label_output
+            else ensure_data_dir() / f"llm_labels_{DEFAULT_TOPK_SAE_MODEL_ID}_llm.json"
+        )
+        label_candidates = (
+            f"llm_labels_{DEFAULT_TOPK_SAE_MODEL_ID}_llm.json",
+            "llm_labels_llm.json",
+        )
+        _optional_asset_download(
+            release=release,
+            assets=assets,
+            headers=headers,
+            timeout=timeout,
+            purpose="LLM label cache",
+            asset_name=args.label_asset_name,
+            candidates=label_candidates,
+            output_path=label_output,
+            force=args.force,
+            require_checksum=args.require_checksum,
+            optional=args.label_optional,
+        )
 
         print(f"Release assets ready from release: {release.get('tag_name', args.tag)}")
         return 0
