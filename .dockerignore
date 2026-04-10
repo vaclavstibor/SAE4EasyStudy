@@ -1,0 +1,20 @@
+# Python caches
+**/__pycache__/
+**/*.pyc
+
+# Local environments
+.venv/
+server/.venv/
+server/.venv39/
+server/.venv39_tmp/
+
+# Local runtime data
+server/cache/
+server/instance/
+server/flask_session/
+
+# Local-only datasets/assets
+server/static/datasets/kaggle-tmdb/
+server/static/datasets/ml-latest/img 2/
+server/static/datasets/ml-latest/ml-latest.zip
+server/static/datasets/ml-latest/tmdb_data.json
