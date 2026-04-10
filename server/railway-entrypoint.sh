@@ -11,11 +11,39 @@ fi
 # Remove archive after extraction to save volume space
 rm -f static/datasets/ml-latest/ml-latest.zip
 
-# Download SAE runtime features only on first run (or when missing)
-if [ ! -f "${SAE_RUNTIME_OUTPUT_PATH:-plugins/sae_steering/data/item_sae_features_www_TopKSAE_8192.pt}" ]; then
+# Download SAE model checkpoint + runtime features only on first run (or when missing)
+RUNTIME_OUTPUT_PATH="${SAE_RUNTIME_OUTPUT_PATH:-plugins/sae_steering/data/item_sae_features_www_TopKSAE_8192.pt}"
+MODEL_OUTPUT_PATH="${SAE_MODEL_OUTPUT_PATH:-plugins/sae_steering/data/www_TopKSAE_8192.ckpt}"
+MODEL_CKPT_PATH="${MODEL_OUTPUT_PATH}"
+MODEL_PT_PATH="${MODEL_OUTPUT_PATH%.ckpt}.pt"
+
+MODEL_OUTPUT_ARG=""
+RUNTIME_OUTPUT_ARG=""
+if [ -n "$MODEL_OUTPUT_PATH" ]; then
+  MODEL_OUTPUT_ARG="--model-output ${MODEL_OUTPUT_PATH}"
+fi
+if [ -n "$RUNTIME_OUTPUT_PATH" ]; then
+  RUNTIME_OUTPUT_ARG="--runtime-output ${RUNTIME_OUTPUT_PATH}"
+fi
+
+if [ ! -f "$MODEL_CKPT_PATH" ] && [ ! -f "$MODEL_PT_PATH" ] || [ ! -f "$RUNTIME_OUTPUT_PATH" ]; then
   python plugins/sae_steering/bootstrap_model.py \
     --tag "${SAE_MODEL_RELEASE_TAG:-latest}" \
-    --runtime-asset-name "${SAE_RUNTIME_ASSET_NAME:-item_sae_features_www_TopKSAE_8192.pt.xz}"
+    --model-asset-name "${SAE_MODEL_ASSET_NAME:-}" \
+    --runtime-asset-name "${SAE_RUNTIME_ASSET_NAME:-item_sae_features_www_TopKSAE_8192.pt.xz}" \
+    $MODEL_OUTPUT_ARG \
+    $RUNTIME_OUTPUT_ARG
+fi
+
+# Ensure the model is visible under plugins/sae_steering/models (expected by loader)
+mkdir -p plugins/sae_steering/models
+if [ -f "$MODEL_CKPT_PATH" ] && [ ! -f "plugins/sae_steering/models/www_TopKSAE_8192.ckpt" ]; then
+  ln -s "$(realpath "$MODEL_CKPT_PATH")" "plugins/sae_steering/models/www_TopKSAE_8192.ckpt" || \
+    cp "$MODEL_CKPT_PATH" "plugins/sae_steering/models/www_TopKSAE_8192.ckpt"
+fi
+if [ -f "$MODEL_PT_PATH" ] && [ ! -f "plugins/sae_steering/models/www_TopKSAE_8192.pt" ]; then
+  ln -s "$(realpath "$MODEL_PT_PATH")" "plugins/sae_steering/models/www_TopKSAE_8192.pt" || \
+    cp "$MODEL_PT_PATH" "plugins/sae_steering/models/www_TopKSAE_8192.pt"
 fi
 
 exec python -m gunicorn \
