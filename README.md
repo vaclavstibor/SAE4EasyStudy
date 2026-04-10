@@ -95,6 +95,41 @@ SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy docker compose up --build
 DATASET_RELEASE_TAG=v1.0 docker compose up --build
 ```
 
+## Railway (No Docker)
+
+The repository now includes [railway.json](railway.json) for a no-Docker Railway deployment.
+
+On each push/deploy, Railway will:
+
+1. install Python dependencies from `server/pip_requirements.txt`
+2. run `server/bootstrap_datasets.py`
+3. run `server/plugins/sae_steering/bootstrap_model.py`
+4. start Gunicorn with `app:create_app()`
+
+Default runtime SAE asset in Railway config is:
+
+- `item_sae_features_www_TopKSAE_8192.pt.xz`
+
+Required Railway setup:
+
+1. Create a Railway project from this GitHub repo.
+2. Add a Redis service in the same project.
+3. Set these variables on the web service:
+   - `APP_SECRET_KEY` (strong random string)
+   - `SESSION_COOKIE_NAME` (any non-empty value)
+   - `DATABASE_URL` (Railway Postgres URL or fallback SQLite path)
+   - `REDIS_URL` (from Railway Redis service)
+4. Optional overrides:
+   - `SAE_MODEL_RELEASE_TAG` (default: `latest`)
+   - `DATASET_RELEASE_TAG` (default: `latest`)
+   - `SAE_RUNTIME_ASSET_NAME` (default: `item_sae_features_www_TopKSAE_8192.pt.xz`)
+   - `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `GUNICORN_LOG_LEVEL`
+
+Notes:
+
+- If your release contains uncompressed runtime features, set `SAE_RUNTIME_ASSET_NAME=item_sae_features_www_TopKSAE_8192.pt`.
+- First deploy can take longer because it downloads and extracts dataset/model assets.
+
 Persistent Docker volumes are used for:
 
 - SQLite data in `/app/instance`
@@ -129,6 +164,3 @@ xz -T0 -9 -k item_sae_features_www_TopKSAE_8192.pt
 ## EasyStudy Framework
 
 Built on [EasyStudy](https://github.com/pdokoupil/EasyStudy) by [Patrik Dokoupil](mailto:patrik.dokoupil@matfyz.cuni.cz) and [Ladislav Peska](mailto:ladislav.peska@matfyz.cuni.cz). For deployment details, dataset setup, and Docker configuration, refer to the original [documentation](https://github.com/pdokoupil/EasyStudy#readme).
-
-lsof -ti:5000 | xargs kill -9 2>/dev/null; echo "done"
-I like spiderman from marvel cinematic universe but dislike dc 

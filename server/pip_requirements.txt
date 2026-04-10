@@ -19,3 +19,4 @@ cachetools
 tf-keras
 torch
 sentence-transformers
+gunicorn # Railway

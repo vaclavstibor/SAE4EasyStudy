@@ -10,6 +10,9 @@ server/instance/
 *.sqlite
 img
 cache
+__MACOSX
+.venv
+db.sqlite
 
 # Models 
 *.pt

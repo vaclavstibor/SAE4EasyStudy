@@ -11,6 +11,7 @@ from flask_session import Session
 import os
 import random
 import sys
+from urllib.parse import urlparse
 import numpy as np
 import tensorflow as tf
 
@@ -33,11 +34,30 @@ pm = PluginManager(plugins_folder="plugins")
 csrf = CSRFProtect()
 
 sess = Session()
-rds = redis.Redis(
-    host=os.environ.get("REDIS_HOST", "localhost"),
-    port=int(os.environ.get("REDIS_PORT", "6379")),
-    db=int(os.environ.get("REDIS_DB", "0")),
-)
+
+def _create_redis_client():
+    # Railway provides REDIS_URL environment variable, but we also want to support separate variables for host, port, db and password for easier local development and testing
+    redis_url = os.environ.get("REDIS_URL", "").strip()
+    if redis_url:
+        parsed = urlparse(redis_url)
+        db_index = int(parsed.path.lstrip("/") or os.environ.get("REDIS_DB", "0"))
+        return redis.Redis(
+            host=parsed.hostname or os.environ.get("REDIS_HOST", "localhost"),
+            port=parsed.port or int(os.environ.get("REDIS_PORT", "6379")),
+            db=db_index,
+            username=parsed.username,
+            password=parsed.password,
+        )
+
+    return redis.Redis(
+        host=os.environ.get("REDIS_HOST", "localhost"),
+        port=int(os.environ.get("REDIS_PORT", "6379")),
+        db=int(os.environ.get("REDIS_DB", "0")),
+        password=os.environ.get("REDIS_PASSWORD", "") or None,
+    )
+
+
+rds = _create_redis_client()
 
 from models import *
 
