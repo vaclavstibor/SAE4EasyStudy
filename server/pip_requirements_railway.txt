@@ -1,5 +1,7 @@
 numpy
 Flask-PluginKit
+Flask-Login
+Flask-SQLAlchemy
 Flask-Session
 Flask-Migrate
 polars
