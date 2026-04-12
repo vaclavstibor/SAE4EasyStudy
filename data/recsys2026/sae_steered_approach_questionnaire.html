@@ -1,0 +1,397 @@
+<!--
+  SAE Steering Study — Steered Approach Questionnaire
+  ====================================================
+  Based on sae_phase_questionnaire.html with adjusted naming and items.
+  All Likert items use a 7-point scale.
+-->
+
+<div class="q-wrap">
+
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+     style="display:none"
+     onload="
+(function(){
+  if(document.getElementById('psa-injected-css')) return;
+  var s=document.createElement('style');
+  s.id='psa-injected-css';
+  s.textContent=`
+  .q-wrap{max-width:720px;margin:0 auto 32px;text-align:left}
+  .q-wrap .form-group{margin-bottom:1.3rem}
+  .q-wrap .likert-row{display:flex;flex-wrap:nowrap;gap:0;border:1px solid #dee2e6;border-radius:.25rem;overflow:hidden;background:#f8f9fa}
+  .q-wrap .likert-row label{flex:1 1 0;text-align:center;padding:10px 4px;cursor:pointer;font-size:.85em;font-weight:500;color:#495057;border-right:1px solid #dee2e6;user-select:none;margin:0;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+  .q-wrap .likert-row label:last-child{border-right:none}
+  .q-wrap .likert-row label:hover{background:#e2e6ea;color:#212529}
+  .q-wrap .likert-row input[type=radio]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .q-wrap .likert-row input[type=radio]:checked+span{font-weight:700;color:#007bff}
+  .q-wrap .likert-row label.lk-sel{background:#cce5ff;color:#004085}
+  .q-wrap .likert-anchors{display:flex;justify-content:space-between;font-size:.72em;color:#6c757d;margin-top:4px;padding:0 2px}
+  .q-wrap .q-hint{font-size:.78em;color:#6c757d;margin-top:-0.3rem;margin-bottom:0.5rem}
+  `;
+  document.head.appendChild(s);
+  document.addEventListener('change',function(e){
+    if(e.target.type==='radio'&&e.target.closest('.likert-row')){
+      var ls=e.target.closest('.likert-row').querySelectorAll('label');
+      for(var i=0;i<ls.length;i++) ls[i].classList.remove('lk-sel');
+      e.target.closest('label').classList.add('lk-sel');
+    }
+  });
+})();
+">
+
+<div class="text-center mb-4">
+  <h4 class="font-weight-bold">Questionnaire for steered approach</h4>
+  <p class="text-muted small">Please rate your experience with this approach.<br>
+  <em>(1 = Strongly disagree ... 7 = Strongly agree, unless stated otherwise)</em></p>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">P1. Recommendation Quality</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">P1a. The recommendations matched my movie preferences.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p1a_accuracy" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="2"><span>2</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="3"><span>3</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="4"><span>4</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="5"><span>5</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="6"><span>6</span></label>
+        <label><input type="radio" name="p1a_accuracy" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P1b. The system suggested interesting movies I would not have found on my own.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p1b_novelty" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p1b_novelty" value="2"><span>2</span></label>
+        <label><input type="radio" name="p1b_novelty" value="3"><span>3</span></label>
+        <label><input type="radio" name="p1b_novelty" value="4"><span>4</span></label>
+        <label><input type="radio" name="p1b_novelty" value="5"><span>5</span></label>
+        <label><input type="radio" name="p1b_novelty" value="6"><span>6</span></label>
+        <label><input type="radio" name="p1b_novelty" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">P1c. The recommended movies were sufficiently diverse (not all very similar).</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p1c_diversity" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p1c_diversity" value="2"><span>2</span></label>
+        <label><input type="radio" name="p1c_diversity" value="3"><span>3</span></label>
+        <label><input type="radio" name="p1c_diversity" value="4"><span>4</span></label>
+        <label><input type="radio" name="p1c_diversity" value="5"><span>5</span></label>
+        <label><input type="radio" name="p1c_diversity" value="6"><span>6</span></label>
+        <label><input type="radio" name="p1c_diversity" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">P2. Perceived Control</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">P2a. I felt I had meaningful control over what was recommended to me.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p2a_control" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p2a_control" value="2"><span>2</span></label>
+        <label><input type="radio" name="p2a_control" value="3"><span>3</span></label>
+        <label><input type="radio" name="p2a_control" value="4"><span>4</span></label>
+        <label><input type="radio" name="p2a_control" value="5"><span>5</span></label>
+        <label><input type="radio" name="p2a_control" value="6"><span>6</span></label>
+        <label><input type="radio" name="p2a_control" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P2b. Over successive iterations, the recommendations got closer to what I wanted.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p2b_convergence" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p2b_convergence" value="2"><span>2</span></label>
+        <label><input type="radio" name="p2b_convergence" value="3"><span>3</span></label>
+        <label><input type="radio" name="p2b_convergence" value="4"><span>4</span></label>
+        <label><input type="radio" name="p2b_convergence" value="5"><span>5</span></label>
+        <label><input type="radio" name="p2b_convergence" value="6"><span>6</span></label>
+        <label><input type="radio" name="p2b_convergence" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P2c. Selecting liked movies was sufficient to define what recommendations I want.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="2"><span>2</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="3"><span>3</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="4"><span>4</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="5"><span>5</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="6"><span>6</span></label>
+        <label><input type="radio" name="p2c_liked_movies_sufficient" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P2d. When the recommendations were not right, I could correct them easily.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p2d_correction_ease" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="2"><span>2</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="3"><span>3</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="4"><span>4</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="5"><span>5</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="6"><span>6</span></label>
+        <label><input type="radio" name="p2d_correction_ease" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">P2e. When I adjusted the features/sliders, the recommendations changed in the direction I expected.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p2e_responsiveness" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="2"><span>2</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="3"><span>3</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="4"><span>4</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="5"><span>5</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="6"><span>6</span></label>
+        <label><input type="radio" name="p2e_responsiveness" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">P3. Transparency &amp; Explainability</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">P3a. The feature labels (slider names) were meaningful and easy to understand.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p3a_label_clarity" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="2"><span>2</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="3"><span>3</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="4"><span>4</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="5"><span>5</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="6"><span>6</span></label>
+        <label><input type="radio" name="p3a_label_clarity" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">P3b. I could predict how changing a feature would affect the recommendations.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p3b_predictability" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p3b_predictability" value="2"><span>2</span></label>
+        <label><input type="radio" name="p3b_predictability" value="3"><span>3</span></label>
+        <label><input type="radio" name="p3b_predictability" value="4"><span>4</span></label>
+        <label><input type="radio" name="p3b_predictability" value="5"><span>5</span></label>
+        <label><input type="radio" name="p3b_predictability" value="6"><span>6</span></label>
+        <label><input type="radio" name="p3b_predictability" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">P4. Interface Usability</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4a. The steering interface (feature sliders) was easy to use.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4a_ease" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4a_ease" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4a_ease" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4a_ease" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4a_ease" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4a_ease" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4a_ease" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4b. I found it overwhelming to decide which features to adjust.</label>
+      <p class="q-hint"><em>Higher = more overwhelming; reverse-coded item.</em></p>
+      <div class="likert-row">
+        <label><input type="radio" name="p4b_cognitive_load" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4b_cognitive_load" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4c. It was usually sufficient for me to pick some from the displayed features.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4c_displayed_features_sufficient" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4d. I frequently needed to search for the right features via the search bar.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4d_search_needed" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4d_search_needed" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4e. The number of displayed steering features was:</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4e_displayed_feature_count" value="too_few" required><span>Too few</span></label>
+        <label><input type="radio" name="p4e_displayed_feature_count" value="about_right"><span>About right</span></label>
+        <label><input type="radio" name="p4e_displayed_feature_count" value="too_many"><span>Too many</span></label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4f. Did you tend to boost (increase) features, suppress (decrease) them, or both equally?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4f_boost_suppress_balance" value="mostly_boost" required><span>Mostly boost</span></label>
+        <label><input type="radio" name="p4f_boost_suppress_balance" value="both_equally"><span>Both equally</span></label>
+        <label><input type="radio" name="p4f_boost_suppress_balance" value="mostly_suppress"><span>Mostly suppress</span></label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P4g. The features were at the right level of detail - not too broad, not too narrow.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p4g_granularity" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4g_granularity" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4g_granularity" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4g_granularity" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4g_granularity" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4g_granularity" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4g_granularity" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">P4h. Some features felt redundant or too similar to each other.</label>
+      <p class="q-hint"><em>Higher = more overlap perceived; reverse-coded item.</em></p>
+      <div class="likert-row">
+        <label><input type="radio" name="p4h_overlap" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p4h_overlap" value="2"><span>2</span></label>
+        <label><input type="radio" name="p4h_overlap" value="3"><span>3</span></label>
+        <label><input type="radio" name="p4h_overlap" value="4"><span>4</span></label>
+        <label><input type="radio" name="p4h_overlap" value="5"><span>5</span></label>
+        <label><input type="radio" name="p4h_overlap" value="6"><span>6</span></label>
+        <label><input type="radio" name="p4h_overlap" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">P5. Overall Satisfaction</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">P5a. Overall, I am satisfied with this recommendation approach.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p5a_satisfaction" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="2"><span>2</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="3"><span>3</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="4"><span>4</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="5"><span>5</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="6"><span>6</span></label>
+        <label><input type="radio" name="p5a_satisfaction" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">P5b. I would use a system like this again to discover movies.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p5b_reuse" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p5b_reuse" value="2"><span>2</span></label>
+        <label><input type="radio" name="p5b_reuse" value="3"><span>3</span></label>
+        <label><input type="radio" name="p5b_reuse" value="4"><span>4</span></label>
+        <label><input type="radio" name="p5b_reuse" value="5"><span>5</span></label>
+        <label><input type="radio" name="p5b_reuse" value="6"><span>6</span></label>
+        <label><input type="radio" name="p5b_reuse" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">P5c. I would recommend this system to a friend who is looking for movies.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p5c_recommend" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p5c_recommend" value="2"><span>2</span></label>
+        <label><input type="radio" name="p5c_recommend" value="3"><span>3</span></label>
+        <label><input type="radio" name="p5c_recommend" value="4"><span>4</span></label>
+        <label><input type="radio" name="p5c_recommend" value="5"><span>5</span></label>
+        <label><input type="radio" name="p5c_recommend" value="6"><span>6</span></label>
+        <label><input type="radio" name="p5c_recommend" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Attention Check</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">AC1. Attention check: please select <em>6</em> for this item.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="p_attention_check" value="1" required><span>1</span></label>
+        <label><input type="radio" name="p_attention_check" value="2"><span>2</span></label>
+        <label><input type="radio" name="p_attention_check" value="3"><span>3</span></label>
+        <label><input type="radio" name="p_attention_check" value="4"><span>4</span></label>
+        <label><input type="radio" name="p_attention_check" value="5"><span>5</span></label>
+        <label><input type="radio" name="p_attention_check" value="6"><span>6</span></label>
+        <label><input type="radio" name="p_attention_check" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header font-weight-bold text-primary">P6. Open Feedback</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold" for="p6_comments">P6a. Any thoughts or observations about this approach?</label>
+      <textarea class="form-control" name="p6a_comments" id="p6_comments" rows="3" placeholder="What worked well? What was confusing or frustrating? (optional)"></textarea>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.q-wrap -->

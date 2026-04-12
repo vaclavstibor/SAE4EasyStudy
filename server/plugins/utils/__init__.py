@@ -475,11 +475,16 @@ def final_questionnaire():
     params["contact"] = tr("footer_contact")
     params["t1"] = tr("footer_t1")
     params["t2"] = tr("footer_t2")
-    params["title"] = tr("questionnaire_title")
-    params["header"] = tr("questionnaire_header")
-    params["hint"] = tr("questionnaire_hint")
+    params["title"] = request.args.get("title_override") or tr("questionnaire_title")
+    params["header"] = request.args.get("header_override") or tr("questionnaire_header")
+    hint_override = request.args.get("hint_override")
+    params["hint"] = tr("questionnaire_hint") if hint_override is None else hint_override
     params["continuation_url"] = request.args.get("continuation_url")
-    params["finish"] = tr("questionnaire_finish")
+    params["finish"] = request.args.get("finish_override") or tr("questionnaire_finish")
+    params["hide_embedded_questionnaire_heading"] = (
+        (request.args.get("hide_embedded_questionnaire_heading") or "").strip().lower()
+        in {"1", "true", "yes"}
+    )
 
     explicit_file = request.args.get("questionnaire_file")
     if explicit_file:

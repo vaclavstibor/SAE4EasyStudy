@@ -1,10 +1,32 @@
 {% include 'header.html' %}
 
+<style>
+    .questionnaire-title-wrap {
+        margin: 18px 0 16px 0;
+        text-align: center;
+    }
+
+    .questionnaire-title {
+        font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .questionnaire-subtitle {
+        margin: 0.35rem 0 0 0;
+        font-size: 1.05rem;
+        color: #5c6773;
+    }
+</style>
+
 <div id="app">
     <b-container fluid>
-        <b-jumbotron class="smallJumbotron" header="{{header}}" lead="">
-            {{hint}}
-        </b-jumbotron>
+        <div class="questionnaire-title-wrap">
+            <h1 class="questionnaire-title">{{header}}</h1>
+            {% if hint %}
+            <p class="questionnaire-subtitle">{{hint}}</p>
+            {% endif %}
+        </div>
     
         <b-row align-h="center">
             <b-col>
@@ -42,6 +64,14 @@
         
     },
     async mounted() {
+        const hideEmbeddedHeading = {{ 'true' if hide_embedded_questionnaire_heading else 'false' }};
+        if (hideEmbeddedHeading) {
+            const embeddedHeading = document.querySelector('form h4.font-weight-bold');
+            if (embeddedHeading && /questionnaire/i.test((embeddedHeading.textContent || '').trim())) {
+                embeddedHeading.style.display = 'none';
+            }
+        }
+
         const btns = document.querySelectorAll("button");
         const radios = document.querySelectorAll("input[type=radio]");
         const checkboxes = document.querySelectorAll("input[type=checkbox]");

@@ -1,0 +1,189 @@
+<!--
+  SAE Steering Study - Final Questionnaire (updated)
+  ==================================================
+  Reduced version with only these sections:
+  1) Approach Comparison
+  2) About You
+  3) Open Feedback
+-->
+
+<div class="q-wrap">
+
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+     style="display:none"
+     onload="
+(function(){
+  if(document.getElementById('fq-upd-injected-css')) return;
+  var s=document.createElement('style');
+  s.id='fq-upd-injected-css';
+  s.textContent=`
+  .q-wrap{max-width:720px;margin:0 auto 32px;text-align:left}
+  .q-wrap .form-group{margin-bottom:1.3rem}
+  .q-wrap .likert-row{display:flex;flex-wrap:nowrap;gap:0;border:1px solid #dee2e6;border-radius:.25rem;overflow:hidden;background:#f8f9fa}
+  .q-wrap .likert-row label{flex:1 1 0;text-align:center;padding:10px 4px;cursor:pointer;font-size:.85em;font-weight:500;color:#495057;border-right:1px solid #dee2e6;user-select:none;margin:0;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+  .q-wrap .likert-row label:last-child{border-right:none}
+  .q-wrap .likert-row label:hover{background:#e2e6ea;color:#212529}
+  .q-wrap .likert-row input[type=radio]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .q-wrap .likert-row input[type=radio]:checked+span{font-weight:700;color:#007bff}
+  .q-wrap .likert-row label.lk-sel{background:#cce5ff;color:#004085}
+  .q-wrap .likert-anchors{display:flex;justify-content:space-between;font-size:.72em;color:#6c757d;margin-top:4px;padding:0 2px}
+  .q-wrap .custom-select{max-width:440px}
+  .q-wrap .q-section-note{font-size:.8em;color:#6c757d;margin-bottom:0.8rem;font-style:italic}
+  `;
+  document.head.appendChild(s);
+  document.addEventListener('change',function(e){
+    if(e.target.type==='radio'&&e.target.closest('.likert-row')){
+      var ls=e.target.closest('.likert-row').querySelectorAll('label');
+      for(var i=0;i<ls.length;i++) ls[i].classList.remove('lk-sel');
+      e.target.closest('label').classList.add('lk-sel');
+    }
+  });
+})();
+">
+
+<div class="text-center mb-4">
+  <h4 class="font-weight-bold">Final Questionnaire</h4>
+  <p class="text-muted small">Now that you have tried both approaches, please answer the following questions.<br>
+  There are no right or wrong answers - we value your honest experience.</p>
+</div>
+
+<!-- SECTION 1 - Approach Comparison -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Approach Comparison</div>
+  <div class="card-body">
+    <p class="q-section-note">Think back to Approach A (first) and Approach B (second).</p>
+
+    <div class="form-group">
+      <label class="font-weight-bold">F1. Which approach did you prefer overall?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f1_preference" value="A_strongly" required><span>Strongly prefer A</span></label>
+        <label><input type="radio" name="f1_preference" value="A_slightly"><span>Slightly prefer A</span></label>
+        <label><input type="radio" name="f1_preference" value="no_preference"><span>No preference</span></label>
+        <label><input type="radio" name="f1_preference" value="B_slightly"><span>Slightly prefer B</span></label>
+        <label><input type="radio" name="f1_preference" value="B_strongly"><span>Strongly prefer B</span></label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">F2. Which approach gave you better movie recommendations?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f2_better_recs" value="A_clearly" required><span>A - clearly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f2_better_recs" value="B_slightly"><span>B - slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="B_clearly"><span>B - clearly</span></label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">F3. Which approach gave you more control over the recommendations?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f3_more_control" value="A_clearly" required><span>A - clearly</span></label>
+        <label><input type="radio" name="f3_more_control" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f3_more_control" value="B_slightly"><span>B - slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="B_clearly"><span>B - clearly</span></label>
+      </div>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F4. Which approach felt more responsive to your adjustments?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f4_more_responsive" value="A_clearly" required><span>A - clearly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="B_slightly"><span>B - slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="B_clearly"><span>B - clearly</span></label>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- SECTION 2 - About You -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">About You <small class="text-muted font-weight-normal">(optional but helpful for analysis)</small></div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold">F19. How familiar are you with movies in general?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f19_movie_familiarity" value="1"><span>1</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="2"><span>2</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="3"><span>3</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="4"><span>4</span></label>
+        <label><input type="radio" name="f19_movie_familiarity" value="5"><span>5</span></label>
+      </div>
+      <div class="likert-anchors"><span>Rarely watch movies</span><span>Movie enthusiast</span></div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold" for="f20_rs_frequency">F20. How often do you use recommendation services (Netflix, Spotify, YouTube, etc.)?</label>
+      <select class="custom-select" name="f20_rs_frequency" id="f20_rs_frequency">
+        <option value="">- Select -</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">A few times per week</option>
+        <option value="monthly">A few times per month</option>
+        <option value="rarely">Rarely</option>
+        <option value="never">Never</option>
+      </select>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">F21. How familiar are you with AI / machine-learning concepts?</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f21_ml_familiarity" value="1"><span>1</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="2"><span>2</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="3"><span>3</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="4"><span>4</span></label>
+        <label><input type="radio" name="f21_ml_familiarity" value="5"><span>5</span></label>
+      </div>
+      <div class="likert-anchors"><span>Not at all familiar</span><span>Expert</span></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">Attention Check</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">AC1. Attention check: please select <em>5</em> for this item.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f_attention_check" value="1" required><span>1</span></label>
+        <label><input type="radio" name="f_attention_check" value="2"><span>2</span></label>
+        <label><input type="radio" name="f_attention_check" value="3"><span>3</span></label>
+        <label><input type="radio" name="f_attention_check" value="4"><span>4</span></label>
+        <label><input type="radio" name="f_attention_check" value="5"><span>5</span></label>
+        <label><input type="radio" name="f_attention_check" value="6"><span>6</span></label>
+        <label><input type="radio" name="f_attention_check" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SECTION 3 - Open Feedback -->
+<div class="card mb-4">
+  <div class="card-header font-weight-bold text-primary">Open Feedback</div>
+  <div class="card-body">
+
+    <div class="form-group">
+      <label class="font-weight-bold" for="f24_liked_most">F24. What did you like most about the steering experience? (optional)</label>
+      <textarea class="form-control" name="f24_liked_most" id="f24_liked_most" rows="3" placeholder="Your answer (optional)..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold" for="f25_improvement">F25. What would you improve or change? (optional)</label>
+      <textarea class="form-control" name="f25_improvement" id="f25_improvement" rows="3" placeholder="Your answer (optional)..."></textarea>
+    </div>
+
+    <div class="form-group mb-0">
+      <label class="font-weight-bold" for="f26_other">F26. Any other comments?</label>
+      <textarea class="form-control" name="f26_other" id="f26_other" rows="3" placeholder="(optional)"></textarea>
+    </div>
+
+  </div>
+</div>
+
+</div><!-- /.q-wrap -->
