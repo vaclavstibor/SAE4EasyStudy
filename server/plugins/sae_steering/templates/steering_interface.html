@@ -23,7 +23,7 @@
             max-width: 1560px;
             margin: 0 auto;
             padding: 20px;
-            --visible-recs: {{ num_recommendations|default(10) }};
+            --visible-recs: {{ num_recommendations|default(20) }};
             zoom: 0.92;
         }
         
@@ -41,9 +41,15 @@
         .page-guidance {
             max-width: 880px;
             margin: 8px auto 14px;
+            color: #6c757d;
             font-size: 0.93em;
             line-height: 1.5;
+        }
+        .steering-instructions {
+            margin: 8px 0 0;
             color: #6c757d;
+            font-size: 0.9em;
+            line-height: 1.45;
         }
         .iteration-badge {
             display: inline-block;
@@ -95,98 +101,106 @@
         }
         
         .recommendations-scroll {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 12px;
             padding: 16px;
-            overflow-x: auto;
-            scroll-behavior: smooth;
             min-height: 280px;
         }
-        .recommendations-scroll::-webkit-scrollbar {
-            height: 6px;
-        }
-        .recommendations-scroll::-webkit-scrollbar-track {
-            background: #f0f0f0;
-            border-radius: 3px;
-        }
-        .recommendations-scroll::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 3px;
-        }
-        
+
         .rec-card {
-            flex: 0 0 140px;
-            min-width: 140px;
-            background: #fafafa;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            border: 1px solid #e8e8e8;
             position: relative;
+            width: 100%;
+            overflow: hidden;
+            border: 1px solid #d6dde8;
+            border-radius: 8px;
+            background: #ffffff;
+            text-align: left;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
         }
         .rec-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+            border-color: #cbd5e1;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+        }
+        .rec-card:focus {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        .rec-card.selected {
+            border-width: 2px;
+            border-color: #198754;
+            background: #eaf8ef;
+            box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.28);
+        }
+        .rec-card.selected .rec-poster {
+            box-shadow: 0 0 0 3px #198754;
+        }
+        .rec-selected-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 2;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #198754;
+            color: #ffffff;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
         }
         .rec-poster {
             width: 100%;
-            height: 180px;
-            border-radius: 10px 10px 0 0;
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
+            aspect-ratio: 2 / 3;
+            object-fit: cover;
+            display: block;
+            background: #eef2f7;
             color: white;
             font-size: 2.5em;
+            overflow: hidden;
         }
-        
-        .rec-info {
-            padding: 10px;
+        .rec-hover-info {
+            position: absolute;
+            inset: auto 0 0 0;
+            padding: 10px 10px 12px;
+            background: linear-gradient(180deg, rgba(9, 15, 28, 0) 0%, rgba(9, 15, 28, 0.82) 45%, rgba(9, 15, 28, 0.96) 100%);
+            color: #ffffff;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            pointer-events: none;
+        }
+        .rec-card:hover .rec-hover-info,
+        .rec-card:focus .rec-hover-info,
+        .rec-card.selected .rec-hover-info {
+            opacity: 1;
+            transform: translateY(0);
         }
         .rec-title {
-            font-size: 0.8em;
-            font-weight: 600;
-            color: #333;
-            line-height: 1.3;
-            height: 2.6em;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-        }
-        .rec-metadata {
-            font-size: 0.7em;
-            color: #888;
-            margin-top: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.35;
+            min-height: 0;
         }
         .rec-genres {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
             margin-top: 6px;
-            min-height: 36px;
-            max-height: 36px;
-            align-content: flex-start;
-            overflow: hidden;
         }
         .rec-genre-pill {
             display: inline-flex;
             align-items: center;
-            background: #edf0f2;
-            color: #5f6368;
+            padding: 2px 7px;
             border-radius: 999px;
-            padding: 2px 8px;
-            font-size: 0.64em;
-            font-weight: 500;
-            max-width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            background: rgba(255,255,255,0.16);
+            color: #ffffff;
+            font-size: 0.68rem;
+            font-weight: 600;
         }
         
         .empty-recs {
@@ -529,18 +543,6 @@
             margin-bottom: 12px;
             font-size: 0.92em;
         }
-        .approval-copy svg {
-            width: 14px;
-            height: 14px;
-            vertical-align: -2px;
-            margin: 0 2px;
-        }
-        .approval-copy .like-icon {
-            color: #2e7d32;
-        }
-        .approval-copy .dislike-icon {
-            color: #c62828;
-        }
         .mode-hint-box {
             margin-bottom: 18px;
             padding: 14px 16px;
@@ -563,7 +565,7 @@
             display: none;
         }
         
-        /* Single model mode – single horizontal row with scrollbar */
+        /* Single-model layout: 2 rows x 10 cards on desktop */
         .single-model .model-recommendations {
             max-width: 100%;
         }
@@ -571,91 +573,13 @@
             justify-content: flex-start;
         }
         .single-model .recommendations-scroll {
-            flex-wrap: nowrap;
-            overflow-x: auto;
+            grid-template-columns: repeat(10, minmax(0, 1fr));
             min-height: auto;
-            justify-content: flex-start;
-            padding-bottom: 8px;          /* room for scrollbar */
-            scrollbar-width: thin;        /* Firefox */
-            gap: 8px;
-        }
-        .single-model .recommendations-scroll::-webkit-scrollbar {
-            height: 6px;
-        }
-        .single-model .recommendations-scroll::-webkit-scrollbar-track {
-            background: #f0f0f0;
-            border-radius: 3px;
-        }
-        .single-model .recommendations-scroll::-webkit-scrollbar-thumb {
-            background: #bbb;
-            border-radius: 3px;
-        }
-        .single-model .recommendations-scroll::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
-        .single-model .rec-card {
-            flex: 0 0 calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
-            min-width: calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
-            max-width: calc((100% - ((var(--visible-recs) - 1) * 8px)) / var(--visible-recs));
-        }
-        .single-model .rec-poster {
-            height: 162px;
-        }
-        .single-model .rec-info {
-            padding: 10px 8px 6px;
-        }
-
-        /* Like / Dislike buttons */
-        .rec-actions {
-            display: flex;
-            gap: 4px;
-            justify-content: center;
-            padding: 6px 10px 8px;
-        }
-        .rec-actions button {
-            flex: 1;
-            border: none;
-            border-radius: 6px;
-            padding: 5px 0;
-            cursor: pointer;
-            transition: all 0.15s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .rec-actions button svg {
-            width: 16px;
-            height: 16px;
-        }
-        .btn-like {
-            background: #e8f5e9;
-            color: #43a047;
-        }
-        .btn-like:hover {
-            background: #c8e6c9;
-        }
-        .btn-like.active {
-            background: #2e7d32;
-            color: #fff;
-        }
-        .btn-dislike {
-            background: #fce4ec;
-            color: #e53935;
-        }
-        .btn-dislike:hover {
-            background: #f8bbd0;
-        }
-        .btn-dislike.active {
-            background: #c62828;
-            color: #fff;
+            padding-bottom: 16px;
         }
         .recommendations-section.final-locked .rec-card {
             opacity: 0.68;
             filter: grayscale(0.35);
-        }
-        .recommendations-section.final-locked .rec-actions button {
-            opacity: 0.5;
-            cursor: not-allowed;
             pointer-events: none;
         }
 
@@ -689,22 +613,6 @@
         @keyframes toastOut {
             to { opacity: 0; transform: translateX(40px); }
         }
-        .rec-card.liked {
-            border-color: #2e7d32;
-            box-shadow: 0 0 0 2px rgba(46,125,50,0.25);
-        }
-        .rec-card.liked.liked-dimming {
-            opacity: 0.45;
-            filter: brightness(0.7);
-            transition: opacity 0.4s ease, filter 0.4s ease;
-        }
-        .rec-card.disliked {
-            opacity: 0.45;
-            filter: brightness(0.7);
-            transition: opacity 0.4s ease, filter 0.4s ease;
-            border-color: #c62828;
-        }
-
         /* Movie plot tooltip -- uses fixed positioning so it never clips */
         .rec-tooltip {
             display: none;
@@ -723,16 +631,46 @@
             box-shadow: 0 4px 16px rgba(0,0,0,0.35);
         }
 
+        @media (max-width: 1280px) {
+            .single-model .recommendations-scroll {
+                grid-template-columns: repeat(8, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 1120px) {
+            .single-model .recommendations-scroll {
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 920px) {
+            .recommendations-scroll,
+            .single-model .recommendations-scroll {
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+            }
+        }
+
         /* Mobile responsive */
         @media (max-width: 768px) {
             .recommendations-row {
                 flex-direction: column;
+            }
+            .recommendations-scroll,
+            .single-model .recommendations-scroll {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
             .sliders-grid {
                 grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             }
             .main-container {
                 zoom: 1;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .recommendations-scroll,
+            .single-model .recommendations-scroll {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
         }
 
@@ -875,25 +813,18 @@
             color: #2e7d32;
             margin: 2px;
         }
-        .history-movie-tag.disliked-tag {
-            background: #fce4ec;
-            color: #c62828;
-        }
         .history-movie-tag:hover {
             filter: brightness(0.95);
             border-color: #999;
         }
-        .history-movie-tag .toggle-dislike-btn {
+        .history-movie-tag .history-movie-remove {
             margin-left: 2px;
             opacity: 0.6;
             font-size: 1.1em;
             cursor: pointer;
-            color: #c62828;
+            color: #2e7d32;
         }
-        .history-movie-tag.disliked-tag .toggle-dislike-btn {
-            color: #495057;
-        }
-        .history-movie-tag .toggle-dislike-btn:hover {
+        .history-movie-tag .history-movie-remove:hover {
             opacity: 1;
         }
 
@@ -917,9 +848,7 @@
     <div class="main-container">
         <!-- Header -->
         <div class="page-header">
-            <h1>Steering - {{ title }}</h1>
-            <p class="text-muted">{{ header_subtitle }}</p>
-            <div class="page-guidance">{{ header_guidance }}</div>
+            <h1>{{ title }}</h1>
             <span class="iteration-badge" id="iteration-badge">
                 {% if iteration > max_iterations %}
                     All iterations completed
@@ -975,16 +904,13 @@
         </div>
 
         <div class="approval-card {% if preferences_approved %}approved{% endif %}" id="approval-card">
-            <div class="approval-title">Review and confirm your preferences</div>
+            <div class="approval-title">Step 1: Select movies you would consider watching in the near future.</div>
             <div class="approval-copy">
-                Before continuing, confirm that you reviewed the current recommendations and selected your
-                <span class="like-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2V8H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.49 1.49 0 00-.44-1.06L13.17 0 6.59 6.59C6.22 6.95 6 7.45 6 8v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></span>
-                and
-                <span class="dislike-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 4h-2v12h2V4zm-4 12a2 2 0 002-2V4a2 2 0 00-2-2H9c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2a2 2 0 002 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L13.17 22l6.58-6.59c.37-.36.59-.86.59-1.41z"/></svg></span>.
-                You can still change it later, but this checkpoint makes the study flow explicit.
+                Check the recommended movies and select those you would currently consider to watch by simply clicking on them.
+                If you click on one accidentally, another click de-selects the movie.
             </div>
             <div class="d-flex gap-2 align-items-center flex-wrap">
-                <button class="btn btn-outline-primary" id="approve-preferences-btn">Preference selection approved</button>
+                <button class="btn btn-outline-primary" id="approve-preferences-btn">I'm done with the selection</button>
             </div>
         </div>
         
@@ -995,9 +921,19 @@
                     {% if is_sequential %}
                     <div id="phase-complete-content">
                         <h4 class="text-primary mb-3">Approach complete</h4>
+                        {% if has_phase_questionnaire_for_current_phase %}
+                        <p>You have completed all iterations for this approach. A short questionnaire follows.</p>
+                        {% else %}
                         <p>You have completed all iterations for this approach. Ready for the next one?</p>
+                        {% endif %}
                         <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-primary btn-lg">
-                            {% if next_phase_name %}Continue to {{ next_phase_name }}{% else %}Continue to Next Approach{% endif %} &rarr;
+                            {% if has_phase_questionnaire_for_current_phase %}
+                            Continue to the questionnaire &rarr;
+                            {% elif next_phase_name %}
+                            Continue to {{ next_phase_name }} &rarr;
+                            {% else %}
+                            Continue to Next Approach &rarr;
+                            {% endif %}
                         </a>
                     </div>
                     <div id="study-complete-content" style="display:none;">
@@ -1019,8 +955,19 @@
                 </div>
             </div>
             <div class="steering-header">
-                <h3>Steer Your Recommendations</h3>
+                <h3>Step 2: Steer Your Recommendations</h3>
             </div>
+            {% if steering_mode == 'none' %}
+            <p class="steering-instructions">
+                This approach uses movie selection only. After you approve your current selections, click Get Recommendations to continue.
+            </p>
+            {% else %}
+            <p class="steering-instructions">
+                Below, you can modify the features of your recommendations. Use the slider to increase or decrease
+                the presence of particular movie types in your next recommendation iteration. You can also search for
+                additional features using the field below.
+            </p>
+            {% endif %}
             <div class="steering-lock-target" id="steering-lock-target">
             <!-- Text Steering -->
             {% if steering_mode == 'text' or steering_mode == 'both' %}
@@ -1038,12 +985,6 @@
             {% endif %}
 
             <!-- Feature Sliders -->
-            {% if steering_mode == 'none' %}
-            <div class="mode-hint-box">
-                This approach uses likes/dislikes only. After you approve your current selections, click <strong>Get Recommendations</strong> to continue.
-            </div>
-            {% endif %}
-
             {% if steering_mode != 'text' and steering_mode != 'none' %}
             <div class="sliders-section" id="sliders-section">
                 {% if show_general_features %}
@@ -1069,11 +1010,6 @@
                     </div>
                 </div>
                 {% endif %}
-
-                <div class="sliders-label mt-3">
-                    <span>Fine-grained Features</span>
-                    <span class="text-muted small">(Discovered concepts -- drag to steer)</span>
-                </div>
 
                 <div class="sliders-grid" id="sliders-container">
                     <!-- Dynamic Features (hidden in text-only mode) -->
@@ -1117,7 +1053,7 @@
             </div>
 
             <!-- Activity History (collapsed) -->
-            <div class="activity-history-panel" id="activity-history-panel" style="display:none;">
+            <div class="activity-history-panel" id="activity-history-panel">
                 <div class="activity-header" onclick="toggleActivityHistory()">
                     <span class="activity-toggle-icon" id="activity-toggle-icon">▶</span>
                     <span class="activity-label">Your Steering History</span>
@@ -1160,9 +1096,14 @@
         let lastSearchResultIds = [];
         let searchResultsData = [];
         let searchShowAll = false;
+        const CSRF_TOKEN = '{{ csrf_token() }}';
+        const JSON_CSRF_HEADERS = {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF_TOKEN,
+            'X-CSRF-Token': CSRF_TOKEN
+        };
 
         const likedMovies = {};
-        const dislikedMovies = {};
 
         // Seed values are baked into the model's cumulative weights.
         // Dynamic sliders always start at 0 (center) — they represent
@@ -1210,8 +1151,8 @@
                 approvalBtn.classList.add((preferencesApproved || isStudyLocked) ? 'btn-success' : 'btn-outline-primary');
                 approvalBtn.classList.toggle('readonly-state', preferencesApproved || isStudyLocked);
                 approvalBtn.textContent = isStudyLocked
-                    ? 'Preferences locked for the final screen'
-                    : (preferencesApproved ? 'Steering is now unlocked.' : 'Preference selection approved');
+                    ? 'Selection locked for the final screen'
+                    : (preferencesApproved ? 'Selection confirmed' : "I'm done with the selection");
             }
             if (applyBtn) applyBtn.disabled = isStudyLocked || !preferencesApproved;
             setSteeringLocked(locked);
@@ -1221,23 +1162,25 @@
         async function approvePreferences() {
             if (isStudyLocked || preferencesApproved) return;
             try {
-                await fetch('{{ url_for("sae_steering.approve_preferences") }}', {
+                const response = await fetch('{{ url_for("sae_steering.approve_preferences") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    },
+                    credentials: 'same-origin',
+                    headers: JSON_CSRF_HEADERS,
                     body: JSON.stringify({
-                        liked_movies: Object.keys(likedMovies).map(Number),
-                        disliked_movies: Object.keys(dislikedMovies).map(Number)
+                        liked_movies: Object.keys(likedMovies).map(Number)
                     })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Could not confirm selection (HTTP ${response.status}). Reload the page and try again.`);
+                }
+
                 preferencesApproved = true;
                 updateApprovalUI();
-                showToast('Preferences approved. Steering unlocked.');
+                showToast('Selection confirmed. Step 2 unlocked.');
             } catch (error) {
                 console.error(error);
-                showToast('Could not approve preferences');
+                showToast(error.message || 'Could not confirm your selection');
             }
         }
 
@@ -1387,7 +1330,6 @@
 
             const allExcluded = [
                 ...(window.excludedMoviesFromText || []),
-                ...Object.keys(dislikedMovies).map(Number),
                 ...Object.keys(likedMovies).map(Number)
             ];
 
@@ -1421,21 +1363,22 @@
 
                 const response = await fetch('{{ url_for("sae_steering.adjust_features") }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token() }}'
-                    },
+                    credentials: 'same-origin',
+                    headers: JSON_CSRF_HEADERS,
                     body: JSON.stringify({
                         adjustments: filteredAdjustments,
                         interaction_mode: CONFIG.interactionMode,
                         excluded_movies: allExcluded,
                         suppressed_features: suppressedFeatures,
                         liked_movies: Object.keys(likedMovies).map(Number),
-                        disliked_movies: Object.keys(dislikedMovies).map(Number),
                         preferences_approved: preferencesApproved,
                         search_context: collectSearchContext()
                     })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`Could not update recommendations (HTTP ${response.status}). Reload the page and try again.`);
+                }
 
                 const data = await response.json();
 
@@ -1540,14 +1483,14 @@
         document.getElementById('approve-preferences-btn')?.addEventListener('click', approvePreferences);
 
         // ------------------------------------------------------------------
-        // Render recommendations with like/dislike & tooltip
+        // Render recommendations with click-to-select cards & tooltip
         // ------------------------------------------------------------------
         function renderGenrePills(metadata) {
             const genres = String(metadata || '')
                 .split('|')
                 .map(x => x.trim())
                 .filter(Boolean)
-                .slice(0, 5);
+                .slice(0, 3);
             return genres.map(genre => `<span class="rec-genre-pill">${genre}</span>`).join('');
         }
 
@@ -1560,8 +1503,7 @@
 
             container.innerHTML = recommendations.map((rec, idx) => {
                 const movieId = rec.movie_idx || rec.movie_id;
-                const isLiked = likedMovies[movieId];
-                const isDisliked = dislikedMovies[movieId];
+                const isSelected = !!likedMovies[movieId];
 
                 let posterContent;
                 if (rec.url && rec.url !== 'None' && rec.url !== null && rec.url !== '') {
@@ -1571,25 +1513,27 @@
                 }
 
                 const safeOverview = (rec.overview || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-
-                const likedClass = isLiked ? ' liked' : (isDisliked ? ' disliked' : '');
+                const safeTitle = (rec.title || '').replace(/"/g, '&quot;');
+                const safeMetadata = (rec.metadata || '').replace(/"/g, '&quot;');
+                const safeUrl = (rec.url || '').replace(/"/g, '&quot;');
+                const selectedClass = isSelected ? ' selected' : '';
 
                 return `
-                    <div class="rec-card${likedClass}" data-movie-id="${movieId}" data-overview="${safeOverview}">
+                    <div class="rec-card${selectedClass}"
+                        data-movie-id="${movieId}"
+                        data-overview="${safeOverview}"
+                        data-title="${safeTitle}"
+                        data-url="${safeUrl}"
+                        data-meta="${safeMetadata}"
+                        role="button"
+                        tabindex="${isStudyLocked ? '-1' : '0'}"
+                        onclick="toggleLikeFromCard(this)"
+                        onkeydown="onRecommendationKeydown(event, this)">
+                        ${isSelected ? '<div class="rec-selected-badge">Selected</div>' : ''}
                         <div class="rec-poster">${posterContent}</div>
-                        <div class="rec-info">
+                        <div class="rec-hover-info">
                             <div class="rec-title" title="${rec.title}">${rec.title}</div>
                             <div class="rec-genres">${renderGenrePills(rec.metadata || '')}</div>
-                        </div>
-                        <div class="rec-actions">
-                            <button class="btn-like${isLiked ? ' active' : ''}"
-                                data-movie-id="${movieId}"
-                                data-title="${(rec.title||'').replace(/"/g,'&quot;')}"
-                                data-url="${rec.url||''}"
-                                data-meta="${(rec.metadata||'').replace(/"/g,'&quot;')}"
-                                onclick="toggleLikeFromBtn(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 20h2V8H2v12zm20-11a2 2 0 00-2-2h-6.31l.95-4.57.03-.32a1.49 1.49 0 00-.44-1.06L13.17 0 6.59 6.59C6.22 6.95 6 7.45 6 8v10a2 2 0 002 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg></button>
-                            <button class="btn-dislike${isDisliked ? ' active' : ''}"
-                                onclick="toggleDislike(${movieId}, this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 4h-2v12h2V4zm-4 12a2 2 0 002-2V4a2 2 0 00-2-2H9c-.83 0-1.54.5-1.84 1.22l-3.02 7.05c-.09.23-.14.47-.14.73v2a2 2 0 002 2h6.31l-.95 4.57-.03.32c0 .41.17.79.44 1.06L13.17 22l6.58-6.59c.37-.36.59-.86.59-1.41z"/></svg></button>
                         </div>
                     </div>
                 `;
@@ -1598,56 +1542,49 @@
         }
 
         // ------------------------------------------------------------------
-        // Like / Dislike logic
+        // Card selection logic (like-only)
         // ------------------------------------------------------------------
-        function toggleLikeFromBtn(btn) {
-            const movieId = parseInt(btn.dataset.movieId);
-            const title = btn.dataset.title || '';
-            const url = btn.dataset.url || '';
-            const metadata = btn.dataset.meta || '';
-            toggleLike(movieId, btn, title, url, metadata);
+        function onRecommendationKeydown(event, card) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleLikeFromCard(card);
+            }
         }
 
-        function toggleLike(movieId, btn, title, url, metadata) {
+        function toggleLikeFromCard(card) {
             if (isStudyLocked) return;
-            const card = btn.closest('.rec-card');
+            const movieId = parseInt(card.dataset.movieId, 10);
+            if (Number.isNaN(movieId)) return;
+            const title = card.dataset.title || card.querySelector('.rec-title')?.textContent || '';
+            const url = card.dataset.url || '';
+            const metadata = card.dataset.meta || '';
+            toggleLike(movieId, title, url, metadata);
+        }
+
+        function syncCardSelectionUI(movieId) {
+            const isSelected = !!likedMovies[movieId];
+            document.querySelectorAll(`.rec-card[data-movie-id="${movieId}"]`).forEach(card => {
+                card.classList.toggle('selected', isSelected);
+                const existingBadge = card.querySelector('.rec-selected-badge');
+                if (isSelected && !existingBadge) {
+                    card.insertAdjacentHTML('afterbegin', '<div class="rec-selected-badge">Selected</div>');
+                } else if (!isSelected && existingBadge) {
+                    existingBadge.remove();
+                }
+            });
+        }
+
+        function toggleLike(movieId, title, url, metadata) {
+            if (isStudyLocked) return;
             if (likedMovies[movieId]) {
                 delete likedMovies[movieId];
-                card.classList.remove('liked', 'liked-dimming');
-                btn.classList.remove('active');
+                showToast(`Removed "${title}" from selection`);
             } else {
-                delete dislikedMovies[movieId];
                 likedMovies[movieId] = { title, url, metadata };
-                card.classList.remove('disliked');
-                card.classList.add('liked');
-                btn.classList.add('active');
-                card.querySelector('.btn-dislike').classList.remove('active');
-                showToast(`Liked "${title}"`);
-                requestAnimationFrame(() => card.classList.add('liked-dimming'));
+                showToast(`Selected "${title}"`);
             }
+            syncCardSelectionUI(movieId);
             logFeedback(movieId, likedMovies[movieId] ? 'like' : 'neutral');
-            snapshotIterationFeedback();
-            renderActivityHistory();
-        }
-
-        function toggleDislike(movieId, btn) {
-            if (isStudyLocked) return;
-            const card = btn.closest('.rec-card');
-            const title = card.querySelector('.rec-title')?.textContent || '';
-            if (dislikedMovies[movieId]) {
-                delete dislikedMovies[movieId];
-                card.classList.remove('disliked');
-                btn.classList.remove('active');
-            } else {
-                delete likedMovies[movieId];
-                dislikedMovies[movieId] = { title };
-                card.classList.remove('liked', 'liked-dimming');
-                card.classList.add('disliked');
-                btn.classList.add('active');
-                card.querySelector('.btn-like').classList.remove('active');
-                showToast(`"${title}" hidden next round`);
-            }
-            logFeedback(movieId, dislikedMovies[movieId] ? 'dislike' : 'neutral');
             snapshotIterationFeedback();
             renderActivityHistory();
         }
@@ -1655,7 +1592,8 @@
         function logFeedback(movieId, action) {
             fetch('{{ url_for("sae_steering.log_movie_feedback") }}', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                credentials: 'same-origin',
+                headers: JSON_CSRF_HEADERS,
                 body: JSON.stringify({ movie_id: movieId, action, iteration: currentIteration })
             }).catch(() => {});
         }
@@ -1717,9 +1655,15 @@
                 try {
                     const response = await fetch('{{ url_for("sae_steering.text_to_adjustments_endpoint") }}', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token() }}' },
+                        credentials: 'same-origin',
+                        headers: JSON_CSRF_HEADERS,
                         body: JSON.stringify({ text })
                     });
+
+                    if (!response.ok) {
+                        throw new Error(`Text parsing failed (HTTP ${response.status}). Reload the page and try again.`);
+                    }
+
                     const data = await response.json();
 
                     if (data.status === 'success') {
@@ -1962,7 +1906,7 @@
         // ------------------------------------------------------------------
         // Activity History – iteration-based timeline with editable entries
         // ------------------------------------------------------------------
-        // Structure: { iteration_number: { sliders: [...], liked: [...], disliked: [...] } }
+        // Structure: { iteration_number: { sliders: [...], liked: [...] } }
         const activityByIteration = {};
 
         function toggleActivityHistory() {
@@ -1975,7 +1919,7 @@
 
         function ensureIterationEntry(iteration) {
             if (!activityByIteration[iteration]) {
-                activityByIteration[iteration] = { sliders: [], liked: [], disliked: [] };
+                activityByIteration[iteration] = { sliders: [], liked: [] };
             }
             return activityByIteration[iteration];
         }
@@ -1983,10 +1927,6 @@
         function snapshotIterationFeedback(iteration = currentIteration) {
             const entry = ensureIterationEntry(iteration);
             entry.liked = Object.entries(likedMovies).map(([mid, info]) => ({
-                mid: parseInt(mid),
-                title: info.title || `Movie ${mid}`
-            }));
-            entry.disliked = Object.entries(dislikedMovies).map(([mid, info]) => ({
                 mid: parseInt(mid),
                 title: info.title || `Movie ${mid}`
             }));
@@ -2020,15 +1960,10 @@
             const container = document.getElementById('activity-items');
             const countBadge = document.getElementById('activity-count');
 
-            const hasContent = Object.keys(activityByIteration).length > 0;
-            if (!hasContent) {
-                panel.style.display = 'none';
-                return;
-            }
             panel.style.display = 'block';
 
             const totalEntries = Object.values(activityByIteration).reduce(
-                (sum, e) => sum + e.sliders.length + e.liked.length + e.disliked.length, 0
+                (sum, e) => sum + e.sliders.length + e.liked.length, 0
             );
             countBadge.textContent = totalEntries;
 
@@ -2036,10 +1971,14 @@
 
             // Iteration sections (newest first)
             const iterations = Object.keys(activityByIteration).map(Number).sort((a, b) => b - a);
+            if (iterations.length === 0) {
+                container.innerHTML = '<div class="text-muted small">No activity yet.</div>';
+                return;
+            }
+
             for (const iter of iterations) {
                 const entry = activityByIteration[iter];
-                if (entry.sliders.length === 0 && entry.liked.length === 0 && entry.disliked.length === 0) continue;
-                const itemCount = entry.sliders.length + entry.liked.length + entry.disliked.length;
+                const itemCount = entry.sliders.length + entry.liked.length;
 
                 html += `<div class="history-iteration">
                     <div class="history-iteration-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
@@ -2056,20 +1995,7 @@
                     for (const item of entry.liked) {
                         html += `<span class="history-movie-tag" title="Click to remove like">
                             ${item.title}
-                            <span class="toggle-dislike-btn" onclick="event.stopPropagation(); removeLikeFromHistory(${item.mid})" title="Remove like">&times;</span>
-                        </span>`;
-                    }
-                    html += `</div></div>`;
-                }
-
-                if (entry.disliked.length > 0) {
-                    html += `<div class="history-subsection">
-                        <div class="history-subsection-label">Disliked Movies</div>
-                        <div class="history-movie-list">`;
-                    for (const item of entry.disliked) {
-                        html += `<span class="history-movie-tag disliked-tag" title="Click to undo dislike">
-                            ${item.title}
-                            <span class="toggle-dislike-btn" onclick="event.stopPropagation(); removeDislikeFromHistory(${item.mid})" title="Undo dislike">&times;</span>
+                            <span class="history-movie-remove" onclick="event.stopPropagation(); removeLikeFromHistory(${item.mid})" title="Remove like">&times;</span>
                         </span>`;
                     }
                     html += `</div></div>`;
@@ -2096,6 +2022,12 @@
                         </span>`;
                     }
                     html += `</div></div>`;
+                }
+
+                if (entry.liked.length === 0 && entry.sliders.length === 0) {
+                    html += `<div class="history-subsection">
+                        <div class="text-muted small">No activity yet for this iteration.</div>
+                    </div>`;
                 }
 
                 html += `</div></div>`;
@@ -2174,18 +2106,11 @@
 
         function removeLikeFromHistory(mid) {
             delete likedMovies[mid];
+            syncCardSelectionUI(mid);
             logFeedback(mid, 'neutral');
             snapshotIterationFeedback();
             renderActivityHistory();
             showToast('Like removed');
-        }
-
-        function removeDislikeFromHistory(mid) {
-            delete dislikedMovies[mid];
-            logFeedback(mid, 'neutral');
-            snapshotIterationFeedback();
-            renderActivityHistory();
-            showToast('Dislike removed');
         }
 
         // ------------------------------------------------------------------
@@ -2306,6 +2231,8 @@
             }
         })();
 
+        ensureIterationEntry(currentIteration);
+        renderActivityHistory();
         updateApprovalUI();
     </script>
 </body>

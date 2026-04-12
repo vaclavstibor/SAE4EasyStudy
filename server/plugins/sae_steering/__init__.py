@@ -203,7 +203,7 @@ def _get_steering_subtitle(steering_mode: str) -> str:
     if steering_mode == "both":
         return "Write text or adjust features to steer your recommendations."
     if steering_mode == "none":
-        return "Review recommendations and use the like/dislike buttons."
+        return "Review recommendations and select movies you would watch."
     return "Adjust features to steer your recommendations."
 
 
@@ -214,7 +214,7 @@ def _get_steering_guidance(steering_mode: str) -> str:
     if steering_mode == "both":
         return "Start by reviewing the current recommendations, then either write what you want or adjust the discovered concepts before getting updated recommendations."
     if steering_mode == "none":
-        return "Start by reviewing the current recommendations, mark what you like or dislike, and then continue to the next recommendation update."
+        return "Start by reviewing the current recommendations, select what you would watch, and then continue to the next recommendation update."
     return "Start by reviewing the current recommendations, adjust the discovered concepts below, and then get updated recommendations."
 
 
@@ -919,7 +919,7 @@ def available_steering_modes():
     """Return list of steering modalities"""
     return jsonify([
         {
-            "name": "No Steering (likes/dislikes only)",
+            "name": "No Steering (movie selection only)",
             "id": "none",
             "description": "No explicit steering controls, only movie feedback"
         },
@@ -1152,7 +1152,7 @@ def study_intro():
             "sliders": "sliders",
             "text": "text input",
             "both": "sliders + text",
-            "none": "likes/dislikes only",
+            "none": "movie selection only",
         }
         steering_label_a = steering_labels.get(mode_a, mode_a)
         steering_label_b = steering_labels.get(mode_b, mode_b)
@@ -1182,7 +1182,7 @@ def study_intro():
             },
             {
                 "title": "Iteration review",
-                "description": "At the start of each round, review the shown recommendations and confirm your likes/dislikes before continuing.",
+                "description": "At the start of each round, review the shown recommendations and confirm your movie selections before continuing.",
             },
             {
                 "title": "Steering",
@@ -1811,6 +1811,10 @@ def next_phase():
     models = conf.get("models", [])
     current_phase = session.get("current_phase", 0)
     next_phase_idx = current_phase + 1
+    current_phase_model_name = _get_active_model_config(conf, current_phase).get(
+        "name", _approach_label(current_phase)
+    )
+    phase_questionnaire_title = f"Questionnaire on {current_phase_model_name}"
 
     participation_id = session.get("participation_id")
     if participation_id:
@@ -1829,7 +1833,12 @@ def next_phase():
             return redirect(url_for(
                 "utils.final_questionnaire",
                 questionnaire_file=phase_questionnaire_file,
-                continuation_url=url_for(f"{__plugin_name__}._advance_phase")
+                continuation_url=url_for(f"{__plugin_name__}._advance_phase"),
+                title_override=phase_questionnaire_title,
+                header_override=phase_questionnaire_title,
+                hint_override="Please answer the questions below.",
+                finish_override="Continue to the rest of the study",
+                hide_embedded_questionnaire_heading=1
             ))
         return redirect(url_for(f"{__plugin_name__}.finish_user_study"))
 
@@ -1841,7 +1850,12 @@ def next_phase():
         return redirect(url_for(
             "utils.final_questionnaire",
             questionnaire_file=phase_questionnaire_file,
-            continuation_url=url_for(f"{__plugin_name__}._advance_phase")
+            continuation_url=url_for(f"{__plugin_name__}._advance_phase"),
+            title_override=phase_questionnaire_title,
+            header_override=phase_questionnaire_title,
+            hint_override="Please answer the questions below.",
+            finish_override="Continue to the rest of the study",
+            hide_embedded_questionnaire_heading=1
         ))
 
     # No questionnaire — advance immediately
@@ -1888,7 +1902,6 @@ def _do_advance_phase(next_phase_idx):
     session["feature_adjustments"] = {}
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
-    session.pop("persistent_disliked", None)
     session.pop("excluded_movies_from_text", None)
 
     return redirect(url_for(f"{__plugin_name__}.steering_interface"))
@@ -1946,7 +1959,7 @@ def steering_interface():
     enable_comparison = conf.get("enable_comparison", False)
     interaction_mode = conf.get("interaction_mode", "reset")
     models = conf.get("models", [])
-    num_recommendations = max(1, int(conf.get("num_recommendations", 10)))
+    num_recommendations = max(1, int(conf.get("num_recommendations", 20)))
 
     # --- Sequential mode: show one model at a time ---
     is_sequential = comparison_mode == "sequential" and len(models) >= 2
@@ -1964,6 +1977,9 @@ def steering_interface():
     next_phase_name = ""
     if is_sequential and current_phase + 1 < len(models):
         next_phase_name = models[current_phase + 1].get("name", f"Model {chr(66 + current_phase)}")
+    has_phase_questionnaire_for_current_phase = bool(
+        is_sequential and _phase_questionnaire_exists(conf, current_phase)
+    )
 
     # ------------------------------------------------------------------
     # Generate initial recommendations using the user's PROJECTED
@@ -2120,6 +2136,7 @@ def steering_interface():
         "current_phase": current_phase,
         "total_phases": total_phases,
         "next_phase_name": next_phase_name,
+        "has_phase_questionnaire_for_current_phase": has_phase_questionnaire_for_current_phase,
         "seed_adjustments": session.get("initial_seed_adjustments", {}),
         "cluster_profile": cluster_profile,
         "initial_cluster_values": initial_cluster_values,
@@ -2274,7 +2291,6 @@ def adjust_features():
         raw_adjustments = data.get("adjustments", {})
         request_interaction_mode = data.get("interaction_mode", "cumulative")
         excluded_movies_from_text = data.get("excluded_movies", [])
-        client_disliked = [m for m in data.get("disliked_movies", []) if m is not None]
         client_liked = [m for m in data.get("liked_movies", []) if m is not None]
         suppressed_genres = data.get("suppressed_features", data.get("suppressed_genres", []))
         search_context = data.get("search_context", {})
@@ -2314,7 +2330,7 @@ def adjust_features():
         if is_sequential_cfg:
             enable_comparison = False
 
-        num_recommendations = max(1, int(conf.get("num_recommendations", 10)))
+        num_recommendations = max(1, int(conf.get("num_recommendations", 20)))
 
         # Determine active SAE model_id for this request
         active_model_cfg = _get_active_model_config(conf)
@@ -2326,7 +2342,7 @@ def adjust_features():
         if not preferences_approved:
             return jsonify({
                 "status": "error",
-                "message": "Please confirm your likes/dislikes before continuing.",
+                "message": "Please confirm your movie selections before continuing.",
                 "recommendations": [],
                 "recommendations_a": [],
                 "recommendations_b": [],
@@ -2369,23 +2385,15 @@ def adjust_features():
         feature_adjustments = model_adjustments
         session["feature_adjustments"] = previous_adjustments
 
-        # ---- Persistent liked / disliked (session-wide) ----
-        # Both sets are EXCLUDED from future recommendations so that
+        # ---- Persistent selections (session-wide) ----
+        # Selected movies are EXCLUDED from future recommendations so that
         # each iteration surfaces fresh movies to evaluate.
         persistent_liked = set(session.get("persistent_liked", []))
-        persistent_disliked = set(session.get("persistent_disliked", []))
         for mid in client_liked:
             if mid is not None:
                 mid = int(mid)
                 persistent_liked.add(mid)
-                persistent_disliked.discard(mid)
-        for mid in client_disliked:
-            if mid is not None:
-                mid = int(mid)
-                persistent_disliked.add(mid)
-                persistent_liked.discard(mid)
         session["persistent_liked"] = list(persistent_liked)
-        session["persistent_disliked"] = list(persistent_disliked)
 
         # ---- Liked-movie neuron boost (equivalent weight to slider interaction) ----
         if client_liked:
@@ -2418,17 +2426,15 @@ def adjust_features():
                 enable_comparison=enable_comparison,
                 excluded_movies=excluded_movies_from_text,
                 liked_movies=client_liked,
-                disliked_movies=list(persistent_disliked),
                 search_context=search_context,
                 negative_adjustment_ids=[int(k) for k, v in feature_adjustments.items() if float(v) < 0],
                 negative_adjustment_count=sum(1 for v in feature_adjustments.values() if float(v) < 0),
             )
 
         selected_movies = session.get("elicitation_selected_movies", [])
-        # ORIGINAL: exclude liked/disliked from future iterations
+        # ORIGINAL: exclude selected movies from future iterations
         # excluded_movie_ids = list(set(
         #     (excluded_movies_from_text or []) +
-        #     list(persistent_disliked) +
         #     list(persistent_liked)
         # ))
         # EXPERIMENT: allow re-showing items across iterations
@@ -2593,7 +2599,6 @@ def adjust_features():
                 current_features=current_features,
                 cumulative_adjustments=slider_only_adjustments,
                 liked_movie_ids=list(persistent_liked),
-                disliked_movie_ids=list(persistent_disliked),
                 model_id=active_sae_id,
                 num_sliders=NUM_SLIDERS,
             )
@@ -2696,7 +2701,7 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
         
         print(f"[generate_steered_recommendations_for_model] Neuron adjustments: {neuron_adjustments}")
         
-        # All movie references (from elicitation, likes, dislikes) are movieIds.
+        # All movie references (from elicitation and selections) are movieIds.
         exclude_movie_ids = []
         for movie_ref in selected_movies:
             try:
@@ -2914,7 +2919,6 @@ def _compute_updated_sliders(
     current_features: list,
     cumulative_adjustments: dict,
     liked_movie_ids: list,
-    disliked_movie_ids: list,
     model_id: str = None,
     num_sliders: int = 21,
 ) -> list:
@@ -2922,7 +2926,7 @@ def _compute_updated_sliders(
 
     User-adjusted sliders rotate OUT (their cumulative effect is baked
     into the model).  Freed slots are filled by engagement-driven
-    discovery neurons (liked - disliked activation signal), then by
+    discovery neurons from selected movies, then by
     globally popular features as a fallback.  Every new slider starts
     at 0 in the UI — it represents a DELTA from the current state.
     """
@@ -2952,7 +2956,7 @@ def _compute_updated_sliders(
             features_np = features_np.cpu().numpy()
         neuron_act_counts = np.sum(features_np > 0, axis=0)
 
-        # Build engagement signal from liked / disliked movies
+        # Build engagement signal from selected movies
         liked_acts = []
         for mid in (liked_movie_ids or []):
             idx = id_to_idx.get(int(mid))
@@ -2960,15 +2964,6 @@ def _compute_updated_sliders(
                 a = features_np[idx]
                 liked_acts.append(a)
         preference_signal = np.mean(liked_acts, axis=0) if liked_acts else None
-
-        if disliked_movie_ids and preference_signal is not None:
-            disliked_acts = []
-            for mid in disliked_movie_ids:
-                idx = id_to_idx.get(int(mid))
-                if idx is not None:
-                    disliked_acts.append(features_np[idx])
-            if disliked_acts:
-                preference_signal = preference_signal - 0.5 * np.mean(disliked_acts, axis=0)
 
         neuron_scores = sorted(
             enumerate(preference_signal), key=lambda x: x[1], reverse=True
@@ -3404,19 +3399,18 @@ def approve_preferences():
             model_id=active_model.get("sae", DEFAULT_TOPK_SAE_MODEL_ID),
             steering_mode=active_model.get("steering_mode", DEFAULT_STEERING_MODE),
             liked_movies=data.get("liked_movies", []),
-            disliked_movies=data.get("disliked_movies", []),
         )
 
     return jsonify({"status": "ok", "approved": True})
 
 
 # ============================================================================
-# Movie Feedback (like / dislike)
+# Movie Feedback (selection events)
 # ============================================================================
 
 @bp.route("/log-movie-feedback", methods=["POST"])
 def log_movie_feedback():
-    """Log a like / dislike / neutral action on a recommended movie."""
+    """Log a selection action on a recommended movie."""
     try:
         data = request.get_json(force=True)
         movie_id = data.get("movie_id")
