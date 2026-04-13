@@ -173,3 +173,10 @@ xz -T0 -9 -k item_sae_features_www_TopKSAE_8192.pt
 ## EasyStudy Framework
 
 Built on [EasyStudy](https://github.com/pdokoupil/EasyStudy) by [Patrik Dokoupil](mailto:patrik.dokoupil@matfyz.cuni.cz) and [Ladislav Peska](mailto:ladislav.peska@matfyz.cuni.cz). For deployment details, dataset setup, and Docker configuration, refer to the original [documentation](https://github.com/pdokoupil/EasyStudy#readme).
+
+## Hard TODOs
+
+- [ ] Relabel sliders with human-understandable concepts
+  - [ ] Several repetitive label names "Quirky", "Goofy", ...
+  - [ ] Several with same Label name but slightly different descriptions >> probably merge
+- [ ] "Na te uvodni strance potom co vysvetlime o cem je studie musi byt i ten informed consent (pripravim presny text) a to tlacitko by melo rict neco jako "I give my consent, lets continue""
