@@ -46,19 +46,20 @@
             line-height: 1.5;
         }
         .steering-instructions {
-            margin: 8px 0 0;
+            margin: 8px 0 8px;
             color: #6c757d;
             font-size: 0.9em;
             line-height: 1.45;
         }
         .iteration-badge {
             display: inline-block;
-            background: #6c757d;
+            background: rgba(108, 117, 125, 0.55);
             color: white;
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.85em;
             font-weight: 500;
+            margin-top: 4px;
         }
         
         /* Recommendations Section */
@@ -243,13 +244,44 @@
             z-index: 6;
             width: min(720px, calc(100% - 48px));
             text-align: center;
-            padding: 24px;
-            background: linear-gradient(135deg, #d4edda 0%, #f8f9fa 100%);
+            padding: 24px 28px;
+            background: #f3fbf6;
+            border: 1px solid #198754;
             border-radius: var(--border-radius);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            box-shadow: var(--card-shadow);
         }
         .steering-lock-message.visible {
             display: block;
+        }
+        .steering-lock-message h4 {
+            font-size: 1.1em;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .steering-lock-message p {
+            color: #555;
+            font-size: 0.92em;
+            margin-bottom: 14px;
+        }
+        .lock-msg-btn {
+            background: #198754;
+            color: white;
+            border: 1px solid #198754;
+            padding: 10px 28px;
+            font-size: 1em;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        .lock-msg-btn:hover {
+            background: #157347;
+            border-color: #157347;
+            color: white;
+        }
+        .approval-card.fully-locked {
+            opacity: 0.45;
+            pointer-events: none;
+            filter: grayscale(0.3);
         }
         
         .steering-header {
@@ -355,6 +387,8 @@
             border-radius: 10px;
             padding: 12px;
             transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
         }
         .slider-card:hover {
             border-color: #aaa;
@@ -431,9 +465,11 @@
             width: 100%;
             height: 6px;
             -webkit-appearance: none;
+            appearance: none;
             background: #e0e0e0;
             border-radius: 3px;
             outline: none;
+            flex-shrink: 0;
         }
         .slider-control::-webkit-slider-thumb {
             -webkit-appearance: none;
@@ -445,26 +481,27 @@
             border: 2px solid white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
+        .slider-control::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: var(--model-a-color);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
         
         .slider-value {
+            display: block;
             text-align: center;
             font-size: 0.75em;
             color: #666;
             margin-top: 6px;
             font-weight: 600;
+            flex-shrink: 0;
+            align-self: stretch;
         }
-        .slider-card.active-boost .slider-value::after,
-        .slider-card.active-suppress .slider-value::after {
-            content: '  (dbl-click to reset)';
-            font-size: 0.85em;
-            opacity: 0;
-            transition: opacity 0.2s;
-            color: #999;
-        }
-        .slider-card.active-boost:hover .slider-value::after,
-        .slider-card.active-suppress:hover .slider-value::after {
-            opacity: 1;
-        }
+        
         
         /* Cluster Profile */
         .cluster-profile-section {
@@ -920,13 +957,13 @@
                 <div class="steering-lock-message" id="steering-lock-message">
                     {% if is_sequential %}
                     <div id="phase-complete-content">
-                        <h4 class="text-primary mb-3">Approach complete</h4>
+                        <h4>Approach complete</h4>
                         {% if has_phase_questionnaire_for_current_phase %}
                         <p>You have completed all iterations for this approach. A short questionnaire follows.</p>
                         {% else %}
                         <p>You have completed all iterations for this approach. Ready for the next one?</p>
                         {% endif %}
-                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-primary btn-lg">
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn lock-msg-btn">
                             {% if has_phase_questionnaire_for_current_phase %}
                             Continue to the questionnaire &rarr;
                             {% elif next_phase_name %}
@@ -937,17 +974,17 @@
                         </a>
                     </div>
                     <div id="study-complete-content" style="display:none;">
-                        <h4 class="text-success mb-3">All Approaches Complete!</h4>
+                        <h4>All Approaches Complete!</h4>
                         <p>You have completed all approaches. A short questionnaire follows before we finish.</p>
-                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-success btn-lg">
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn lock-msg-btn">
                             Continue &rarr;
                         </a>
                     </div>
                     {% else %}
                     <div id="study-complete-content">
-                        <h4 class="text-success mb-3">Study Complete!</h4>
+                        <h4>Study Complete!</h4>
                         <p>You have completed all iterations. A short questionnaire follows.</p>
-                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn btn-success btn-lg">
+                        <a href="{{ url_for('sae_steering.next_phase') }}" class="btn lock-msg-btn">
                             Continue &rarr;
                         </a>
                     </div>
@@ -964,8 +1001,8 @@
             {% else %}
             <p class="steering-instructions">
                 Below, you can modify the features of your recommendations. Use the slider to increase or decrease
-                the presence of particular movie types in your next recommendation iteration. You can also search for
-                additional features using the field below.
+                the presence of particular movie types in your next recommendation iteration.
+                Double-click any feature card to easily reset its value. You can also search for additional features using the field below.
             </p>
             {% endif %}
             <div class="steering-lock-target" id="steering-lock-target">
@@ -1090,7 +1127,10 @@
         let currentIteration = {{ iteration|default(1) }};
         window.excludedMoviesFromText = [];
         let preferencesApproved = {{ 'true' if preferences_approved else 'false' }};
-        let isStudyLocked = {{ 'true' if iteration_locked_final else 'false' }};
+        const _iterationLockedFinal = {{ 'true' if iteration_locked_final else 'false' }};
+        let isStudyLocked = _iterationLockedFinal && preferencesApproved;
+        let isFinalIterationPending = _iterationLockedFinal && !preferencesApproved;
+        let pendingFinalData = null;
         const searchInteractions = {};
         let lastSearchQuery = '';
         let lastSearchResultIds = [];
@@ -1140,21 +1180,56 @@
             const approvalCard = document.getElementById('approval-card');
             const approvalBtn = document.getElementById('approve-preferences-btn');
             const applyBtn = document.getElementById('apply-btn');
-            const locked = isStudyLocked || !preferencesApproved;
 
+            if (isStudyLocked) {
+                if (approvalCard) {
+                    approvalCard.classList.add('approved', 'completed', 'fully-locked');
+                }
+                if (approvalBtn) {
+                    approvalBtn.classList.remove('btn-outline-primary');
+                    approvalBtn.classList.add('btn-success', 'readonly-state');
+                    approvalBtn.textContent = 'Selection confirmed';
+                }
+                if (applyBtn) applyBtn.disabled = true;
+                setSteeringLocked(true);
+                updateFinalLockMessage();
+                return;
+            }
+
+            if (isFinalIterationPending) {
+                if (approvalCard) {
+                    approvalCard.classList.remove('approved', 'completed', 'fully-locked');
+                    approvalCard.classList.toggle('approved', preferencesApproved);
+                }
+                if (approvalBtn) {
+                    approvalBtn.classList.remove('btn-outline-primary', 'btn-success', 'readonly-state');
+                    if (preferencesApproved) {
+                        approvalBtn.classList.add('btn-success', 'readonly-state');
+                        approvalBtn.textContent = 'Selection confirmed';
+                    } else {
+                        approvalBtn.classList.add('btn-outline-primary');
+                        approvalBtn.textContent = 'Confirm final selection';
+                    }
+                }
+                if (applyBtn) applyBtn.disabled = true;
+                setSteeringLocked(true);
+                updateFinalLockMessage();
+                return;
+            }
+
+            const locked = !preferencesApproved;
             if (approvalCard) {
-                approvalCard.classList.toggle('approved', preferencesApproved || isStudyLocked);
-                approvalCard.classList.toggle('completed', isStudyLocked);
+                approvalCard.classList.remove('fully-locked');
+                approvalCard.classList.toggle('approved', preferencesApproved);
+                approvalCard.classList.toggle('completed', false);
             }
             if (approvalBtn) {
                 approvalBtn.classList.remove('btn-outline-primary', 'btn-success');
-                approvalBtn.classList.add((preferencesApproved || isStudyLocked) ? 'btn-success' : 'btn-outline-primary');
-                approvalBtn.classList.toggle('readonly-state', preferencesApproved || isStudyLocked);
-                approvalBtn.textContent = isStudyLocked
-                    ? 'Selection locked for the final screen'
-                    : (preferencesApproved ? 'Selection confirmed' : "I'm done with the selection");
+                approvalBtn.classList.add(preferencesApproved ? 'btn-success' : 'btn-outline-primary');
+                approvalBtn.classList.toggle('readonly-state', preferencesApproved);
+                approvalBtn.textContent = preferencesApproved ? 'Selection confirmed' : "I'm done with the selection";
             }
-            if (applyBtn) applyBtn.disabled = isStudyLocked || !preferencesApproved;
+            if (applyBtn) applyBtn.disabled = !preferencesApproved;
             setSteeringLocked(locked);
             updateFinalLockMessage();
         }
@@ -1176,8 +1251,29 @@
                 }
 
                 preferencesApproved = true;
-                updateApprovalUI();
-                showToast('Selection confirmed. Step 2 unlocked.');
+
+                if (isFinalIterationPending) {
+                    isStudyLocked = true;
+                    isFinalIterationPending = false;
+                    if (pendingFinalData) {
+                        const phaseDiv = document.getElementById('phase-complete-content');
+                        const studyDiv = document.getElementById('study-complete-content');
+                        if (phaseDiv && studyDiv) {
+                            if (pendingFinalData.isFinalOfStudy) {
+                                phaseDiv.style.display = 'none';
+                                studyDiv.style.display = 'block';
+                            } else {
+                                phaseDiv.style.display = 'block';
+                                studyDiv.style.display = 'none';
+                            }
+                        }
+                    }
+                    updateApprovalUI();
+                    showToast('Selection confirmed. You can now continue.');
+                } else {
+                    updateApprovalUI();
+                    showToast('Selection confirmed. Continue to the next step.');
+                }
             } catch (error) {
                 console.error(error);
                 showToast(error.message || 'Could not confirm your selection');
@@ -1207,11 +1303,10 @@
             });
 
             const card = document.getElementById(`slider-card-${featureId}`);
-            card.addEventListener('dblclick', (e) => {
-                if (e.target.closest('.slider-control')) return;
+            card.addEventListener('dblclick', () => {
                 syncSlider(featureId, 0);
                 featureAdjustments[featureId] = 0;
-                showToast('Reset to zero');
+                showToast('Slider was reset to zero.');
             });
         });
 
@@ -1257,8 +1352,7 @@
             });
 
             const card = document.getElementById(`cluster-card-${cid}`);
-            card.addEventListener('dblclick', (e) => {
-                if (e.target.closest('.slider-control')) return;
+            card.addEventListener('dblclick', () => {
                 slider.value = SLIDER_CENTER;
                 clusterAdjustments[cid] = 0;
                 document.getElementById(`slider-value-${cid}`).textContent = '0.00';
@@ -1435,23 +1529,13 @@
                     }
 
                     if (data.is_final_iteration) {
-                        isStudyLocked = true;
+                        isFinalIterationPending = true;
                         preferencesApproved = false;
+                        pendingFinalData = {
+                            isSequential: !!data.is_sequential,
+                            isFinalOfStudy: !!data.is_final_of_study
+                        };
                         document.getElementById('apply-btn').style.display = 'none';
-
-                        if (data.is_sequential) {
-                            const phaseDiv = document.getElementById('phase-complete-content');
-                            const studyDiv = document.getElementById('study-complete-content');
-                            if (phaseDiv && studyDiv) {
-                                if (data.is_final_of_study) {
-                                    phaseDiv.style.display = 'none';
-                                    studyDiv.style.display = 'block';
-                                } else {
-                                    phaseDiv.style.display = 'block';
-                                    studyDiv.style.display = 'none';
-                                }
-                            }
-                        }
                     } else {
                         preferencesApproved = false;
                     }
@@ -1481,6 +1565,11 @@
 
         document.getElementById('apply-btn').addEventListener('click', fetchAndRender);
         document.getElementById('approve-preferences-btn')?.addEventListener('click', approvePreferences);
+
+        if (isFinalIterationPending || isStudyLocked) {
+            document.getElementById('apply-btn').style.display = 'none';
+        }
+        updateApprovalUI();
 
         // ------------------------------------------------------------------
         // Render recommendations with click-to-select cards & tooltip
@@ -1521,6 +1610,8 @@
                 return `
                     <div class="rec-card${selectedClass}"
                         data-movie-id="${movieId}"
+                        data-rank="${idx + 1}"
+                        data-list-id="${containerId}"
                         data-overview="${safeOverview}"
                         data-title="${safeTitle}"
                         data-url="${safeUrl}"
@@ -1558,7 +1649,12 @@
             const title = card.dataset.title || card.querySelector('.rec-title')?.textContent || '';
             const url = card.dataset.url || '';
             const metadata = card.dataset.meta || '';
-            toggleLike(movieId, title, url, metadata);
+            const rank = parseInt(card.dataset.rank || '', 10);
+            const listId = card.dataset.listId || '';
+            toggleLike(movieId, title, url, metadata, {
+                rank: Number.isNaN(rank) ? null : rank,
+                list_id: listId || null
+            });
         }
 
         function syncCardSelectionUI(movieId) {
@@ -1574,7 +1670,7 @@
             });
         }
 
-        function toggleLike(movieId, title, url, metadata) {
+        function toggleLike(movieId, title, url, metadata, context = {}) {
             if (isStudyLocked) return;
             if (likedMovies[movieId]) {
                 delete likedMovies[movieId];
@@ -1584,17 +1680,23 @@
                 showToast(`Selected "${title}"`);
             }
             syncCardSelectionUI(movieId);
-            logFeedback(movieId, likedMovies[movieId] ? 'like' : 'neutral');
+            logFeedback(movieId, likedMovies[movieId] ? 'like' : 'neutral', context);
             snapshotIterationFeedback();
             renderActivityHistory();
         }
 
-        function logFeedback(movieId, action) {
+        function logFeedback(movieId, action, context = {}) {
             fetch('{{ url_for("sae_steering.log_movie_feedback") }}', {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: JSON_CSRF_HEADERS,
-                body: JSON.stringify({ movie_id: movieId, action, iteration: currentIteration })
+                body: JSON.stringify({
+                    movie_id: movieId,
+                    action,
+                    iteration: currentIteration,
+                    rank: context.rank ?? null,
+                    list_id: context.list_id ?? null
+                })
             }).catch(() => {});
         }
 

@@ -74,6 +74,8 @@ _tmdb_cache = None
 DEFAULT_STEERING_MODE = "sliders"
 DEFAULT_FEATURE_SELECTION_ALGORITHM = "personalized_grouped_topk"
 DEFAULT_BASE_MODEL_ID = "elsa"
+DEFAULT_DATASET_VARIANT = "ml-latest"
+SUPPORTED_DATASET_VARIANTS = {"ml-latest"}
 SUPPORTED_STEERING_MODES = {"sliders", "toggles", "text", "both", "none"}
 SUPPORTED_FEATURE_SELECTION_ALGORITHMS = {
     "personalized_grouped_topk",
@@ -101,6 +103,40 @@ def _normalize_feature_selection_algorithm(algorithm: str) -> str:
     return DEFAULT_FEATURE_SELECTION_ALGORITHM
 
 
+def _normalize_dataset_variant(dataset_id: str) -> str:
+    dataset_id = (dataset_id or DEFAULT_DATASET_VARIANT).strip().lower()
+    if dataset_id in SUPPORTED_DATASET_VARIANTS:
+        return dataset_id
+    return DEFAULT_DATASET_VARIANT
+
+
+def _get_study_dataset_variant(conf: dict) -> str:
+    return _normalize_dataset_variant((conf or {}).get("dataset"))
+
+
+def _get_effective_models(conf):
+    conf = _normalize_study_config(conf)
+    models = list(conf.get("models", []))
+    if len(models) != 2 or not conf.get("enable_comparison", False):
+        return models
+
+    if not conf.get("randomize_approach_order", True):
+        session["approach_order"] = [0, 1]
+        return models
+
+    raw_order = session.get("approach_order")
+    if (
+        not isinstance(raw_order, list)
+        or len(raw_order) != 2
+        or sorted(raw_order) != [0, 1]
+    ):
+        raw_order = [0, 1] if secrets.randbelow(2) == 0 else [1, 0]
+        session["approach_order"] = raw_order
+        print(f"[_get_effective_models] Assigned per-participant approach order: {raw_order}")
+
+    return [models[idx] for idx in raw_order]
+
+
 def _get_required_sae_model_option():
     if find_local_model_path(DEFAULT_TOPK_SAE_MODEL_ID):
         return {
@@ -118,7 +154,9 @@ def _normalize_study_config(conf):
     conf = dict(conf or {})
     conf["skip_participation_details"] = conf.get("skip_participation_details", True)
     conf["disable_demographics"] = conf.get("disable_demographics", True)
-    conf["show_general_features"] = conf.get("show_general_features", True)
+    conf["show_general_features"] = conf.get("show_general_features", False)
+    conf["dataset"] = _normalize_dataset_variant(conf.get("dataset"))
+    conf["randomize_approach_order"] = bool(conf.get("randomize_approach_order", True))
     conf["feature_selection_algorithm"] = _normalize_feature_selection_algorithm(
         conf.get("feature_selection_algorithm")
     )
@@ -168,7 +206,7 @@ def _normalize_study_config(conf):
 
 def _get_active_model_config(conf, phase_idx=None):
     conf = _normalize_study_config(conf)
-    models = conf.get("models", [])
+    models = _get_effective_models(conf)
     if not models:
         return {
             "id": "single",
@@ -310,7 +348,7 @@ def get_default_models():
             "name": "Approach B",
             "base": "elsa",
             "sae": DEFAULT_TOPK_SAE_MODEL_ID,
-            "steering_mode": "text",
+            "steering_mode": "none",
             "feature_selection_algorithm": DEFAULT_FEATURE_SELECTION_ALGORITHM,
         },
     ]
@@ -319,6 +357,35 @@ def get_default_models():
 def get_cache_path(guid, name=""):
     """Get cache directory path for this plugin"""
     return os.path.join("cache", __plugin_name__, guid, name)
+
+
+def _get_phase_id_map(session_key: str) -> dict:
+    raw = session.get(session_key, {})
+    if isinstance(raw, dict):
+        return raw
+    return {}
+
+
+def _get_phase_movie_set(session_key: str, phase_idx: int) -> set:
+    phase_map = _get_phase_id_map(session_key)
+    raw_list = phase_map.get(str(int(phase_idx)), [])
+    if not isinstance(raw_list, list):
+        return set()
+    return {int(mid) for mid in raw_list if mid is not None}
+
+
+def _set_phase_movie_set(session_key: str, phase_idx: int, movie_ids: set) -> None:
+    phase_map = _get_phase_id_map(session_key)
+    phase_map[str(int(phase_idx))] = sorted({int(mid) for mid in movie_ids if mid is not None})
+    session[session_key] = phase_map
+
+
+def _remember_shown_movies(phase_idx: int, movie_ids: list) -> None:
+    if not movie_ids:
+        return
+    seen = _get_phase_movie_set("seen_movies_per_phase", phase_idx)
+    seen.update({int(mid) for mid in movie_ids if mid is not None})
+    _set_phase_movie_set("seen_movies_per_phase", phase_idx, seen)
 
 
 # ============================================================================
@@ -765,11 +832,11 @@ _CLUSTER_GENRE_CENTROIDS = {
 }
 
 
-def _compute_user_genre_vector(selected_movies, model_id: str = None):
+def _compute_user_genre_vector(selected_movies, model_id: str = None, dataset_variant: str = DEFAULT_DATASET_VARIANT):
     """Build a genre vector from the user's selected movies."""
     try:
         from plugins.utils.data_loading import load_ml_dataset
-        loader = load_ml_dataset()
+        loader = load_ml_dataset(ml_variant=_normalize_dataset_variant(dataset_variant))
         movies_df = loader.movies_df_indexed
     except Exception:
         return None
@@ -882,13 +949,7 @@ def create():
 @bp.route("/available-datasets")
 def available_datasets():
     """Return list of supported datasets"""
-    # POC: Start with MovieLens
     return jsonify([
-        {
-            "name": "MovieLens Latest Small",
-            "id": "ml-latest-small",
-            "description": "Small MovieLens dataset for testing"
-        },
         {
             "name": "MovieLens Latest",
             "id": "ml-latest",
@@ -1134,7 +1195,7 @@ def study_intro():
     conf = _normalize_study_config(load_user_study_config(session.get("user_study_id")))
     tr = get_tr(languages, get_lang())
 
-    models = conf.get("models", [])
+    models = _get_effective_models(conf)
     comparison_mode = conf.get("comparison_mode", "side_by_side")
     num_phases = len(models) if comparison_mode == "sequential" else 1
     num_iterations = conf.get("num_iterations", 3)
@@ -1792,8 +1853,14 @@ def show_features():
     session["feature_adjustments"] = {}
     session["current_phase"] = 0
     session["phase_data"] = {}
+    session["seen_movies_per_phase"] = {}
+    session["persistent_liked_by_phase"] = {}
+    session["last_shown_movies_per_phase"] = {}
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
+
+    conf = _normalize_study_config(load_user_study_config(session.get("user_study_id")))
+    _get_effective_models(conf)
 
     return redirect(url_for(f"{__plugin_name__}.steering_interface"))
 
@@ -1808,13 +1875,13 @@ def next_phase():
     if not conf:
         return redirect(url_for(f"{__plugin_name__}.finish_user_study"))
 
-    models = conf.get("models", [])
+    models = _get_effective_models(conf)
     current_phase = session.get("current_phase", 0)
     next_phase_idx = current_phase + 1
     current_phase_model_name = _get_active_model_config(conf, current_phase).get(
         "name", _approach_label(current_phase)
     )
-    phase_questionnaire_title = f"Questionnaire on {current_phase_model_name}"
+    phase_questionnaire_title = f"Questionnaire for {current_phase_model_name}"
 
     participation_id = session.get("participation_id")
     if participation_id:
@@ -1836,7 +1903,7 @@ def next_phase():
                 continuation_url=url_for(f"{__plugin_name__}._advance_phase"),
                 title_override=phase_questionnaire_title,
                 header_override=phase_questionnaire_title,
-                hint_override="Please answer the questions below.",
+                hint_override="",
                 finish_override="Continue to the rest of the study",
                 hide_embedded_questionnaire_heading=1
             ))
@@ -1853,7 +1920,7 @@ def next_phase():
             continuation_url=url_for(f"{__plugin_name__}._advance_phase"),
             title_override=phase_questionnaire_title,
             header_override=phase_questionnaire_title,
-            hint_override="Please answer the questions below.",
+            hint_override="",
             finish_override="Continue to the rest of the study",
             hide_embedded_questionnaire_heading=1
         ))
@@ -1958,7 +2025,7 @@ def steering_interface():
     comparison_mode = conf.get("comparison_mode", "side_by_side")
     enable_comparison = conf.get("enable_comparison", False)
     interaction_mode = conf.get("interaction_mode", "reset")
-    models = conf.get("models", [])
+    models = _get_effective_models(conf)
     num_recommendations = max(1, int(conf.get("num_recommendations", 20)))
 
     # --- Sequential mode: show one model at a time ---
@@ -1994,7 +2061,7 @@ def steering_interface():
     try:
         import torch as _torch_init
         from plugins.utils.data_loading import load_ml_dataset
-        loader = load_ml_dataset()
+        loader = load_ml_dataset(ml_variant=_get_study_dataset_variant(conf))
 
         seed_adjustments = {}
         if selected_movies:
@@ -2053,29 +2120,44 @@ def steering_interface():
         session["feature_adjustments"] = dict(seed_adjustments)
 
         if is_sequential:
+            seen_for_phase = _get_phase_movie_set("seen_movies_per_phase", current_phase)
+            all_excluded_movies = list(set(selected_movies + list(seen_for_phase)))
             initial_recs = generate_steered_recommendations_for_model(
-                loader=loader, selected_movies=selected_movies,
+                loader=loader, selected_movies=all_excluded_movies,
                 feature_adjustments=seed_adjustments,
                 model_config=active_model, k=num_recommendations)
         elif enable_comparison and len(models) >= 2:
+            seen_a = _get_phase_movie_set("seen_movies_per_phase", 0)
+            seen_b = _get_phase_movie_set("seen_movies_per_phase", 1)
             initial_recs_a = generate_steered_recommendations_for_model(
-                loader=loader, selected_movies=selected_movies,
+                loader=loader, selected_movies=list(set(selected_movies + list(seen_a))),
                 feature_adjustments=seed_adjustments,
                 model_config=models[0], k=num_recommendations)
             initial_recs_b = generate_steered_recommendations_for_model(
-                loader=loader, selected_movies=selected_movies,
+                loader=loader, selected_movies=list(set(selected_movies + list(seen_b))),
                 feature_adjustments=seed_adjustments,
                 model_config=models[1], k=num_recommendations)
         else:
             if models:
+                seen_single = _get_phase_movie_set("seen_movies_per_phase", 0)
                 initial_recs = generate_steered_recommendations_for_model(
-                    loader=loader, selected_movies=selected_movies,
+                    loader=loader, selected_movies=list(set(selected_movies + list(seen_single))),
                     feature_adjustments=seed_adjustments,
                     model_config=models[0], k=num_recommendations)
             else:
                 initial_recs = generate_steered_recommendations(
                     loader=loader, selected_movies=selected_movies,
                     feature_adjustments=seed_adjustments, k=num_recommendations)
+
+        shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+        if is_sequential:
+            shown_map[str(int(current_phase))] = [int(r.get("movie_idx")) for r in initial_recs if r.get("movie_idx") is not None]
+        elif enable_comparison and len(models) >= 2:
+            shown_map["0"] = [int(r.get("movie_idx")) for r in initial_recs_a if r.get("movie_idx") is not None]
+            shown_map["1"] = [int(r.get("movie_idx")) for r in initial_recs_b if r.get("movie_idx") is not None]
+        else:
+            shown_map["0"] = [int(r.get("movie_idx")) for r in initial_recs if r.get("movie_idx") is not None]
+        session["last_shown_movies_per_phase"] = shown_map
     except Exception as e:
         print(f"[steering_interface] Could not generate initial recs: {e}")
         traceback.print_exc()
@@ -2098,7 +2180,9 @@ def steering_interface():
     if cluster_profile and selected_movies:
         try:
             user_genre_vec = _compute_user_genre_vector(
-                selected_movies, active_sae_model_id
+                selected_movies,
+                active_sae_model_id,
+                _get_study_dataset_variant(conf),
             )
             cluster_centroids = _compute_cluster_genre_centroids(
                 cluster_profile, active_sae_model_id
@@ -2322,11 +2406,12 @@ def adjust_features():
         max_iterations = conf.get("num_iterations", 3)
         enable_comparison = conf.get("enable_comparison", False)
         interaction_mode = conf.get("interaction_mode", request_interaction_mode)
-        models = conf.get("models", [])
+        models = _get_effective_models(conf)
 
         # Sequential mode overrides enable_comparison
         comparison_mode_cfg = conf.get("comparison_mode", "side_by_side")
         is_sequential_cfg = comparison_mode_cfg == "sequential" and len(models) >= 2
+        current_phase = session.get("current_phase", 0)
         if is_sequential_cfg:
             enable_comparison = False
 
@@ -2347,6 +2432,15 @@ def adjust_features():
                 "recommendations_a": [],
                 "recommendations_b": [],
             }), 200
+
+        shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+        if is_sequential_cfg:
+            _remember_shown_movies(current_phase, shown_map.get(str(int(current_phase)), []))
+        elif enable_comparison and len(models) >= 2:
+            _remember_shown_movies(0, shown_map.get("0", []))
+            _remember_shown_movies(1, shown_map.get("1", []))
+        else:
+            _remember_shown_movies(0, shown_map.get("0", []))
 
         # ---- Cumulative preference accumulation ----
         # Track TWO things separately:
@@ -2385,15 +2479,16 @@ def adjust_features():
         feature_adjustments = model_adjustments
         session["feature_adjustments"] = previous_adjustments
 
-        # ---- Persistent selections (session-wide) ----
-        # Selected movies are EXCLUDED from future recommendations so that
-        # each iteration surfaces fresh movies to evaluate.
-        persistent_liked = set(session.get("persistent_liked", []))
+        # ---- Persistent selections (per approach/phase) ----
+        # Selected movies in each approach are remembered only inside that
+        # approach to keep profile evolution independent across approaches.
+        active_phase_for_profile = current_phase if is_sequential_cfg else 0
+        persistent_liked = _get_phase_movie_set("persistent_liked_by_phase", active_phase_for_profile)
         for mid in client_liked:
             if mid is not None:
                 mid = int(mid)
                 persistent_liked.add(mid)
-        session["persistent_liked"] = list(persistent_liked)
+        _set_phase_movie_set("persistent_liked_by_phase", active_phase_for_profile, persistent_liked)
 
         # ---- Liked-movie neuron boost (equivalent weight to slider interaction) ----
         if client_liked:
@@ -2432,20 +2527,14 @@ def adjust_features():
             )
 
         selected_movies = session.get("elicitation_selected_movies", [])
-        # ORIGINAL: exclude selected movies from future iterations
-        # excluded_movie_ids = list(set(
-        #     (excluded_movies_from_text or []) +
-        #     list(persistent_liked)
-        # ))
-        # EXPERIMENT: allow re-showing items across iterations
-        excluded_movie_ids = list(set(
-            (excluded_movies_from_text or [])
-        ))
+        # Exclude explicit text blocks and keep per-approach recommendation
+        # history disjoint across iterations.
+        excluded_movie_ids = list(set((excluded_movies_from_text or [])))
         if excluded_movie_ids:
             session["excluded_movies_from_text"] = excluded_movie_ids
 
         from plugins.utils.data_loading import load_ml_dataset
-        loader = load_ml_dataset()
+        loader = load_ml_dataset(ml_variant=_get_study_dataset_variant(conf))
 
         _seed = session.get("initial_seed_adjustments")
         
@@ -2475,7 +2564,8 @@ def adjust_features():
 
         if is_sequential:
             active_model = session.get("active_model_config", models[current_phase])
-            all_excluded_movies = list(set(selected_movies + excluded_movie_ids))
+            seen_in_phase = _get_phase_movie_set("seen_movies_per_phase", current_phase)
+            all_excluded_movies = list(set(selected_movies + excluded_movie_ids + list(seen_in_phase)))
             recommendations = generate_steered_recommendations_for_model(
                 loader=loader,
                 selected_movies=all_excluded_movies,
@@ -2496,6 +2586,9 @@ def adjust_features():
                     model=active_model.get("name", f"Phase {current_phase}"),
                     movies=[r.get('movie_idx') for r in recommendations]
                 )
+            shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+            shown_map[str(int(current_phase))] = [int(r.get("movie_idx")) for r in recommendations if r.get("movie_idx") is not None]
+            session["last_shown_movies_per_phase"] = shown_map
 
         elif enable_comparison and len(models) >= 2:
             # A/B Comparison Mode - generate recommendations for both models
@@ -2505,12 +2598,14 @@ def adjust_features():
             print(f"[A/B Comparison] Model A config: {model_a_config}")
             print(f"[A/B Comparison] Model B config: {model_b_config}")
             
-            # Combine selected movies with excluded movies from text
-            all_excluded_movies = list(set(selected_movies + excluded_movie_ids))
+            seen_a = _get_phase_movie_set("seen_movies_per_phase", 0)
+            seen_b = _get_phase_movie_set("seen_movies_per_phase", 1)
+            all_excluded_movies_a = list(set(selected_movies + excluded_movie_ids + list(seen_a)))
+            all_excluded_movies_b = list(set(selected_movies + excluded_movie_ids + list(seen_b)))
             
             recommendations_a = generate_steered_recommendations_for_model(
                 loader=loader,
-                selected_movies=all_excluded_movies,
+                selected_movies=all_excluded_movies_a,
                 feature_adjustments=feature_adjustments,
                 model_config=model_a_config,
                 k=num_recommendations,
@@ -2520,7 +2615,7 @@ def adjust_features():
             
             recommendations_b = generate_steered_recommendations_for_model(
                 loader=loader,
-                selected_movies=all_excluded_movies,
+                selected_movies=all_excluded_movies_b,
                 feature_adjustments=feature_adjustments,
                 model_config=model_b_config,
                 k=num_recommendations,
@@ -2550,10 +2645,14 @@ def adjust_features():
                     model_a=[r.get('movie_idx') for r in recommendations_a],
                     model_b=[r.get('movie_idx') for r in recommendations_b]
                 )
+            shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+            shown_map["0"] = [int(r.get("movie_idx")) for r in recommendations_a if r.get("movie_idx") is not None]
+            shown_map["1"] = [int(r.get("movie_idx")) for r in recommendations_b if r.get("movie_idx") is not None]
+            session["last_shown_movies_per_phase"] = shown_map
         else:
             # Single model mode
-            # Combine selected movies with excluded movies from text
-            all_excluded_movies = list(set(selected_movies + excluded_movie_ids))
+            seen_single = _get_phase_movie_set("seen_movies_per_phase", 0)
+            all_excluded_movies = list(set(selected_movies + excluded_movie_ids + list(seen_single)))
             if models:
                 recommendations = generate_steered_recommendations_for_model(
                     loader=loader,
@@ -2572,6 +2671,9 @@ def adjust_features():
                     k=num_recommendations
                 )
             response_data["recommendations"] = recommendations
+            shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+            shown_map["0"] = [int(r.get("movie_idx")) for r in recommendations if r.get("movie_idx") is not None]
+            session["last_shown_movies_per_phase"] = shown_map
         
         # Build updated_features depending on steering mode
         _sm = "sliders"
@@ -2710,6 +2812,21 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
                 continue
         
         allowed_ids = set(loader.movies_df_indexed.index.tolist())
+        try:
+            model_item_ids = {int(mid) for mid in recommender.item_ids}
+            overlap_count = len(model_item_ids & allowed_ids)
+            overlap_ratio = overlap_count / max(len(model_item_ids), 1)
+            print(
+                "[generate_steered_recommendations_for_model] "
+                f"ID overlap model<->dataset: {overlap_count}/{len(model_item_ids)} ({overlap_ratio:.1%})"
+            )
+            if overlap_ratio < 0.7:
+                print(
+                    "[generate_steered_recommendations_for_model] WARNING: low model↔dataset ID overlap; "
+                    "check dataset variant vs feature cache/checkpoint provenance."
+                )
+        except Exception as exc:
+            print(f"[generate_steered_recommendations_for_model] Could not compute ID overlap diagnostics: {exc}")
 
         # NOTE: Image filter disabled — it was too restrictive and reduced
         # recommendation quality.  Movies without posters will show a
@@ -2806,6 +2923,12 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
         
         if skipped_unknown_id:
             print(f"[generate_steered_recommendations_for_model] Skipped {len(skipped_unknown_id)} items with unknown IDs, sample: {skipped_unknown_id[:10]}")
+            unknown_ratio = len(skipped_unknown_id) / max(len(raw_recommendations), 1)
+            if unknown_ratio > 0.25:
+                print(
+                    "[generate_steered_recommendations_for_model] WARNING: high unknown-ID drop ratio "
+                    f"({unknown_ratio:.1%}); this usually indicates dataset/model cache mismatch."
+                )
         if skipped_missing_meta:
             sample_ids = skipped_missing_meta[:10]
             print(f"[generate_steered_recommendations_for_model] Skipped {len(skipped_missing_meta)} items with missing metadata, sample: {sample_ids}")
@@ -3416,6 +3539,9 @@ def log_movie_feedback():
         movie_id = data.get("movie_id")
         action = data.get("action", "neutral")
         iteration = data.get("iteration", session.get("iteration", 1))
+        rank = data.get("rank")
+        list_id = data.get("list_id")
+        current_phase = session.get("current_phase", 0)
 
         participation_id = session.get("participation_id")
         if participation_id:
@@ -3424,7 +3550,10 @@ def log_movie_feedback():
                 "movie-feedback",
                 movie_id=movie_id,
                 action=action,
-                iteration=iteration
+                iteration=iteration,
+                phase=current_phase,
+                rank=rank,
+                list_id=list_id,
             )
         return jsonify({"status": "ok"})
     except Exception as e:
@@ -3484,7 +3613,10 @@ def finish_user_study():
     if has_final_q:
         return redirect(url_for(
             "utils.final_questionnaire",
-            continuation_url=url_for("utils.finish")
+            continuation_url=url_for("utils.finish"),
+            header_override="Final Comparison Questionnaire",
+            hint_override="",
+            hide_embedded_questionnaire_heading=1,
         ))
     study_ended(session["participation_id"])
     return redirect(url_for("utils.finish"))
@@ -3505,86 +3637,722 @@ def results():
     )
 
 
+def _safe_parse_json(raw):
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw)
+    except Exception:
+        return {}
+
+
+def _to_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _mean(values):
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def _build_distribution(values):
+    counts = {}
+    total = len(values)
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    percentages = {}
+    for key, cnt in counts.items():
+        percentages[key] = round((cnt / total) * 100, 2) if total else 0
+    return {"counts": counts, "percentages": percentages, "n": total}
+
+
+def _round_or_none(value, digits=3):
+    if value is None:
+        return None
+    return round(value, digits)
+
+
 @bp.route("/fetch-results/<guid>")
 def fetch_results(guid):
-    """Fetch results data for analysis"""
+    """Fetch analytics-first results for SAE steering study."""
     user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
     if not user_study:
         return jsonify({"error": "Study not found"}), 404
-    
+
+    study_config = _normalize_study_config(load_user_study_config_by_guid(guid))
+    config_models = list(study_config.get("models", []))
+
     participants = Participation.query.filter(
-        (Participation.time_finished != None) & 
+        (Participation.time_finished != None) &
         (Participation.user_study_id == user_study.id)
     ).all()
-    
+
+    final_score_maps = {
+        "f1_preference": {
+            "A_strongly": -2,
+            "A_slightly": -1,
+            "no_preference": 0,
+            "B_slightly": 1,
+            "B_strongly": 2,
+        },
+        "f2_better_recs": {
+            "A_clearly": -2,
+            "A_slightly": -1,
+            "same": 0,
+            "B_slightly": 1,
+            "B_clearly": 2,
+        },
+        "f3_more_control": {
+            "A_clearly": -2,
+            "A_slightly": -1,
+            "same": 0,
+            "B_slightly": 1,
+            "B_clearly": 2,
+        },
+        "f4_more_responsive": {
+            "A_clearly": -2,
+            "A_slightly": -1,
+            "same": 0,
+            "B_slightly": 1,
+            "B_clearly": 2,
+        },
+    }
+
+    phase_shared_items = [
+        "p1a_accuracy",
+        "p1b_novelty",
+        "p1c_diversity",
+        "p2a_control",
+        "p2b_convergence",
+        "p2c_liked_movies_sufficient",
+        "p2d_correction_ease",
+        "p5a_satisfaction",
+        "p5b_reuse",
+        "p5c_recommend",
+    ]
+    quality_items = ["p1a_accuracy", "p1b_novelty", "p1c_diversity"]
+    satisfaction_items = ["p5a_satisfaction", "p5b_reuse", "p5c_recommend"]
+    control_items = ["p2a_control", "p2b_convergence", "p2c_liked_movies_sufficient", "p2d_correction_ease"]
+    steering_likert_items = [
+        "p2e_responsiveness",
+        "p3a_label_clarity",
+        "p3b_predictability",
+        "p4a_ease",
+        "p4b_cognitive_load",
+        "p4c_displayed_features_sufficient",
+        "p4d_search_needed",
+        "p4g_granularity",
+        "p4h_overlap",
+    ]
+    reverse_scored_items = {"p4b_cognitive_load", "p4h_overlap"}
+    steering_categorical_items = ["p4e_displayed_feature_count", "p4f_boost_suppress_balance"]
+
     results = {
         "study_guid": guid,
-        "total_participants": len(participants),
-        "participants": []
+        "sample": {
+            "participants_completed": len(participants),
+            "participants_with_phase_questionnaires": 0,
+            "participants_with_final_questionnaire": 0,
+            "participants_with_both": 0,
+            "attention_checks": {
+                "phase_passed": 0,
+                "phase_total": 0,
+                "final_passed": 0,
+                "final_total": 0,
+                "overall_passed": 0,
+                "overall_total": len(participants),
+            },
+        },
+        "approaches": {"labels": {}, "overview": {}, "comparison": {}},
+        "questionnaire": {
+            "final": {"responses": 0, "items": {}, "text_feedback": {}},
+            "phase_shared": {"participants_with_pairs": 0, "items": {}, "composites": {}},
+            "steering_specific": {"likert_items": {}, "categorical_items": {}},
+            "links": {},
+        },
+        "moderators": {},
+        "insights": [],
+        "participants": [],
     }
-    
+
+    participant_analytics = []
+    final_distributions = {}
+    final_score_values = {item: [] for item in final_score_maps}
+    final_text_feedback = {"f24_liked_most": [], "f25_improvement": [], "f26_other": []}
+    phase_shared_diffs = {item: [] for item in phase_shared_items}
+    quality_diffs = []
+    satisfaction_diffs = []
+    control_diffs = []
+    steering_likert_values = {item: [] for item in steering_likert_items}
+    steering_categorical_values = {item: [] for item in steering_categorical_items}
+    moderator_pref_by_ml = {"low": [], "mid": [], "high": []}
+    moderator_pref_by_movie = {"low": [], "mid": [], "high": []}
+    moderator_pref_by_freq = {}
+    link_pref_quality = []
+    link_control = []
+    link_responsiveness = []
+    preference_model_votes = {}
+    selection_dynamics = {}
+
+    for idx, cfg_model in enumerate(config_models):
+        key = str(idx)
+        results["approaches"]["labels"][key] = cfg_model.get("name") or _approach_label(idx)
+
     for p in participants:
-        # Get all interactions for this participant
         interactions = Interaction.query.filter(
             Interaction.participation == p.id
         ).order_by(Interaction.time.asc()).all()
-        
+
         participant_data = {
             "participant_id": p.id,
             "time_joined": p.time_joined.isoformat() if p.time_joined else None,
             "time_finished": p.time_finished.isoformat() if p.time_finished else None,
             "language": p.language,
-            "demographics": {
-                "age_group": p.age_group,
-                "gender": p.gender,
-                "education": p.education,
-                "ml_familiar": p.ml_familiar
-            },
-            "feature_adjustments": [],
-            "elicitation_selections": [],
-            "total_iterations": 0
+            "phase_models": {},
+            "phase_behavior": {},
+            "phase_movie_feedback": {},
+            "phase_questionnaires": {},
+            "final_questionnaire": {},
+            "attention_checks": {"phase_pass": None, "final_pass": None, "overall_pass": None},
         }
-        
+
+        phase_behavior = {}
+        phase_movie_feedback = {}
+        phase_questionnaires = {}
+        final_questionnaire = {}
+        phase_models = {}
+
         for interaction in interactions:
-            data = json.loads(interaction.data) if interaction.data else {}
-            
+            data = _safe_parse_json(interaction.data)
             if interaction.interaction_type == "feature-adjustment":
-                participant_data["feature_adjustments"].append({
-                    "iteration": data.get("iteration"),
-                    "adjustments": data.get("adjustments", {}),
-                    "time": interaction.time.isoformat() if interaction.time else None
-                })
-                participant_data["total_iterations"] = max(
-                    participant_data["total_iterations"], 
-                    data.get("iteration", 0)
+                phase_idx = str(int(data.get("phase", 0)))
+                phase_entry = phase_behavior.setdefault(
+                    phase_idx,
+                    {"iterations": [], "abs_values": [], "nonzero_adjustments": 0, "events": 0},
                 )
-            
-            elif interaction.interaction_type == "elicitation-completed":
-                participant_data["elicitation_selections"] = data.get("selected_movies", [])
-        
+                iteration = int(data.get("iteration", 0) or 0)
+                if iteration > 0:
+                    phase_entry["iterations"].append(iteration)
+                adjustments = data.get("adjustments", {}) or {}
+                numeric_values = []
+                for _, raw_val in adjustments.items():
+                    val = _to_float(raw_val)
+                    if val is None:
+                        continue
+                    numeric_values.append(val)
+                    phase_entry["abs_values"].append(abs(val))
+                    if abs(val) > 1e-9:
+                        phase_entry["nonzero_adjustments"] += 1
+                if numeric_values:
+                    phase_entry["events"] += 1
+
+            elif interaction.interaction_type == "phase-questionnaire":
+                phase_idx = str(int(data.get("phase", 0)))
+                answers = {k: v for k, v in data.items() if k not in {"phase"}}
+                phase_questionnaires[phase_idx] = answers
+
+            elif interaction.interaction_type == "movie-feedback":
+                phase_idx = str(int(data.get("phase", 0)))
+                phase_entry = phase_movie_feedback.setdefault(
+                    phase_idx,
+                    {"events": [], "iteration_like_counts": {}, "position_counts": {}, "like_events": 0, "neutral_events": 0},
+                )
+                action = str(data.get("action", "neutral")).strip().lower()
+                iteration = int(data.get("iteration", 0) or 0)
+                rank = _to_float(data.get("rank"))
+                rank_int = int(rank) if rank is not None else None
+                list_id = data.get("list_id")
+                phase_entry["events"].append(
+                    {
+                        "movie_id": data.get("movie_id"),
+                        "action": action,
+                        "iteration": iteration,
+                        "rank": rank_int,
+                        "list_id": list_id,
+                    }
+                )
+                if action == "like":
+                    phase_entry["like_events"] += 1
+                    iter_bucket = phase_entry["iteration_like_counts"]
+                    iter_key = str(iteration)
+                    iter_bucket[iter_key] = iter_bucket.get(iter_key, 0) + 1
+                    if rank_int is not None and rank_int > 0:
+                        pos_bucket = phase_entry["position_counts"]
+                        rank_key = str(rank_int)
+                        pos_bucket[rank_key] = pos_bucket.get(rank_key, 0) + 1
+                elif action == "neutral":
+                    phase_entry["neutral_events"] += 1
+
+            elif interaction.interaction_type == "final-questionnaire":
+                final_questionnaire = data
+
+            elif interaction.interaction_type == "phase-complete":
+                phase_idx = str(int(data.get("phase", 0)))
+                if data.get("model"):
+                    phase_models[phase_idx] = data.get("model")
+
+        has_phase_q = bool(phase_questionnaires)
+        has_final_q = bool(final_questionnaire)
+        if has_phase_q:
+            results["sample"]["participants_with_phase_questionnaires"] += 1
+        if has_final_q:
+            results["sample"]["participants_with_final_questionnaire"] += 1
+        if has_phase_q and has_final_q:
+            results["sample"]["participants_with_both"] += 1
+
+        phase_attention_passes = []
+        for phase_idx, answers in phase_questionnaires.items():
+            raw_attention = answers.get("p_attention_check")
+            if raw_attention is None:
+                continue
+            is_steered_phase = any(
+                key in answers for key in ("p2e_responsiveness", "p3a_label_clarity", "p4a_ease")
+            )
+            expected = "6" if is_steered_phase else "3"
+            passed = str(raw_attention).strip() == expected
+            phase_attention_passes.append(passed)
+            results["sample"]["attention_checks"]["phase_total"] += 1
+            if passed:
+                results["sample"]["attention_checks"]["phase_passed"] += 1
+
+        final_attention_value = final_questionnaire.get("f_attention_check")
+        final_attention_pass = None
+        if final_attention_value is not None:
+            final_attention_pass = str(final_attention_value).strip() == "5"
+            results["sample"]["attention_checks"]["final_total"] += 1
+            if final_attention_pass:
+                results["sample"]["attention_checks"]["final_passed"] += 1
+
+        phase_pass_all = (all(phase_attention_passes) if phase_attention_passes else None)
+        if phase_pass_all is True and (final_attention_pass in (True, None)):
+            participant_data["attention_checks"]["overall_pass"] = True
+        elif phase_pass_all is False or final_attention_pass is False:
+            participant_data["attention_checks"]["overall_pass"] = False
+
+        if participant_data["attention_checks"]["overall_pass"] is True:
+            results["sample"]["attention_checks"]["overall_passed"] += 1
+        participant_data["attention_checks"]["phase_pass"] = phase_pass_all
+        participant_data["attention_checks"]["final_pass"] = final_attention_pass
+
+        normalized_phase_behavior = {}
+        for phase_idx, raw in phase_behavior.items():
+            max_iteration = max(raw["iterations"]) if raw["iterations"] else 0
+            normalized_phase_behavior[phase_idx] = {
+                "events": raw["events"],
+                "max_iteration": max_iteration,
+                "mean_abs_adjustment": _round_or_none(_mean(raw["abs_values"]), 4),
+                "nonzero_adjustments": raw["nonzero_adjustments"],
+            }
+
+        participant_data["phase_models"] = phase_models
+        participant_data["phase_behavior"] = normalized_phase_behavior
+        participant_data["phase_movie_feedback"] = phase_movie_feedback
+        participant_data["phase_questionnaires"] = phase_questionnaires
+        participant_data["final_questionnaire"] = final_questionnaire
         results["participants"].append(participant_data)
-    
-    # Aggregate steering patterns across all participants
-    all_adjustments = {}
-    for p in results["participants"]:
-        for adj in p["feature_adjustments"]:
-            for feature, value in adj.get("adjustments", {}).items():
-                if feature not in all_adjustments:
-                    all_adjustments[feature] = []
-                all_adjustments[feature].append(value)
-    
-    # Calculate average adjustments per feature
-    results["aggregate_stats"] = {
-        "avg_adjustments": {
-            feature: sum(values) / len(values) if values else 0
-            for feature, values in all_adjustments.items()
-        },
-        "adjustment_counts": {
-            feature: len(values)
-            for feature, values in all_adjustments.items()
+
+        participant_analytics.append(
+            {
+                "participant_id": p.id,
+                "phase_questionnaires": phase_questionnaires,
+                "final_questionnaire": final_questionnaire,
+                "phase_models": phase_models,
+                "phase_behavior": normalized_phase_behavior,
+                "phase_movie_feedback": phase_movie_feedback,
+            }
+        )
+
+        for item_key in list(final_score_maps.keys()) + [
+            "f19_movie_familiarity",
+            "f20_rs_frequency",
+            "f21_ml_familiarity",
+        ]:
+            value = final_questionnaire.get(item_key)
+            if value in (None, ""):
+                continue
+            final_distributions.setdefault(item_key, []).append(value)
+
+        for item_key, mapping in final_score_maps.items():
+            choice = final_questionnaire.get(item_key)
+            if choice in mapping:
+                score = mapping[choice]
+                final_score_values[item_key].append(score)
+
+        for text_key in final_text_feedback:
+            text_value = (final_questionnaire.get(text_key) or "").strip()
+            if text_value:
+                final_text_feedback[text_key].append(text_value)
+
+        phase_keys = sorted(phase_questionnaires.keys(), key=lambda x: int(x))
+        if len(phase_keys) >= 2:
+            first_phase, second_phase = phase_keys[0], phase_keys[1]
+            first_answers = phase_questionnaires.get(first_phase, {})
+            second_answers = phase_questionnaires.get(second_phase, {})
+
+            for item_key in phase_shared_items:
+                left = _to_float(first_answers.get(item_key))
+                right = _to_float(second_answers.get(item_key))
+                if left is not None and right is not None:
+                    phase_shared_diffs[item_key].append(right - left)
+
+            quality_left = [v for v in [_to_float(first_answers.get(x)) for x in quality_items] if v is not None]
+            quality_right = [v for v in [_to_float(second_answers.get(x)) for x in quality_items] if v is not None]
+            if quality_left and quality_right:
+                quality_diff = _mean(quality_right) - _mean(quality_left)
+                quality_diffs.append(quality_diff)
+
+            sat_left = [v for v in [_to_float(first_answers.get(x)) for x in satisfaction_items] if v is not None]
+            sat_right = [v for v in [_to_float(second_answers.get(x)) for x in satisfaction_items] if v is not None]
+            if sat_left and sat_right:
+                satisfaction_diffs.append(_mean(sat_right) - _mean(sat_left))
+
+            control_left = [v for v in [_to_float(first_answers.get(x)) for x in control_items] if v is not None]
+            control_right = [v for v in [_to_float(second_answers.get(x)) for x in control_items] if v is not None]
+            if control_left and control_right:
+                control_diffs.append(_mean(control_right) - _mean(control_left))
+
+            preference_score = None
+            pref_choice = final_questionnaire.get("f1_preference")
+            if pref_choice in final_score_maps["f1_preference"]:
+                preference_score = final_score_maps["f1_preference"][pref_choice]
+
+            if preference_score is not None and quality_left and quality_right:
+                link_pref_quality.append(
+                    {"preference_score": preference_score, "quality_diff": _mean(quality_right) - _mean(quality_left)}
+                )
+            if preference_score is not None and control_left and control_right:
+                link_control.append(
+                    {"preference_score": preference_score, "control_diff": _mean(control_right) - _mean(control_left)}
+                )
+
+            responsiveness_left = _to_float(first_answers.get("p2e_responsiveness"))
+            responsiveness_right = _to_float(second_answers.get("p2e_responsiveness"))
+            responsiveness_diff = None
+            if responsiveness_left is not None and responsiveness_right is not None:
+                responsiveness_diff = responsiveness_right - responsiveness_left
+            elif responsiveness_right is not None:
+                responsiveness_diff = responsiveness_right
+            elif responsiveness_left is not None:
+                responsiveness_diff = -responsiveness_left
+            if preference_score is not None and responsiveness_diff is not None:
+                link_responsiveness.append(
+                    {"preference_score": preference_score, "responsiveness_diff": responsiveness_diff}
+                )
+
+            if pref_choice:
+                target_phase = second_phase if pref_choice.startswith("B_") else first_phase
+                if pref_choice == "no_preference":
+                    target_phase = None
+                if target_phase is not None:
+                    model_name = (
+                        phase_models.get(target_phase)
+                        or results["approaches"]["labels"].get(target_phase)
+                        or f"Approach {target_phase}"
+                    )
+                    preference_model_votes[model_name] = preference_model_votes.get(model_name, 0) + 1
+
+            ml_score = _to_float(final_questionnaire.get("f21_ml_familiarity"))
+            movie_score = _to_float(final_questionnaire.get("f19_movie_familiarity"))
+            if preference_score is not None and ml_score is not None:
+                if ml_score <= 2:
+                    moderator_pref_by_ml["low"].append(preference_score)
+                elif ml_score >= 4:
+                    moderator_pref_by_ml["high"].append(preference_score)
+                else:
+                    moderator_pref_by_ml["mid"].append(preference_score)
+            if preference_score is not None and movie_score is not None:
+                if movie_score <= 2:
+                    moderator_pref_by_movie["low"].append(preference_score)
+                elif movie_score >= 4:
+                    moderator_pref_by_movie["high"].append(preference_score)
+                else:
+                    moderator_pref_by_movie["mid"].append(preference_score)
+
+            usage_freq = final_questionnaire.get("f20_rs_frequency")
+            if preference_score is not None and usage_freq:
+                moderator_pref_by_freq.setdefault(usage_freq, []).append(preference_score)
+
+        for phase_idx, answers in phase_questionnaires.items():
+            for item_key in phase_shared_items:
+                numeric_val = _to_float(answers.get(item_key))
+                if numeric_val is not None:
+                    bucket = results["questionnaire"]["phase_shared"]["items"].setdefault(
+                        item_key, {"by_phase": {}, "delta_b_minus_a": {"n": 0, "mean": None}}
+                    )
+                    phase_bucket = bucket["by_phase"].setdefault(phase_idx, [])
+                    phase_bucket.append(numeric_val)
+
+            for item_key in steering_likert_items:
+                numeric_val = _to_float(answers.get(item_key))
+                if numeric_val is None:
+                    continue
+                if item_key in reverse_scored_items:
+                    numeric_val = 8 - numeric_val
+                steering_likert_values[item_key].append(numeric_val)
+
+            for item_key in steering_categorical_items:
+                cat_val = answers.get(item_key)
+                if cat_val:
+                    steering_categorical_values[item_key].append(cat_val)
+
+    for phase_idx, label in list(results["approaches"]["labels"].items()):
+        phase_rows = [x["phase_behavior"].get(phase_idx, {}) for x in participant_analytics if phase_idx in x["phase_behavior"]]
+        if not phase_rows:
+            continue
+        iter_values = [row.get("max_iteration", 0) for row in phase_rows if row.get("max_iteration", 0) > 0]
+        abs_values = [row.get("mean_abs_adjustment") for row in phase_rows if row.get("mean_abs_adjustment") is not None]
+        nonzero_values = [row.get("nonzero_adjustments", 0) for row in phase_rows]
+        event_values = [row.get("events", 0) for row in phase_rows]
+        results["approaches"]["overview"][phase_idx] = {
+            "label": label,
+            "participants": len(phase_rows),
+            "mean_iterations": _round_or_none(_mean(iter_values)),
+            "mean_abs_adjustment": _round_or_none(_mean(abs_values), 4),
+            "mean_nonzero_adjustments": _round_or_none(_mean(nonzero_values), 2),
+            "mean_adjustment_events": _round_or_none(_mean(event_values), 2),
         }
+
+    if "0" in results["approaches"]["overview"] and "1" in results["approaches"]["overview"]:
+        a_stats = results["approaches"]["overview"]["0"]
+        b_stats = results["approaches"]["overview"]["1"]
+        results["approaches"]["comparison"] = {
+            "delta_iterations_b_minus_a": _round_or_none(
+                (b_stats.get("mean_iterations") or 0) - (a_stats.get("mean_iterations") or 0), 3
+            ),
+            "delta_abs_adjustment_b_minus_a": _round_or_none(
+                (b_stats.get("mean_abs_adjustment") or 0) - (a_stats.get("mean_abs_adjustment") or 0), 4
+            ),
+            "delta_nonzero_adjustments_b_minus_a": _round_or_none(
+                (b_stats.get("mean_nonzero_adjustments") or 0) - (a_stats.get("mean_nonzero_adjustments") or 0), 3
+            ),
+        }
+
+    for participant_row in participant_analytics:
+        feedback_by_phase = participant_row.get("phase_movie_feedback", {})
+        for phase_idx, phase_feedback in feedback_by_phase.items():
+            aggregate = selection_dynamics.setdefault(
+                phase_idx,
+                {
+                    "participants_with_feedback": 0,
+                    "total_like_events": 0,
+                    "total_neutral_events": 0,
+                    "iteration_like_counts": {},
+                    "position_counts": {},
+                },
+            )
+            aggregate["participants_with_feedback"] += 1
+            aggregate["total_like_events"] += int(phase_feedback.get("like_events", 0))
+            aggregate["total_neutral_events"] += int(phase_feedback.get("neutral_events", 0))
+            for iter_key, iter_count in (phase_feedback.get("iteration_like_counts", {}) or {}).items():
+                aggregate["iteration_like_counts"][iter_key] = (
+                    aggregate["iteration_like_counts"].get(iter_key, 0) + int(iter_count)
+                )
+            for rank_key, rank_count in (phase_feedback.get("position_counts", {}) or {}).items():
+                aggregate["position_counts"][rank_key] = (
+                    aggregate["position_counts"].get(rank_key, 0) + int(rank_count)
+                )
+
+    normalized_selection_dynamics = {}
+    for phase_idx, phase_data in selection_dynamics.items():
+        participant_count = phase_data.get("participants_with_feedback") or 1
+        iteration_counts = phase_data.get("iteration_like_counts", {})
+        position_counts = phase_data.get("position_counts", {})
+        normalized_selection_dynamics[phase_idx] = {
+            "label": results["approaches"]["labels"].get(phase_idx, f"Approach {phase_idx}"),
+            "participants_with_feedback": phase_data.get("participants_with_feedback", 0),
+            "total_like_events": phase_data.get("total_like_events", 0),
+            "total_neutral_events": phase_data.get("total_neutral_events", 0),
+            "mean_like_events_per_participant": _round_or_none(
+                phase_data.get("total_like_events", 0) / participant_count, 3
+            ),
+            "iteration_like_counts": iteration_counts,
+            "iteration_like_means": {
+                iter_key: _round_or_none(count / participant_count, 3)
+                for iter_key, count in sorted(iteration_counts.items(), key=lambda item: int(item[0]))
+            },
+            "position_counts": {
+                rank_key: count
+                for rank_key, count in sorted(position_counts.items(), key=lambda item: int(item[0]))
+            },
+        }
+    results["approaches"]["selection_dynamics"] = normalized_selection_dynamics
+
+    final_section = results["questionnaire"]["final"]
+    final_section["responses"] = len(final_distributions.get("f1_preference", []))
+    for item_key, values in final_distributions.items():
+        entry = {"distribution": _build_distribution(values)}
+        if item_key in final_score_values and final_score_values[item_key]:
+            entry["mean_score"] = _round_or_none(_mean(final_score_values[item_key]), 3)
+            entry["score_scale"] = "A=-2 ... B=+2"
+        if item_key in ("f19_movie_familiarity", "f21_ml_familiarity"):
+            numeric_values = [_to_float(v) for v in values]
+            numeric_values = [x for x in numeric_values if x is not None]
+            if numeric_values:
+                entry["mean"] = _round_or_none(_mean(numeric_values), 3)
+                entry["scale"] = "1-5"
+        final_section["items"][item_key] = entry
+
+    final_section["text_feedback"] = {
+        key: {"count": len(vals), "samples": vals[:5]} for key, vals in final_text_feedback.items()
     }
-    
+
+    phase_section = results["questionnaire"]["phase_shared"]
+    paired_count = 0
+    for item_key, diffs in phase_shared_diffs.items():
+        if diffs:
+            paired_count = max(paired_count, len(diffs))
+        item_entry = phase_section["items"].get(item_key)
+        if not item_entry:
+            item_entry = {"by_phase": {}, "delta_b_minus_a": {"n": 0, "mean": None}}
+            phase_section["items"][item_key] = item_entry
+        for phase_idx, scores in list(item_entry["by_phase"].items()):
+            item_entry["by_phase"][phase_idx] = {
+                "n": len(scores),
+                "mean": _round_or_none(_mean(scores), 3),
+            }
+        item_entry["delta_b_minus_a"] = {"n": len(diffs), "mean": _round_or_none(_mean(diffs), 3)}
+    phase_section["participants_with_pairs"] = paired_count
+    phase_section["composites"] = {
+        "quality_diff_b_minus_a": {"n": len(quality_diffs), "mean": _round_or_none(_mean(quality_diffs), 3)},
+        "satisfaction_diff_b_minus_a": {
+            "n": len(satisfaction_diffs),
+            "mean": _round_or_none(_mean(satisfaction_diffs), 3),
+        },
+        "control_diff_b_minus_a": {"n": len(control_diffs), "mean": _round_or_none(_mean(control_diffs), 3)},
+    }
+
+    steering_section = results["questionnaire"]["steering_specific"]
+    for item_key, values in steering_likert_values.items():
+        steering_section["likert_items"][item_key] = {
+            "n": len(values),
+            "mean": _round_or_none(_mean(values), 3),
+            "scale": "1-7",
+        }
+    for item_key, values in steering_categorical_values.items():
+        steering_section["categorical_items"][item_key] = _build_distribution(values)
+
+    def _build_link_summary(rows, value_key):
+        if not rows:
+            return {"n": 0, "mean_by_preference": {}}
+        buckets = {"A": [], "neutral": [], "B": []}
+        for row in rows:
+            pref = row.get("preference_score", 0)
+            metric_value = row.get(value_key)
+            if metric_value is None:
+                continue
+            if pref < 0:
+                buckets["A"].append(metric_value)
+            elif pref > 0:
+                buckets["B"].append(metric_value)
+            else:
+                buckets["neutral"].append(metric_value)
+        return {
+            "n": len(rows),
+            "mean_by_preference": {
+                key: _round_or_none(_mean(vals), 3) for key, vals in buckets.items() if vals
+            },
+        }
+
+    results["questionnaire"]["links"] = {
+        "preference_vs_quality": _build_link_summary(link_pref_quality, "quality_diff"),
+        "preference_vs_control": _build_link_summary(link_control, "control_diff"),
+        "preference_vs_responsiveness": _build_link_summary(link_responsiveness, "responsiveness_diff"),
+        "preferred_model_votes": preference_model_votes,
+    }
+
+    def _build_moderator_stats(groups):
+        return {
+            key: {"n": len(vals), "mean_preference_score": _round_or_none(_mean(vals), 3)}
+            for key, vals in groups.items()
+        }
+
+    results["moderators"] = {
+        "ml_familiarity": _build_moderator_stats(moderator_pref_by_ml),
+        "movie_familiarity": _build_moderator_stats(moderator_pref_by_movie),
+        "rs_usage_frequency": _build_moderator_stats(moderator_pref_by_freq),
+    }
+
+    phase_attention = results["sample"]["attention_checks"]["phase_total"]
+    final_attention = results["sample"]["attention_checks"]["final_total"]
+    if phase_attention:
+        results["sample"]["attention_checks"]["phase_pass_rate"] = _round_or_none(
+            results["sample"]["attention_checks"]["phase_passed"] / phase_attention, 3
+        )
+    else:
+        results["sample"]["attention_checks"]["phase_pass_rate"] = None
+    if final_attention:
+        results["sample"]["attention_checks"]["final_pass_rate"] = _round_or_none(
+            results["sample"]["attention_checks"]["final_passed"] / final_attention, 3
+        )
+    else:
+        results["sample"]["attention_checks"]["final_pass_rate"] = None
+    overall_total = results["sample"]["attention_checks"]["overall_total"] or 0
+    if overall_total:
+        results["sample"]["attention_checks"]["overall_pass_rate"] = _round_or_none(
+            results["sample"]["attention_checks"]["overall_passed"] / overall_total, 3
+        )
+    else:
+        results["sample"]["attention_checks"]["overall_pass_rate"] = None
+
+    pref_mean = _mean(final_score_values["f1_preference"])
+    quality_link = results["questionnaire"]["links"]["preference_vs_quality"]["mean_by_preference"]
+    control_link = results["questionnaire"]["links"]["preference_vs_control"]["mean_by_preference"]
+    resp_link = results["questionnaire"]["links"]["preference_vs_responsiveness"]["mean_by_preference"]
+    ml_mod = results["moderators"]["ml_familiarity"]
+
+    if pref_mean is not None:
+        direction = "Approach B" if pref_mean > 0 else "Approach A" if pref_mean < 0 else "No clear winner"
+        results["insights"].append(
+            {
+                "id": "preference",
+                "title": "Overall preference",
+                "finding": f"{direction} is preferred on average.",
+                "strength": _round_or_none(abs(pref_mean), 3),
+                "metric": "f1_preference mean (A=-2, B=+2)",
+            }
+        )
+    if quality_link:
+        results["insights"].append(
+            {
+                "id": "quality",
+                "title": "Preference vs recommendation quality",
+                "finding": "Participants preferring B also report stronger quality gains when B-A quality diff is positive.",
+                "strength": _round_or_none((quality_link.get("B", 0) - quality_link.get("A", 0)), 3),
+                "metric": "Mean quality_diff (B-A) by preference group",
+            }
+        )
+    if control_link or resp_link:
+        strength_control = (control_link.get("B", 0) - control_link.get("A", 0)) if control_link else 0
+        strength_resp = (resp_link.get("B", 0) - resp_link.get("A", 0)) if resp_link else 0
+        results["insights"].append(
+            {
+                "id": "control_responsiveness",
+                "title": "Control and responsiveness",
+                "finding": "Preference trends align with perceived control and responsiveness differences between approaches.",
+                "strength": _round_or_none(strength_control + strength_resp, 3),
+                "metric": "Control/Responsiveness deltas by preference group",
+            }
+        )
+    if ml_mod:
+        high = ml_mod.get("high", {}).get("mean_preference_score")
+        low = ml_mod.get("low", {}).get("mean_preference_score")
+        if high is not None and low is not None:
+            results["insights"].append(
+                {
+                    "id": "moderator_ml",
+                    "title": "ML familiarity as moderator",
+                    "finding": "Preference differs between participants with low vs high ML familiarity.",
+                    "strength": _round_or_none(high - low, 3),
+                    "metric": "Difference in mean preference score (high-low ML familiarity)",
+                }
+            )
+
     return jsonify(results)
 
 

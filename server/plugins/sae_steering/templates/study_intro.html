@@ -8,20 +8,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
         body {
-            background: #f8f9fa;
+            background: #f5f7fa;
             min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
         .intro-container {
-            max-width: 720px;
-            margin: 40px auto;
-            padding: 0 20px;
+            max-width: min(1120px, calc(100% - 40px));
+            margin: 48px auto;
+            padding: 0;
         }
         .intro-card {
-            background: white;
-            border-radius: 8px;
+            background: #ffffff;
+            border-radius: 12px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.08);
             overflow: hidden;
             border: 1px solid #dee2e6;
@@ -29,7 +26,7 @@
         .intro-header {
             background: #007bff;
             color: white;
-            padding: 36px 36px 28px;
+            padding: 36px 48px 28px;
             text-align: center;
         }
         .intro-header h1 {
@@ -43,7 +40,7 @@
             margin: 0;
         }
         .intro-body {
-            padding: 32px 36px;
+            padding: 32px 48px;
         }
         .intro-body h3 {
             font-size: 1.15em;
@@ -72,7 +69,7 @@
             padding: 12px 16px 12px 52px;
             position: relative;
             background: #f8f9fa;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 10px;
             border: 1px solid #dee2e6;
         }
@@ -94,14 +91,14 @@
             font-size: 0.85em;
         }
         .intro-footer {
-            padding: 24px 36px 32px;
+            padding: 24px 48px 32px;
             text-align: center;
             border-top: 1px solid #dee2e6;
         }
         .parts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
             margin-bottom: 24px;
         }
         .part-card {
@@ -114,6 +111,9 @@
             font-size: 0.95em;
             margin-bottom: 8px;
             color: #0d6efd;
+        }
+        .part-card p {
+            margin-bottom: 0;
         }
         .state-summary {
             display: flex;
@@ -160,6 +160,43 @@
             font-size: 0.85em;
             font-weight: 500;
             margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .intro-container {
+                margin: 20px auto;
+            }
+            .intro-header {
+                padding: 24px 20px 20px;
+            }
+            .intro-header h1 {
+                font-size: 1.4em;
+            }
+            .intro-header p {
+                font-size: 0.92em;
+            }
+            .intro-body {
+                padding: 20px;
+            }
+            .intro-body h3 {
+                font-size: 1.05em;
+            }
+            .intro-footer {
+                padding: 20px;
+            }
+            .step-list li {
+                padding: 10px 14px 10px 46px;
+                font-size: 0.9em;
+            }
+            .step-list li::before {
+                width: 24px;
+                height: 24px;
+                font-size: 0.8em;
+                left: 12px;
+            }
+            .parts-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
