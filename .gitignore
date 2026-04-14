@@ -13,6 +13,7 @@ cache
 __MACOSX
 .venv
 db.sqlite
+.ipynb_checkpoints/
 
 # Models 
 *.pt
