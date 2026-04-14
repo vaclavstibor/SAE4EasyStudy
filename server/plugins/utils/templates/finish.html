@@ -1,88 +1,211 @@
 {% include 'header.html' %}
 
+<style>
+    body {
+        background: #f5f7fa;
+        min-height: 100vh;
+    }
+    .finish-shell {
+        max-width: min(760px, calc(100% - 40px));
+        margin: 48px auto;
+    }
+    .finish-card {
+        background: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+    .finish-header {
+        background: #007bff;
+        color: white;
+        padding: 36px 36px 28px;
+        text-align: center;
+    }
+    .finish-header h1 {
+        font-size: 1.8em;
+        font-weight: 700;
+        margin: 0 0 6px;
+    }
+    .finish-header p {
+        opacity: 0.9;
+        font-size: 1.05em;
+        margin: 0;
+    }
+    .finish-body {
+        padding: 28px 36px 32px;
+    }
+    .finish-body h4 {
+        font-size: 1.05em;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 14px;
+    }
+    .finish-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+        margin-bottom: 20px;
+    }
+    .finish-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #495057;
+        padding: 10px 14px;
+        border-bottom: 2px solid #dee2e6;
+        text-align: left;
+    }
+    .finish-table td {
+        padding: 9px 14px;
+        border-bottom: 1px solid #eee;
+        color: #555;
+    }
+    .finish-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .finish-table .total-row td {
+        font-weight: 600;
+        color: #333;
+        border-top: 2px solid #dee2e6;
+    }
+    .finish-override {
+        margin-top: 16px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .finish-actions {
+        text-align: center;
+        margin-top: 20px;
+    }
+    .finish-actions p {
+        color: #6c757d;
+        font-size: 0.9em;
+        margin-bottom: 12px;
+    }
+    .finish-actions .btn {
+        padding: 10px 28px;
+        font-weight: 600;
+        border-radius: 8px;
+    }
+    .finish-footer {
+        padding: 20px 36px 24px;
+        text-align: center;
+        border-top: 1px solid #dee2e6;
+    }
+    .contact-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+    }
+    .contact-chip {
+        display: inline-block;
+        background: #eef5ff;
+        color: #0d6efd;
+        border-radius: 999px;
+        padding: 6px 16px;
+        font-size: 0.85em;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .contact-chip:hover {
+        background: #dceaff;
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    @media (max-width: 600px) {
+        .finish-shell { margin: 20px auto; }
+        .finish-header { padding: 24px 20px 20px; }
+        .finish-header h1 { font-size: 1.4em; }
+        .finish-body { padding: 20px; }
+        .finish-footer { padding: 16px 20px; }
+    }
+</style>
+
 <div id="app">
-    <b-container fluid>
-        <b-jumbotron class="smallJumbotron" header="{{header}}" lead="">
-            {{hint}}
-        </b-jumbotron>
-        
-        {% if show_final_statistics == True %}
-        <b-row class="mt-3" align-h="center">
-            <b-col class="text-center" align-h="center" cols="10">
-                <h4>{{statistics}}</h4>
-            </b-col>
-        </b-row>
-        <b-row class="mt-3 mb-3" align-h="center">
-            <b-col class="text-center" align-h="center" cols="8">
-                <table role="table" aria-busy="false" aria-colcount="3" class="table b-table table-striped table-hover" id="__BVID__1046">
-                    <thead role="rowgroup" class="">
-                        <tr role="row" class="">
-                            <th role="columnheader" scope="col" aria-colindex="1" class="">
-                                <div>{{table_algo_name}}</div>
-                            </th>
-                            <th role="columnheader" scope="col" aria-colindex="2" class="">
-                                <div>{{table_n_selected}}</div>
-                            </th>
-                            <th role="columnheader" scope="col" aria-colindex="2" class="">
-                                <div>{{table_n_shown}}</div>
-                            </th>
-                            <th role="columnheader" scope="col" aria-colindex="3" class="">
-                                <div>{{table_avg_rating}}</div>
-                            </th>
+    <div class="finish-shell">
+        <div class="finish-card">
+            <div class="finish-header">
+                <h1>{{ header }}</h1>
+                {% if hint %}
+                <p>{{ hint }}</p>
+                {% endif %}
+            </div>
+
+            {% if show_final_statistics == True or (finished_text_override is defined and finished_text_override is not none) or (prolific_pid is defined and prolific_pid is not none) %}
+            <div class="finish-body">
+                {% if show_final_statistics == True %}
+                <h4>{{ statistics }}</h4>
+                <table class="finish-table">
+                    <thead>
+                        <tr>
+                            <th>{{ table_algo_name }}</th>
+                            <th>{{ table_n_selected }}</th>
+                            <th>{{ table_n_shown }}</th>
+                            <th>{{ table_avg_rating }}</th>
                         </tr>
                     </thead>
-                    <tbody role="rowgroup">
+                    <tbody>
                         {% for key, value in n_selected_per_algorithm.items() %}
-                        <tr role="row" class="">
-                            <td aria-colindex="1" role="cell" class="">{{key}}</td>
-                            <td aria-colindex="2" role="cell" class="">{{value}}</td>
-                            <td aria-colindex="3" role="cell" class="">{{(n_recommended / (n_selected_per_algorithm|length))|int}}</td>
-                            <td aria-colindex="4" role="cell" class="">{{n_avg_rating_per_algorithm[key]}}</td>
+                        <tr>
+                            <td>{{ key }}</td>
+                            <td>{{ value }}</td>
+                            <td>{{ (n_recommended / (n_selected_per_algorithm|length))|int }}</td>
+                            <td>{{ n_avg_rating_per_algorithm[key] }}</td>
                         </tr>
                         {% endfor %}
-                        <tr role="row" class="">
-                            <td aria-colindex="1" role="cell" class=""><strong>TOTAL:</strong></td>
-                            <td aria-colindex="2" role="cell" class="">{{n_selected_per_algorithm.values()|sum}}</td>
-                            <td aria-colindex="3" role="cell" class="">{{n_recommended}}</td>
-                            <td aria-colindex="4" role="cell" class="">{{(n_avg_rating_per_algorithm.values()|sum) / (n_avg_rating_per_algorithm|length)}}</td>
+                        <tr class="total-row">
+                            <td><strong>TOTAL:</strong></td>
+                            <td>{{ n_selected_per_algorithm.values()|sum }}</td>
+                            <td>{{ n_recommended }}</td>
+                            <td>{{ (n_avg_rating_per_algorithm.values()|sum) / (n_avg_rating_per_algorithm|length) }}</td>
                         </tr>
-                        <tr role="row" class="">
-                            <td aria-colindex="1" role="cell" class="">Preference Elicitation</td>
-                            <td aria-colindex="2" role="cell" class="">{{n_selected_elicitation}}</td>
-                            <td aria-colindex="3" role="cell" class="">{{n_total_elicitation}}</td>
-                            <td aria-colindex="4" role="cell" class=""></td>
+                        <tr>
+                            <td>Preference Elicitation</td>
+                            <td>{{ n_selected_elicitation }}</td>
+                            <td>{{ n_total_elicitation }}</td>
+                            <td></td>
                         </tr>
                     </tbody>
                 </table>
-            </b-col>
-        </b-row>
-        {% endif %}
+                {% endif %}
 
-        {% if finished_text_override is defined and finished_text_override is not none %}
-        <div>
-            {{ finished_text_override | safe }}
+                {% if finished_text_override is defined and finished_text_override is not none %}
+                <div class="finish-override">
+                    {{ finished_text_override | safe }}
+                </div>
+                {% endif %}
+
+                {% if prolific_pid is defined and prolific_pid is not none %}
+                <div class="finish-actions">
+                    <p>{{ auto_redirect }}.</p>
+                    <b-btn @click="prolificRedirect" variant="success" type="submit">{{ finish_user_study }}</b-btn>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="finish-footer">
+                <div class="contact-chips">
+                    <a class="contact-chip" href="mailto:vaclav.stibor647@student.cuni.cz">vaclav.stibor647@student.cuni.cz</a>
+                    <a class="contact-chip" href="mailto:ladislav.peska@matfyz.cuni.cz">ladislav.peska@matfyz.cuni.cz</a>
+                </div>
+            </div>
         </div>
-        {% endif %}
-
-        {% if prolific_pid is defined and prolific_pid is not none %}
-        <b-row align-h="center">
-            <b-col class="text-center" align-h="center" cols="6">
-                <p>{{auto_redirect}}.</p>
-                <b-btn @click="prolificRedirect" variant="success" type="submit">{{finish_user_study}}</b-btn>
-            </b-col>
-        </b-row>
-        {% endif %}
-    </b-container>
+    </div>
 </div>
 
-<script src="{{url_for('static', filename='resolution_handling.js')}}"></script>
-<script src="{{url_for('static', filename='interaction_reporting.js')}}"></script>
+<script src="{{ url_for('static', filename='resolution_handling.js') }}"></script>
+<script src="{{ url_for('static', filename='interaction_reporting.js') }}"></script>
 
 {% if prolific_pid is defined and prolific_pid is not none %}
 <script>
     console.log("Redirecting in 15 seconds");
     window.setTimeout(function (){
-        window.location = "{{prolific_url}}";
+        window.location = "{{ prolific_url }}";
     }, 15000);
 </script>
 {% endif %}
@@ -90,16 +213,13 @@
 <script>
     window.app = new Vue({
     el: '#app',
-    delimiters: ['[[',']]'], // Used to replace double { escaping with double [ escaping (to prevent jinja vs vue inference)
+    delimiters: ['[[',']]'],
     data: function() {
-        
-        return {
-            
-        };
+        return {};
     },
     methods: {
         prolificRedirect() {
-            window.location = "{{prolific_url}}";
+            window.location = "{{ prolific_url }}";
         }
     },
     mounted() {
@@ -110,11 +230,12 @@
 </script>
 
 {% if footer_override is defined and footer_override is not none %}
-  <div class="footerDiv mt-3">
-    {{ footer_override | safe}}
+  <div style="text-align:center; color:#868e96; font-size:0.82em; margin-top:16px; padding-bottom:20px;">
+    {{ footer_override | safe }}
   </div>
 </body>
 </html>
 {% else %}
-{% include 'footer.html' %}
+</body>
+</html>
 {% endif %}

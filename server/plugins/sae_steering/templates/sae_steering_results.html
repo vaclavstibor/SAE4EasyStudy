@@ -17,48 +17,34 @@
             --accent-negative: #c23c3c;
             --accent-neutral: #4a6fa5;
         }
-        
-        * {
-            box-sizing: border-box;
-        }
-        
+        * { box-sizing: border-box; }
         body {
             background: #fff;
             color: var(--text-primary);
-            font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             font-size: 14px;
             line-height: 1.6;
             -webkit-font-smoothing: antialiased;
         }
-        
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 48px 24px;
         }
-        
-        /* Header */
         .page-header {
-            margin-bottom: 48px;
+            margin-bottom: 42px;
             padding-bottom: 24px;
             border-bottom: 1px solid var(--border-color);
         }
-        
         .page-header h1 {
             font-size: 28px;
             font-weight: 600;
             letter-spacing: -0.5px;
-            margin: 0 0 8px 0;
-            color: var(--text-primary);
+            margin: 0 0 8px;
         }
-        
-        .page-header .subtitle {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
-        
-        .page-header .guid {
-            font-family: 'IBM Plex Mono', 'SF Mono', monospace;
+        .subtitle { color: var(--text-secondary); margin: 0; }
+        .guid {
+            font-family: "IBM Plex Mono", "SF Mono", monospace;
             font-size: 12px;
             color: var(--text-muted);
             background: var(--bg-subtle);
@@ -66,13 +52,12 @@
             border-radius: 4px;
             margin-left: 12px;
         }
-        
         .header-actions {
             margin-top: 20px;
             display: flex;
             gap: 12px;
+            flex-wrap: wrap;
         }
-        
         .btn {
             padding: 10px 20px;
             font-size: 13px;
@@ -82,29 +67,21 @@
             background: #fff;
             color: var(--text-primary);
             cursor: pointer;
-            transition: all 0.15s ease;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
         }
-        
-        .btn:hover {
-            background: var(--bg-subtle);
-            border-color: #ccc;
-        }
-        
+        .btn:hover { background: var(--bg-subtle); }
         .btn-primary {
             background: var(--text-primary);
-            color: #fff;
             border-color: var(--text-primary);
+            color: #fff;
         }
-        
-        .btn-primary:hover {
-            background: #333;
+        .section { margin-bottom: 40px; }
+        .section-header h2 {
+            font-size: 19px;
+            margin: 0 0 4px;
+            font-weight: 600;
         }
-        
-        /* Stats Row */
+        .section-header p { margin: 0; color: var(--text-secondary); }
         .stats-row {
             display: grid;
             grid-template-columns: repeat(5, 1fr);
@@ -113,402 +90,245 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
-            margin-bottom: 48px;
         }
-        
-        .stat-item {
-            background: #fff;
-            padding: 24px;
-            text-align: center;
-        }
-        
-        .stat-value {
-            font-size: 32px;
-            font-weight: 600;
-            color: var(--text-primary);
-            line-height: 1.2;
-            font-variant-numeric: tabular-nums;
-        }
-        
+        .stat-item { background: #fff; padding: 20px; text-align: center; }
+        .stat-value { font-size: 28px; font-weight: 600; line-height: 1.2; }
         .stat-label {
-            font-size: 12px;
-            color: var(--text-muted);
+            margin-top: 6px;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 4px;
+            color: var(--text-muted);
+            letter-spacing: .5px;
         }
-        
-        /* Sections */
-        .section {
-            margin-bottom: 48px;
-        }
-        
-        .section-header {
-            margin-bottom: 24px;
-        }
-        
-        .section-header h2 {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0 0 4px 0;
-        }
-        
-        .section-header p {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin: 0;
-        }
-        
-        /* Chart Grid */
-        .chart-grid {
+        .card-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 24px;
+            gap: 18px;
         }
-        
+        .card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: 20px;
+        }
+        .insight-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .insight-meta { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
+        .mono { font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
+        .table-wrap { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th {
+            text-align: left;
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-subtle);
+        }
+        .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
+        .data-table tr:last-child td { border-bottom: none; }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+        }
         .chart-card {
             border: 1px solid var(--border-color);
             border-radius: 8px;
+            padding: 16px;
+        }
+        .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+        .chart-wrap { position: relative; height: 240px; }
+        .empty-state {
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
             padding: 24px;
-            background: #fff;
-        }
-        
-        .chart-card.full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .chart-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin-bottom: 4px;
-        }
-        
-        .chart-subtitle {
-            font-size: 12px;
             color: var(--text-muted);
-            margin-bottom: 20px;
+            text-align: center;
         }
-        
-        .chart-container {
-            position: relative;
-            height: 280px;
-        }
-        
-        .chart-container.tall {
-            height: 360px;
-        }
-        
-        .chart-container.short {
-            height: 200px;
-        }
-        
-        /* Data Table */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-        
-        .data-table th {
-            text-align: left;
-            font-weight: 500;
-            color: var(--text-muted);
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            background: var(--bg-subtle);
-        }
-        
-        .data-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-        
-        .data-table tr:last-child td {
-            border-bottom: none;
-        }
-        
-        .data-table tr:hover td {
-            background: var(--bg-subtle);
-        }
-        
-        .mono {
-            font-family: 'IBM Plex Mono', 'SF Mono', monospace;
-            font-size: 12px;
-        }
-        
-        .value-positive {
-            color: var(--accent-positive);
-        }
-        
-        .value-negative {
-            color: var(--accent-negative);
-        }
-        
-        /* Mini bar visualization */
-        .mini-bar {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .mini-bar-track {
-            width: 80px;
-            height: 4px;
-            background: #eee;
-            border-radius: 2px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .mini-bar-center {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 1px;
-            background: #ccc;
-        }
-        
-        .mini-bar-fill {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            border-radius: 2px;
-        }
-        
-        .mini-bar-fill.positive {
-            left: 50%;
-            background: var(--accent-positive);
-        }
-        
-        .mini-bar-fill.negative {
-            right: 50%;
-            background: var(--accent-negative);
-        }
-        
-        /* Demographics */
-        .demo-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
-        }
-        
-        .demo-card {
+        .loading {
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 20px;
-        }
-        
-        .demo-title {
-            font-size: 12px;
-            font-weight: 500;
+            padding: 24px;
             color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 16px;
-        }
-        
-        .demo-chart {
-            height: 160px;
-            position: relative;
-        }
-        
-        /* Empty state */
-        .empty-state {
             text-align: center;
-            padding: 48px;
-            color: var(--text-muted);
         }
-        
-        /* Loading */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 48px;
-            color: var(--text-muted);
-        }
-        
-        .spinner {
-            width: 24px;
-            height: 24px;
-            border: 2px solid var(--border-color);
-            border-top-color: var(--text-primary);
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            margin-right: 12px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Responsive */
         @media (max-width: 992px) {
-            .chart-grid { grid-template-columns: 1fr; }
-            .demo-grid { grid-template-columns: repeat(2, 1fr); }
             .stats-row { grid-template-columns: repeat(3, 1fr); }
+            .card-grid, .chart-grid { grid-template-columns: 1fr; }
         }
-        
         @media (max-width: 576px) {
             .stats-row { grid-template-columns: repeat(2, 1fr); }
-            .demo-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="page-header">
             <h1>
                 Study Results
                 <span class="guid">{{ guid }}</span>
             </h1>
-            <p class="subtitle">Aggregate analysis of participant steering behavior</p>
+            <p class="subtitle">Hybrid report focused on preference, quality, control, and moderator effects.</p>
             <div class="header-actions">
                 <a href="{{ url_for('main.administration') }}" class="btn">Back to Administration</a>
                 <button id="export-btn" class="btn btn-primary">Export Data (JSON)</button>
             </div>
         </div>
-        
-        <!-- Stats Row -->
-        <div class="stats-row" id="stats-row">
-            <div class="stat-item">
-                <div class="stat-value" id="stat-n">—</div>
-                <div class="stat-label">Participants (n)</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-completed">—</div>
-                <div class="stat-label">Completed</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-iterations">—</div>
-                <div class="stat-label">Mean Iterations</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-duration">—</div>
-                <div class="stat-label">Mean Duration</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="stat-features">—</div>
-                <div class="stat-label">Features Adjusted</div>
+
+        <div class="section">
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-completed">-</div>
+                    <div class="stat-label">Completed Participants</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-phaseq">-</div>
+                    <div class="stat-label">With Phase Questionnaire</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-finalq">-</div>
+                    <div class="stat-label">With Final Questionnaire</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-attention">-</div>
+                    <div class="stat-label">Overall Attention Pass</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-paired">-</div>
+                    <div class="stat-label">Paired Approach Answers</div>
+                </div>
             </div>
         </div>
-        
-        <!-- Feature Adjustments Analysis -->
+
         <div class="section">
             <div class="section-header">
-                <h2>Feature Adjustment Distribution</h2>
-                <p>Mean adjustment values across all participants, sorted by absolute magnitude</p>
+                <h2>Executive Insights</h2>
+                <p>Top conclusions directly tied to the study questions.</p>
             </div>
-            
+            <div class="card-grid" id="insights-grid"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Approach Overview</h2>
+                <p>Behavioral metrics per approach phase and B-A deltas.</p>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Approach</th>
+                            <th>Participants</th>
+                            <th>Mean iterations</th>
+                            <th>Mean abs adjustment</th>
+                            <th>Mean non-zero adjustments</th>
+                            <th>Mean adjustment events</th>
+                        </tr>
+                    </thead>
+                    <tbody id="approach-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Questionnaire Insights</h2>
+                <p>Final comparison, paired phase differences, and steering-specific diagnostics.</p>
+            </div>
+            <div class="card-grid">
+                <div class="card">
+                    <div class="insight-title">Final comparison items</div>
+                    <div id="final-summary"></div>
+                </div>
+                <div class="card">
+                    <div class="insight-title">Phase composites (B-A)</div>
+                    <div id="phase-composite-summary"></div>
+                </div>
+            </div>
+            <div class="table-wrap" style="margin-top:16px;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Phase A mean</th>
+                            <th>Phase B mean</th>
+                            <th>Delta B-A</th>
+                            <th>n</th>
+                        </tr>
+                    </thead>
+                    <tbody id="phase-items-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Moderator Effects</h2>
+                <p>Preference differences by familiarity and usage segments.</p>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Moderator</th>
+                            <th>Segment</th>
+                            <th>n</th>
+                            <th>Mean preference score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="moderator-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Selection Dynamics by Approach</h2>
+                <p>How many movies were selected per iteration and where they appeared in the ranking.</p>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Approach</th>
+                            <th>Participants with feedback</th>
+                            <th>Total likes</th>
+                            <th>Total removals</th>
+                            <th>Mean likes / participant</th>
+                        </tr>
+                    </thead>
+                    <tbody id="selection-dynamics-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2>Support Charts</h2>
+                <p>Compact visual checks under the narrative insights.</p>
+            </div>
             <div class="chart-grid">
-                <div class="chart-card full-width">
-                    <div class="chart-title">Mean Feature Adjustments</div>
-                    <div class="chart-subtitle">Positive values indicate boosting, negative indicate suppression</div>
-                    <div class="chart-container tall">
-                        <canvas id="distributionChart"></canvas>
-                    </div>
-                </div>
-                
                 <div class="chart-card">
-                    <div class="chart-title">Adjustment Frequency</div>
-                    <div class="chart-subtitle">Number of times each feature was adjusted (non-zero values)</div>
-                    <div class="chart-container">
-                        <canvas id="frequencyChart"></canvas>
-                    </div>
+                    <div class="chart-title">Preference distribution (f1)</div>
+                    <div class="chart-wrap"><canvas id="prefChart"></canvas></div>
                 </div>
-                
                 <div class="chart-card">
-                    <div class="chart-title">Adjustment Intensity Over Iterations</div>
-                    <div class="chart-subtitle">Mean absolute adjustment value per iteration</div>
-                    <div class="chart-container">
-                        <canvas id="iterationChart"></canvas>
-                    </div>
+                    <div class="chart-title">Composite deltas (B-A)</div>
+                    <div class="chart-wrap"><canvas id="deltaChart"></canvas></div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Steering Patterns -->
-        <div class="section">
-            <div class="section-header">
-                <h2>Steering Patterns</h2>
-                <p>Analysis of boosting vs suppression behavior</p>
-            </div>
-            
-            <div class="chart-grid">
                 <div class="chart-card">
-                    <div class="chart-title">Boost vs Suppress Ratio</div>
-                    <div class="chart-subtitle">Distribution of adjustment directions</div>
-                    <div class="chart-container short">
-                        <canvas id="ratioChart"></canvas>
-                    </div>
+                    <div class="chart-title">ML familiarity moderator</div>
+                    <div class="chart-wrap"><canvas id="modChart"></canvas></div>
                 </div>
-                
                 <div class="chart-card">
-                    <div class="chart-title">Adjustment Value Distribution</div>
-                    <div class="chart-subtitle">Histogram of all adjustment values</div>
-                    <div class="chart-container short">
-                        <canvas id="histogramChart"></canvas>
-                    </div>
+                    <div class="chart-title">Likes per iteration by approach</div>
+                    <div class="chart-wrap"><canvas id="selectionIterationChart"></canvas></div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Demographics -->
-        <div class="section">
-            <div class="section-header">
-                <h2>Participant Demographics</h2>
-                <p>Distribution of participant characteristics</p>
-            </div>
-            
-            <div class="demo-grid">
-                <div class="demo-card">
-                    <div class="demo-title">Age Group</div>
-                    <div class="demo-chart">
-                        <canvas id="ageChart"></canvas>
-                    </div>
-                </div>
-                <div class="demo-card">
-                    <div class="demo-title">Gender</div>
-                    <div class="demo-chart">
-                        <canvas id="genderChart"></canvas>
-                    </div>
-                </div>
-                <div class="demo-card">
-                    <div class="demo-title">Education</div>
-                    <div class="demo-chart">
-                        <canvas id="educationChart"></canvas>
-                    </div>
-                </div>
-                <div class="demo-card">
-                    <div class="demo-title">ML Familiarity</div>
-                    <div class="demo-chart">
-                        <canvas id="mlChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Feature Table -->
-        <div class="section">
-            <div class="section-header">
-                <h2>Feature Statistics</h2>
-                <p>Detailed breakdown of all adjusted features</p>
-            </div>
-            
-            <div class="chart-card">
-                <div id="features-table-container">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <span>Loading data...</span>
-                    </div>
+                <div class="chart-card">
+                    <div class="chart-title">Selected position distribution</div>
+                    <div class="chart-wrap"><canvas id="selectionPositionChart"></canvas></div>
                 </div>
             </div>
         </div>
@@ -516,433 +336,294 @@
 
     <script>
         let resultsData = null;
-        
-        // Chart.js configuration
         Chart.defaults.font.family = "'IBM Plex Sans', -apple-system, sans-serif";
-        Chart.defaults.font.size = 11;
-        Chart.defaults.color = '#8a8a8a';
-        Chart.defaults.plugins.legend.display = false;
-        
-        const chartColors = {
-            positive: '#2d7d46',
-            negative: '#c23c3c',
-            neutral: '#4a6fa5',
-            grid: '#f0f0f0',
-            border: '#e5e5e5'
-        };
-        
+        Chart.defaults.color = "#8a8a8a";
+
+        function fmt(value, digits = 2) {
+            if (value === null || value === undefined || Number.isNaN(value)) return "-";
+            return Number(value).toFixed(digits);
+        }
+
+        function pct(value) {
+            if (value === null || value === undefined || Number.isNaN(value)) return "-";
+            return `${Math.round(value * 100)}%`;
+        }
+
         async function loadResults() {
+            const insightsGrid = document.getElementById("insights-grid");
+            insightsGrid.innerHTML = '<div class="loading">Loading analytics...</div>';
             try {
-                const response = await fetch('{{ fetch_results_url }}');
+                const response = await fetch("{{ fetch_results_url }}");
                 const data = await response.json();
                 resultsData = data;
-                
                 renderStats(data);
+                renderInsights(data);
+                renderApproaches(data);
+                renderQuestionnaires(data);
+                renderModerators(data);
+                renderSelectionDynamics(data);
                 renderCharts(data);
-                renderDemographics(data);
-                renderFeaturesTable(data);
-                
-            } catch (error) {
-                console.error('Error:', error);
+            } catch (err) {
+                insightsGrid.innerHTML = '<div class="empty-state">Could not load results.</div>';
+                console.error(err);
             }
         }
-        
+
         function renderStats(data) {
-            const participants = data.participants || [];
-            const stats = data.aggregate_stats || {};
-            
-            document.getElementById('stat-n').textContent = data.total_participants || 0;
-            document.getElementById('stat-completed').textContent = participants.length;
-            
-            if (participants.length > 0) {
-                const avgIter = participants.reduce((sum, p) => sum + (p.total_iterations || 0), 0) / participants.length;
-                document.getElementById('stat-iterations').textContent = avgIter.toFixed(1);
-            }
-            
-            const durations = participants
-                .filter(p => p.time_joined && p.time_finished)
-                .map(p => new Date(p.time_finished) - new Date(p.time_joined));
-            
-            if (durations.length > 0) {
-                const avgMin = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length / 60000);
-                document.getElementById('stat-duration').textContent = avgMin + 'min';
-            }
-            
-            document.getElementById('stat-features').textContent = Object.keys(stats.avg_adjustments || {}).length;
+            const sample = data.sample || {};
+            const attention = sample.attention_checks || {};
+            document.getElementById("stat-completed").textContent = sample.participants_completed ?? "-";
+            document.getElementById("stat-phaseq").textContent = sample.participants_with_phase_questionnaires ?? "-";
+            document.getElementById("stat-finalq").textContent = sample.participants_with_final_questionnaire ?? "-";
+            document.getElementById("stat-attention").textContent = pct(attention.overall_pass_rate);
+            document.getElementById("stat-paired").textContent = data.questionnaire?.phase_shared?.participants_with_pairs ?? "-";
         }
-        
+
+        function renderInsights(data) {
+            const container = document.getElementById("insights-grid");
+            const insights = data.insights || [];
+            if (!insights.length) {
+                container.innerHTML = '<div class="empty-state">No insight payload available yet.</div>';
+                return;
+            }
+            container.innerHTML = insights.map(item => `
+                <div class="card">
+                    <div class="insight-title">${item.title || "Insight"}</div>
+                    <div>${item.finding || "-"}</div>
+                    <div class="insight-meta">
+                        <span class="mono">strength: ${fmt(item.strength, 3)}</span><br>
+                        <span>${item.metric || ""}</span>
+                    </div>
+                </div>
+            `).join("");
+        }
+
+        function renderApproaches(data) {
+            const body = document.getElementById("approach-table");
+            const overview = data.approaches?.overview || {};
+            const rows = Object.values(overview);
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="6">No approach behavior data available.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.label || "-"}</td>
+                    <td>${row.participants ?? "-"}</td>
+                    <td>${fmt(row.mean_iterations, 2)}</td>
+                    <td>${fmt(row.mean_abs_adjustment, 4)}</td>
+                    <td>${fmt(row.mean_nonzero_adjustments, 2)}</td>
+                    <td>${fmt(row.mean_adjustment_events, 2)}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderQuestionnaires(data) {
+            const finalSummary = document.getElementById("final-summary");
+            const phaseSummary = document.getElementById("phase-composite-summary");
+            const phaseBody = document.getElementById("phase-items-table");
+
+            const finalItems = data.questionnaire?.final?.items || {};
+            const finalKeys = ["f1_preference", "f2_better_recs", "f3_more_control", "f4_more_responsive"];
+            finalSummary.innerHTML = finalKeys.map(key => {
+                const item = finalItems[key] || {};
+                return `<div><strong>${key}</strong>: n=${item.distribution?.n ?? 0}, mean=${fmt(item.mean_score, 3)}</div>`;
+            }).join("");
+
+            const composites = data.questionnaire?.phase_shared?.composites || {};
+            phaseSummary.innerHTML = `
+                <div><strong>Quality diff</strong>: ${fmt(composites.quality_diff_b_minus_a?.mean, 3)} (n=${composites.quality_diff_b_minus_a?.n ?? 0})</div>
+                <div><strong>Satisfaction diff</strong>: ${fmt(composites.satisfaction_diff_b_minus_a?.mean, 3)} (n=${composites.satisfaction_diff_b_minus_a?.n ?? 0})</div>
+                <div><strong>Control diff</strong>: ${fmt(composites.control_diff_b_minus_a?.mean, 3)} (n=${composites.control_diff_b_minus_a?.n ?? 0})</div>
+            `;
+
+            const items = data.questionnaire?.phase_shared?.items || {};
+            const itemEntries = Object.entries(items);
+            if (!itemEntries.length) {
+                phaseBody.innerHTML = '<tr><td colspan="5">No paired phase items available.</td></tr>';
+                return;
+            }
+            phaseBody.innerHTML = itemEntries.map(([itemKey, itemVal]) => `
+                <tr>
+                    <td class="mono">${itemKey}</td>
+                    <td>${fmt(itemVal.by_phase?.["0"]?.mean, 3)}</td>
+                    <td>${fmt(itemVal.by_phase?.["1"]?.mean, 3)}</td>
+                    <td>${fmt(itemVal.delta_b_minus_a?.mean, 3)}</td>
+                    <td>${itemVal.delta_b_minus_a?.n ?? 0}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderModerators(data) {
+            const body = document.getElementById("moderator-table");
+            const mods = data.moderators || {};
+            const rows = [];
+            Object.entries(mods).forEach(([modName, groups]) => {
+                Object.entries(groups || {}).forEach(([segment, vals]) => {
+                    rows.push({
+                        moderator: modName,
+                        segment,
+                        n: vals?.n ?? 0,
+                        mean: vals?.mean_preference_score,
+                    });
+                });
+            });
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="4">No moderator data available.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${r.moderator}</td>
+                    <td>${r.segment}</td>
+                    <td>${r.n}</td>
+                    <td>${fmt(r.mean, 3)}</td>
+                </tr>
+            `).join("");
+        }
+
+        function renderSelectionDynamics(data) {
+            const body = document.getElementById("selection-dynamics-table");
+            const dynamics = data.approaches?.selection_dynamics || {};
+            const rows = Object.values(dynamics);
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="5">No movie-selection feedback data available.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.label || "-"}</td>
+                    <td>${row.participants_with_feedback ?? 0}</td>
+                    <td>${row.total_like_events ?? 0}</td>
+                    <td>${row.total_neutral_events ?? 0}</td>
+                    <td>${fmt(row.mean_like_events_per_participant, 3)}</td>
+                </tr>
+            `).join("");
+        }
+
         function renderCharts(data) {
-            const stats = data.aggregate_stats || {};
-            const avgAdjustments = stats.avg_adjustments || {};
-            const counts = stats.adjustment_counts || {};
-            
-            const features = Object.entries(avgAdjustments);
-            if (features.length === 0) return;
-            
-            // Distribution Chart
-            const sorted = [...features].sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 25);
-            new Chart(document.getElementById('distributionChart'), {
-                type: 'bar',
-                data: {
-                    labels: sorted.map(f => formatFeatureName(f[0])),
-                    datasets: [{
-                        data: sorted.map(f => f[1]),
-                        backgroundColor: sorted.map(f => f[1] >= 0 ? chartColors.positive : chartColors.negative),
-                        borderRadius: 2,
-                        barThickness: 16
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            grid: { color: chartColors.grid, drawBorder: false },
-                            ticks: { callback: v => v.toFixed(2) }
-                        },
-                        y: {
-                            grid: { display: false },
-                            ticks: { font: { size: 10 } }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: ctx => `Mean: ${ctx.raw >= 0 ? '+' : ''}${ctx.raw.toFixed(4)}`
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // Frequency Chart
-            const byCount = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-            new Chart(document.getElementById('frequencyChart'), {
-                type: 'bar',
-                data: {
-                    labels: byCount.map(f => formatFeatureName(f[0])),
-                    datasets: [{
-                        data: byCount.map(f => f[1]),
-                        backgroundColor: chartColors.neutral,
-                        borderRadius: 2,
-                        barThickness: 20
-                    }]
-                },
-                options: {
-                    indexAxis: 'y',
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { color: chartColors.grid, drawBorder: false } },
-                        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
-                    }
-                }
-            });
-            
-            // Iteration Chart
-            const iterationData = analyzeByIteration(data.participants);
-            if (iterationData.labels.length > 0) {
-                new Chart(document.getElementById('iterationChart'), {
-                    type: 'line',
+            const finalPref = data.questionnaire?.final?.items?.f1_preference?.distribution?.counts || {};
+            const prefLabels = Object.keys(finalPref);
+            const prefValues = Object.values(finalPref);
+            if (prefLabels.length) {
+                new Chart(document.getElementById("prefChart"), {
+                    type: "bar",
                     data: {
-                        labels: iterationData.labels,
+                        labels: prefLabels,
                         datasets: [{
-                            data: iterationData.avgIntensity,
-                            borderColor: chartColors.neutral,
-                            backgroundColor: 'rgba(74, 111, 165, 0.1)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 4,
-                            pointBackgroundColor: '#fff',
-                            pointBorderWidth: 2,
-                            borderWidth: 2
+                            data: prefValues,
+                            backgroundColor: "#4a6fa5",
+                            borderRadius: 3
                         }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+
+            const comps = data.questionnaire?.phase_shared?.composites || {};
+            const deltaData = [
+                comps.quality_diff_b_minus_a?.mean ?? 0,
+                comps.satisfaction_diff_b_minus_a?.mean ?? 0,
+                comps.control_diff_b_minus_a?.mean ?? 0
+            ];
+            new Chart(document.getElementById("deltaChart"), {
+                type: "bar",
+                data: {
+                    labels: ["Quality", "Satisfaction", "Control"],
+                    datasets: [{
+                        data: deltaData,
+                        backgroundColor: deltaData.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"),
+                        borderRadius: 3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const mlMod = data.moderators?.ml_familiarity || {};
+            const mlLabels = Object.keys(mlMod);
+            const mlValues = mlLabels.map(k => mlMod[k]?.mean_preference_score ?? 0);
+            new Chart(document.getElementById("modChart"), {
+                type: "line",
+                data: {
+                    labels: mlLabels,
+                    datasets: [{
+                        data: mlValues,
+                        borderColor: "#4a6fa5",
+                        backgroundColor: "rgba(74,111,165,0.1)",
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const dynamics = data.approaches?.selection_dynamics || {};
+            const phaseRows = Object.values(dynamics);
+            if (phaseRows.length) {
+                const iterationKeys = Array.from(new Set(
+                    phaseRows.flatMap(row => Object.keys(row.iteration_like_counts || {}))
+                )).sort((a, b) => Number(a) - Number(b));
+
+                const iterationDatasets = phaseRows.map((row, idx) => {
+                    const palette = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
+                    return {
+                        label: row.label || `Approach ${idx + 1}`,
+                        data: iterationKeys.map(key => (row.iteration_like_counts || {})[key] || 0),
+                        borderColor: palette[idx % palette.length],
+                        backgroundColor: "transparent",
+                        tension: 0.2
+                    };
+                });
+
+                new Chart(document.getElementById("selectionIterationChart"), {
+                    type: "line",
+                    data: {
+                        labels: iterationKeys.map(x => `Iter ${x}`),
+                        datasets: iterationDatasets
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        scales: {
-                            y: { 
-                                beginAtZero: true,
-                                grid: { color: chartColors.grid, drawBorder: false },
-                                ticks: { callback: v => v.toFixed(2) }
-                            },
-                            x: { grid: { display: false } }
-                        }
+                        plugins: { legend: { display: true } }
                     }
                 });
-            }
-            
-            // Ratio Chart
-            const allValues = getAllAdjustmentValues(data.participants);
-            const positiveCount = allValues.filter(v => v > 0.01).length;
-            const negativeCount = allValues.filter(v => v < -0.01).length;
-            const neutralCount = allValues.length - positiveCount - negativeCount;
-            
-            new Chart(document.getElementById('ratioChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: ['Boost', 'Suppress', 'Neutral'],
-                    datasets: [{
-                        data: [positiveCount, negativeCount, neutralCount],
-                        backgroundColor: [chartColors.positive, chartColors.negative, '#ccc'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '60%',
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'right',
-                            labels: { boxWidth: 12, padding: 12, font: { size: 11 } }
-                        }
-                    }
-                }
-            });
-            
-            // Histogram
-            const bins = createHistogramBins(allValues, 20);
-            new Chart(document.getElementById('histogramChart'), {
-                type: 'bar',
-                data: {
-                    labels: bins.labels,
-                    datasets: [{
-                        data: bins.counts,
-                        backgroundColor: bins.labels.map(l => {
-                            const val = parseFloat(l);
-                            return val > 0 ? chartColors.positive : val < 0 ? chartColors.negative : '#ccc';
-                        }),
-                        borderRadius: 1,
-                        barPercentage: 1,
-                        categoryPercentage: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { 
-                            grid: { color: chartColors.grid, drawBorder: false },
-                            ticks: { stepSize: 1 }
-                        },
-                        x: { 
-                            grid: { display: false },
-                            ticks: { 
-                                maxRotation: 0,
-                                callback: (val, idx) => idx % 4 === 0 ? bins.labels[idx] : ''
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        function getAllAdjustmentValues(participants) {
-            const values = [];
-            participants.forEach(p => {
-                (p.feature_adjustments || []).forEach(adj => {
-                    Object.values(adj.adjustments || {}).forEach(v => values.push(v));
+
+                const positionKeys = Array.from(new Set(
+                    phaseRows.flatMap(row => Object.keys(row.position_counts || {}))
+                )).sort((a, b) => Number(a) - Number(b)).slice(0, 20);
+                const positionDatasets = phaseRows.map((row, idx) => {
+                    const palette = ["rgba(74,111,165,0.75)", "rgba(45,125,70,0.75)", "rgba(194,60,60,0.75)", "rgba(127,90,162,0.75)"];
+                    return {
+                        label: row.label || `Approach ${idx + 1}`,
+                        data: positionKeys.map(key => (row.position_counts || {})[key] || 0),
+                        backgroundColor: palette[idx % palette.length]
+                    };
                 });
-            });
-            return values;
-        }
-        
-        function createHistogramBins(values, numBins) {
-            if (values.length === 0) return { labels: [], counts: [] };
-            
-            const min = Math.min(...values, -1);
-            const max = Math.max(...values, 1);
-            const binWidth = (max - min) / numBins;
-            
-            const counts = new Array(numBins).fill(0);
-            const labels = [];
-            
-            for (let i = 0; i < numBins; i++) {
-                const binStart = min + i * binWidth;
-                labels.push(binStart.toFixed(2));
-            }
-            
-            values.forEach(v => {
-                const binIdx = Math.min(Math.floor((v - min) / binWidth), numBins - 1);
-                counts[binIdx]++;
-            });
-            
-            return { labels, counts };
-        }
-        
-        function analyzeByIteration(participants) {
-            const iterationMap = {};
-            
-            participants.forEach(p => {
-                (p.feature_adjustments || []).forEach(adj => {
-                    const iter = adj.iteration || 1;
-                    if (!iterationMap[iter]) iterationMap[iter] = [];
-                    
-                    const values = Object.values(adj.adjustments || {});
-                    if (values.length > 0) {
-                        const intensity = values.reduce((sum, v) => sum + Math.abs(v), 0) / values.length;
-                        iterationMap[iter].push(intensity);
-                    }
-                });
-            });
-            
-            const keys = Object.keys(iterationMap).sort((a, b) => a - b);
-            return {
-                labels: keys.map(i => `Iter ${i}`),
-                avgIntensity: keys.map(k => {
-                    const vals = iterationMap[k];
-                    return vals.reduce((a, b) => a + b, 0) / vals.length;
-                })
-            };
-        }
-        
-        function renderDemographics(data) {
-            const participants = data.participants || [];
-            
-            const ageCounts = {}, genderCounts = {}, eduCounts = {};
-            const mlCounts = { 'Familiar': 0, 'Not familiar': 0 };
-            
-            participants.forEach(p => {
-                const d = p.demographics || {};
-                if (d.age_group) ageCounts[d.age_group] = (ageCounts[d.age_group] || 0) + 1;
-                if (d.gender) genderCounts[d.gender] = (genderCounts[d.gender] || 0) + 1;
-                if (d.education) eduCounts[d.education] = (eduCounts[d.education] || 0) + 1;
-                mlCounts[d.ml_familiar ? 'Familiar' : 'Not familiar']++;
-            });
-            
-            const demoColors = ['#4a6fa5', '#6b8cbe', '#8da8d4', '#aec5ea', '#d0e1f9'];
-            
-            const demoOptions = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom',
-                        labels: { boxWidth: 8, padding: 8, font: { size: 10 } }
-                    }
-                }
-            };
-            
-            if (Object.keys(ageCounts).length) {
-                new Chart(document.getElementById('ageChart'), {
-                    type: 'doughnut',
+
+                new Chart(document.getElementById("selectionPositionChart"), {
+                    type: "bar",
                     data: {
-                        labels: Object.keys(ageCounts),
-                        datasets: [{ data: Object.values(ageCounts), backgroundColor: demoColors, borderWidth: 0 }]
+                        labels: positionKeys.map(x => `#${x}`),
+                        datasets: positionDatasets
                     },
-                    options: { ...demoOptions, cutout: '50%' }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: true } }
+                    }
                 });
             }
-            
-            if (Object.keys(genderCounts).length) {
-                new Chart(document.getElementById('genderChart'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(genderCounts),
-                        datasets: [{ data: Object.values(genderCounts), backgroundColor: demoColors, borderWidth: 0 }]
-                    },
-                    options: { ...demoOptions, cutout: '50%' }
-                });
-            }
-            
-            if (Object.keys(eduCounts).length) {
-                new Chart(document.getElementById('educationChart'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(eduCounts),
-                        datasets: [{ data: Object.values(eduCounts), backgroundColor: demoColors, borderWidth: 0 }]
-                    },
-                    options: { ...demoOptions, cutout: '50%' }
-                });
-            }
-            
-            new Chart(document.getElementById('mlChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(mlCounts),
-                    datasets: [{ data: Object.values(mlCounts), backgroundColor: [chartColors.positive, '#ccc'], borderWidth: 0 }]
-                },
-                options: { ...demoOptions, cutout: '50%' }
-            });
         }
-        
-        function renderFeaturesTable(data) {
-            const container = document.getElementById('features-table-container');
-            const stats = data.aggregate_stats || {};
-            const avgAdjustments = stats.avg_adjustments || {};
-            const counts = stats.adjustment_counts || {};
-            
-            const features = Object.entries(avgAdjustments).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
-            
-            if (features.length === 0) {
-                container.innerHTML = '<div class="empty-state">No feature data available</div>';
-                return;
-            }
-            
-            const maxAbs = Math.max(...features.map(f => Math.abs(f[1])));
-            
-            container.innerHTML = `
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 40px">#</th>
-                            <th>Feature</th>
-                            <th style="width: 100px">Mean</th>
-                            <th style="width: 120px">Distribution</th>
-                            <th style="width: 80px">Count</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${features.map((f, idx) => {
-                            const [name, value] = f;
-                            const isPositive = value >= 0;
-                            const barWidth = (Math.abs(value) / maxAbs) * 50;
-                            const valueClass = value > 0.001 ? 'value-positive' : (value < -0.001 ? 'value-negative' : '');
-                            const displayValue = value >= 0 ? `+${value.toFixed(4)}` : value.toFixed(4);
-                            
-                            return `
-                                <tr>
-                                    <td class="mono" style="color: var(--text-muted)">${idx + 1}</td>
-                                    <td>${formatFeatureName(name)}</td>
-                                    <td class="mono ${valueClass}">${displayValue}</td>
-                                    <td>
-                                        <div class="mini-bar">
-                                            <div class="mini-bar-track">
-                                                <div class="mini-bar-center"></div>
-                                                <div class="mini-bar-fill ${isPositive ? 'positive' : 'negative'}" 
-                                                     style="width: ${barWidth}%;"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="mono">${counts[name] || 0}</td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
-                </table>
-            `;
-        }
-        
-        function formatFeatureName(name) {
-            if (name.startsWith('neuron_')) return 'Neuron ' + name.replace('neuron_', '');
-            return name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
-        }
-        
-        // Export
-        document.getElementById('export-btn').addEventListener('click', () => {
+
+        document.getElementById("export-btn").addEventListener("click", () => {
             if (!resultsData) return;
-            const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: 'application/json' });
-            const a = document.createElement('a');
+            const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `results_${resultsData.study_guid || 'export'}.json`;
+            a.download = `results_${resultsData.study_guid || "export"}.json`;
             a.click();
         });
-        
+
         loadResults();
     </script>
 </body>
