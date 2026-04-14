@@ -116,7 +116,7 @@ Study configuration stored in `UserStudy.settings` as JSON:
 
 ```json
 {
-  "dataset": "ml-latest-small",
+  "dataset": "ml-latest",
   "sae_model": "simple_sae_64_512",
   "steering_mode": "sliders",
   "num_features": 10,

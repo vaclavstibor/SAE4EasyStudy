@@ -76,14 +76,28 @@ class RatingsPerYearFilter:
     def __call__(self, loader):
         movies_df_indexed = loader.movies_df.set_index("movieId")
 
-        # Add column with age of each movie
-        movies_df_indexed.loc[:, "age"] = movies_df_indexed.year.max() - movies_df_indexed.year
-        
-        # Calculate number of ratings per year for each of the movies
-        loader.ratings_df.loc[:, "ratings_per_year"] = loader.ratings_df['movieId'].map(loader.ratings_df['movieId'].value_counts()) / loader.ratings_df['movieId'].map(movies_df_indexed["age"])
-        
+        # Ensure ratings only reference movies currently present in movies_df.
+        # This avoids NaN ages when upstream filters trimmed movies metadata.
+        loader.ratings_df = loader.ratings_df[
+            loader.ratings_df.movieId.isin(movies_df_indexed.index)
+        ].reset_index(drop=True)
+
+        # Add column with age of each movie.
+        # Clamp to >= 1 to avoid division by zero for movies in the newest year.
+        movies_df_indexed.loc[:, "age"] = (
+            movies_df_indexed.year.max() - movies_df_indexed.year
+        ).clip(lower=1)
+
+        rating_counts = loader.ratings_df["movieId"].value_counts()
+        ages = loader.ratings_df["movieId"].map(movies_df_indexed["age"])
+        loader.ratings_df.loc[:, "ratings_per_year"] = (
+            loader.ratings_df["movieId"].map(rating_counts) / ages
+        ).fillna(0.0)
+
         # Filter out movies that do not have enough yearly ratings
-        loader.ratings_df = loader.ratings_df[loader.ratings_df.ratings_per_year >= self.min_ratings_per_year]
+        loader.ratings_df = loader.ratings_df[
+            loader.ratings_df.ratings_per_year >= self.min_ratings_per_year
+        ].reset_index(drop=True)
 
 class MovieFilterByYear:
     def __init__(self, min_year):
@@ -104,6 +118,10 @@ class MovieFilterByYear:
         loader.movies_df.loc[:, "year"] = loader.movies_df.title.apply(self._parse_year)
         loader.movies_df = loader.movies_df[loader.movies_df.year >= self.min_year]
         loader.movies_df = loader.movies_df.reset_index(drop=True)
+        # Keep ratings aligned with movies_df to prevent downstream NaN joins.
+        loader.ratings_df = loader.ratings_df[
+            loader.ratings_df.movieId.isin(loader.movies_df.movieId)
+        ].reset_index(drop=True)
 
 class RatingFilterOld:
     def __init__(self, oldest_rating_year):

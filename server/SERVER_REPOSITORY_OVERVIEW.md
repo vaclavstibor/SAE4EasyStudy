@@ -500,7 +500,7 @@ session["lang"]                      # Current language
 ### UserStudy Configuration (JSON in `settings` field)
 ```json
 {
-  "dataset": "ml-latest-small",
+  "dataset": "ml-latest",
   "sae_model": "prediction_aware_sae",
   "steering_mode": "sliders",
   "num_features_display": 15,

@@ -160,6 +160,11 @@ class SAERecommender:
             # Always prefer item_ids from the feature cache (they match the features matrix)
             if 'item_ids' in data and data['item_ids'] is not None:
                 self.item_ids = data['item_ids']
+            if self.item_ids is not None and len(self.item_ids) != int(self.item_features.shape[0]):
+                print(
+                    "[SAERecommender.load] WARNING: item_ids length does not match feature rows "
+                    f"({len(self.item_ids)} vs {int(self.item_features.shape[0])})"
+                )
             print(f"Loaded pre-computed SAE features: {self.item_features.shape}"
                   f" ({len(self.item_ids)} item_ids)")
         elif self.item_embeddings is not None:
@@ -403,6 +408,12 @@ class SAERecommender:
                 device=device,
                 dtype=torch.bool,
             )
+            allowed_count = int(allowed_mask.sum().item())
+            if allowed_count < max(25, int(0.5 * len(self.item_ids))):
+                print(
+                    "[SAERecommender.get_recommendations] WARNING: restrictive allowed_id mask "
+                    f"({allowed_count}/{len(self.item_ids)} items allowed)"
+                )
             if not allowed_mask.any():
                 return []
             scores_allowed = scores[allowed_mask]
