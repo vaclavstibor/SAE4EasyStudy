@@ -45,7 +45,8 @@ def load_ml_dataset(ml_variant="ml-32m-filtered"):
         start_time = time.perf_counter()
         loader = MLDataLoader(ratings_path, movies_path, tags_path, links_path,
             filters=[],
-            img_dir_path=img_dir_path, plots_csv_path=plots_csv_path
+            img_dir_path=img_dir_path, plots_csv_path=plots_csv_path,
+            skip_matrices=True,
         )
         loader = loader.load()
         print(f"## Loading took: {time.perf_counter() - start_time}")
