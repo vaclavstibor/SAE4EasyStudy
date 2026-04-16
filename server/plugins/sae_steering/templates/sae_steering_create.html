@@ -272,12 +272,9 @@
                     <div class="row g-3 mt-1">
                         <div class="col-md-6">
                             <label for="questionnaire-file" class="form-label">Final Questionnaire (HTML file)</label>
-                            <input type="file" class="form-control" id="questionnaire-file" accept=".html,.htm">
-                            <div class="form-text">Shown once after all approaches are complete.</div>
-                            <div id="questionnaire-preview" class="mt-2" style="display:none;">
-                                <span class="badge bg-success">Final questionnaire uploaded</span>
-                                <span id="questionnaire-filename" class="text-muted small ms-2"></span>
-                            </div>
+                            <div id="final-questionnaire-status" class="mb-2 d-flex align-items-center flex-wrap gap-2"></div>
+                            <input type="file" class="form-control form-control-sm" id="questionnaire-file" accept=".html,.htm">
+                            <div class="form-text" id="final-questionnaire-hint">Upload a custom file to override.</div>
                         </div>
                     </div>
                 </div>
@@ -322,8 +319,19 @@
         let approaches = [];
         let uploadedQuestionnaire = null;
 
+        const DEFAULT_QUESTIONNAIRES = {
+            explicit: 'sae_explicit_feedback_approach_questionnaire.html',
+            implicit: 'sae_implicit_feedback_approach_questionnaire.html',
+            final:    'sae_final_questionnaire.html',
+        };
+
+        function defaultPhaseQuestionnaire(steeringMode) {
+            if (steeringMode === 'none') return DEFAULT_QUESTIONNAIRES.implicit;
+            return DEFAULT_QUESTIONNAIRES.explicit;
+        }
+
         function preferredTopKModelId() {
-            const topk = saeModels.find(model => model.id === 'www_TopKSAE_8192');
+            const topk = saeModels.find(model => model.id === 'TopKSAE-1024');
             return topk ? topk.id : (saeModels[0]?.id || '');
         }
 
@@ -345,14 +353,15 @@
         }
 
         function createApproach(index) {
+            const mode = defaultSteeringMode(index);
             return {
                 id: `approach_${index + 1}`,
                 name: approachLabel(index),
                 base: 'elsa',
                 sae: preferredTopKModelId(),
-                steering_mode: defaultSteeringMode(index),
+                steering_mode: mode,
                 feature_selection_algorithm: 'personalized_grouped_topk',
-                phase_questionnaire_file: ''
+                phase_questionnaire_file: defaultPhaseQuestionnaire(mode),
             };
         }
 
@@ -458,26 +467,48 @@
 
         function updateApproachField(index, field, value) {
             approaches[index][field] = value;
+            if (field === 'steering_mode') {
+                const currentQ = approaches[index].phase_questionnaire_file;
+                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
+                if (!currentQ || isDefault) {
+                    approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(value);
+                }
+            }
             if (field === 'sae' || field === 'steering_mode') {
                 loadAvailableNeurons();
                 renderApproachCards();
+                renderApproachQuestionnaireStack();
             }
         }
 
         function renderApproachQuestionnaireStack() {
             const container = document.getElementById('approach-questionnaire-stack');
             if (!container) return;
-            container.innerHTML = approaches.map((approach, index) => `
+
+            container.innerHTML = approaches.map((approach, index) => {
+                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(approach.phase_questionnaire_file);
+                const hasCustom = !!approach.phase_questionnaire_file && !isDefault;
+
+                return `
                 <div class="questionnaire-item">
                     <div class="questionnaire-item-title">${approach.name || approachLabel(index)} questionnaire</div>
-                    <input type="file" class="form-control" id="approach-questionnaire-file-${index}" accept=".html,.htm">
-                    <div class="form-text">Optional. Shown after this specific approach finishes.</div>
-                    <div id="approach-questionnaire-preview-${index}" class="mt-2" style="${approach.phase_questionnaire_file ? 'display:block;' : 'display:none;'}">
-                        <span class="badge bg-info">Questionnaire uploaded</span>
-                        <span id="approach-questionnaire-filename-${index}" class="text-muted small ms-2">${approach.phase_questionnaire_file ? 'uploaded file ready' : ''}</span>
+                    <div class="mb-2 d-flex align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">Current:</span>
+                        ${isDefault
+                            ? `<code class="small">${approach.phase_questionnaire_file}</code>
+                               <span class="badge bg-secondary">default</span>
+                               <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:.75em" onclick="clearApproachQuestionnaire(${index})">remove</button>`
+                            : hasCustom
+                                ? `<span id="approach-questionnaire-filename-${index}" class="fw-semibold small">${approach.phase_questionnaire_file}</span>
+                                   <span class="badge bg-info">uploaded</span>
+                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">reset to default</button>`
+                                : `<span class="text-muted small fst-italic">none</span>
+                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">restore default</button>`}
                     </div>
-                </div>
-            `).join('');
+                    <input type="file" class="form-control form-control-sm" id="approach-questionnaire-file-${index}" accept=".html,.htm">
+                    <div class="form-text">Upload a custom file to override${isDefault ? '' : ', or click "restore default"'}.</div>
+                </div>`;
+            }).join('');
 
             approaches.forEach((approach, index) => {
                 const input = document.getElementById(`approach-questionnaire-file-${index}`);
@@ -490,6 +521,7 @@
                             `approach-questionnaire-filename-${index}`,
                             value => {
                                 approaches[index].phase_questionnaire_file = value;
+                                renderApproachQuestionnaireStack();
                             }
                         );
                     } catch (error) {
@@ -498,6 +530,16 @@
                     }
                 });
             });
+        }
+
+        function clearApproachQuestionnaire(index) {
+            approaches[index].phase_questionnaire_file = '';
+            renderApproachQuestionnaireStack();
+        }
+
+        function resetApproachQuestionnaire(index) {
+            approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
+            renderApproachQuestionnaireStack();
         }
 
         async function uploadQuestionnaire(inputId, previewId, nameId, assignCallback) {
@@ -539,11 +581,12 @@
                     option.textContent = ds.name;
                     datasetSelect.appendChild(option);
                 });
-                const fullMl = datasets.find(ds => ds.id === 'ml-latest');
+                const fullMl = datasets.find(ds => ds.id === 'ml-32m-filtered');
                 datasetSelect.value = fullMl ? fullMl.id : (datasets[0]?.id || '');
 
                 approaches = [createApproach(0), createApproach(1)];
                 ensureApproachCount();
+                renderFinalQuestionnaireStatus();
                 await loadAvailableNeurons();
             } catch (error) {
                 console.error('Error loading options:', error);
@@ -632,10 +675,54 @@
             bootstrap.Modal.getInstance(document.getElementById('neuronPickerModal')).hide();
         });
 
+        let useDefaultFinalQuestionnaire = true;
+
+        function renderFinalQuestionnaireStatus() {
+            const container = document.getElementById('final-questionnaire-status');
+            const hint = document.getElementById('final-questionnaire-hint');
+            if (uploadedQuestionnaire) {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <span class="fw-semibold small">${uploadedQuestionnaire}</span>
+                    <span class="badge bg-info">uploaded</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetFinalQuestionnaire()">reset to default</button>`;
+                hint.textContent = 'Upload another file to replace, or click "reset to default".';
+            } else if (useDefaultFinalQuestionnaire) {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <code class="small">${DEFAULT_QUESTIONNAIRES.final}</code>
+                    <span class="badge bg-secondary">default</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:.75em" onclick="clearFinalQuestionnaire()">remove</button>`;
+                hint.textContent = 'Upload a custom file to override.';
+            } else {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <span class="text-muted small fst-italic">none</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetFinalQuestionnaire()">restore default</button>`;
+                hint.textContent = 'Upload a file or click "restore default".';
+            }
+        }
+
+        function clearFinalQuestionnaire() {
+            useDefaultFinalQuestionnaire = false;
+            uploadedQuestionnaire = null;
+            document.getElementById('questionnaire-file').value = '';
+            renderFinalQuestionnaireStatus();
+        }
+
+        function resetFinalQuestionnaire() {
+            useDefaultFinalQuestionnaire = true;
+            uploadedQuestionnaire = null;
+            document.getElementById('questionnaire-file').value = '';
+            renderFinalQuestionnaireStatus();
+        }
+
         document.getElementById('questionnaire-file').addEventListener('change', async () => {
             try {
-                await uploadQuestionnaire('questionnaire-file', 'questionnaire-preview', 'questionnaire-filename', value => {
+                await uploadQuestionnaire('questionnaire-file', 'final-questionnaire-status', 'final-questionnaire-status', value => {
                     uploadedQuestionnaire = value;
+                    useDefaultFinalQuestionnaire = false;
+                    renderFinalQuestionnaireStatus();
                 });
             } catch (error) {
                 console.error(error);
@@ -686,6 +773,8 @@
             }
             if (uploadedQuestionnaire) {
                 configData.questionnaire_file = uploadedQuestionnaire;
+            } else if (useDefaultFinalQuestionnaire) {
+                configData.questionnaire_file = DEFAULT_QUESTIONNAIRES.final;
             }
 
             try {

@@ -1,0 +1,13 @@
+Training ELSA model using config {'dataset': 'ml-32m-filtered', 'val_user_ratio': 0.2, 'test_user_ratio': 0.0, 'target_interaction_ratio': 0.2, 'model_module': 'elsa', 'model_class': 'ELSA', 'embedding_dim': 2048, 'epochs': 25, 'early_stopping': 10, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'eval_topk': 20, 'eval_topks': '10,20', 'seed': 42}
+Dataset info: users=30966, items=8328, interactions=2954801
+Train split info: users=24773, items=8328, interactions=2368369
+Val split info: users=6193, items=8328, interactions=586432
+Test split info: users=0, items=8328, interactions=0
+No checkpoint found, starting from scratch.
+Reached early stopping condition, terminating training.
+Loading best model from epoch 10 with val loss 0.98454.
+Training loop for ELSA-2048-76e4370a took 29.9100 seconds.
+model = ELSA-2048-76e4370a | split = val | recall @10 = 0.353491 +- 0.002840
+model = ELSA-2048-76e4370a | split = val | ndcg @10 = 0.385338 +- 0.003079
+model = ELSA-2048-76e4370a | split = val | recall @20 = 0.370740 +- 0.002514
+model = ELSA-2048-76e4370a | split = val | ndcg @20 = 0.380176 +- 0.002614

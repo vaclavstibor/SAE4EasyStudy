@@ -1,137 +1,124 @@
 """
 SAE-based Recommendation Engine
 
-Generates recommendations using SAE feature steering.
+Generates recommendations using TopKSAE feature steering.
 Takes neuron adjustments and returns items that match the desired features.
-
-Supports:
-- Basic SAE (sae_model_r4_k32.pt)           – EasyStudy native
-- Prediction-aware SAE (prediction_aware_sae.pt) – EasyStudy native (RECOMMENDED)
-- WWW TopKSAE / BasicSAE checkpoints        – from WWW_disentangling
 """
 
 import os
+import csv
 import torch
 import torch.nn.functional as F
 import numpy as np
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Union
 import json
 
-# Import SAE architectures
 try:
-    from .train_sae import TopKSAE
-    from .train_prediction_aware_sae import PredictionAwareSAE
-    from .www_models import TopKSAE_WWW, BasicSAE as BasicSAE_WWW, load_www_checkpoint
+    from .www_models import load_checkpoint
     from .model_store import (
         DEFAULT_TOPK_SAE_MODEL_ID,
         find_local_model_path,
         format_missing_model_message,
     )
 except ImportError:
-    from train_sae import TopKSAE
-    from train_prediction_aware_sae import PredictionAwareSAE
-    from www_models import TopKSAE_WWW, BasicSAE as BasicSAE_WWW, load_www_checkpoint
+    from www_models import load_checkpoint
     from model_store import (
         DEFAULT_TOPK_SAE_MODEL_ID,
         find_local_model_path,
         format_missing_model_message,
     )
 
-DEFAULT_WWW_MODEL_ID = DEFAULT_TOPK_SAE_MODEL_ID
-
 
 class SAERecommender:
     """
     Recommender that uses SAE feature space for steering.
-    
+
     Flow:
     1. User provides feature adjustments (neuron_id -> weight)
     2. Create "ideal" feature vector from adjustments
     3. Find items whose SAE activations best match this ideal
-    
-    Supports multiple SAE models for A/B comparison.
     """
-    
+
     def __init__(self, data_dir: str = None, model_id: str = None):
-        """
-        Initialize SAE Recommender.
-        
-        Args:
-            data_dir: Path to directory containing SAE model and data files
-            model_id: Specific SAE model to load (e.g., 'www_TopKSAE_8192', 'prediction_aware_sae')
-                     If None, uses the default WWW TopK model when available.
-        """
-        self.data_dir = data_dir or os.path.join(
-            os.path.dirname(__file__), "data"
-        )
+        self.data_dir = data_dir or os.path.join(os.path.dirname(__file__), "data")
         self.models_dir = os.path.join(os.path.dirname(__file__), "models")
-        self.model_id = model_id  # Store for A/B comparison
-        
+        self.model_id = model_id
+
         self.sae_model = None
-        self.item_features = None  # Pre-computed SAE activations for all items
-        self.item_ids = None       # Mapping from index to movie_id
+        self.item_features = None
+        self.item_ids = None
         self.item_embeddings = None
         self.neuron_labels = None
         self.selective_neurons = None
-        
+
         self._loaded = False
+
+    def _infer_training_item_ids(self, dataset_variant: str = "ml-32m-filtered") -> Optional[List[int]]:
+        """Reconstruct item ordering exactly as in train/recsys26.
+
+        Training uses ``np.unique`` over **string** IDs from ratings.csv,
+        which is lexicographic (not integer sort). If we map encoder rows
+        to numerically sorted IDs, recommendations become semantically wrong.
+        """
+        ratings_path = os.path.normpath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "..",
+                "static",
+                "datasets",
+                dataset_variant,
+                "ratings.csv",
+            )
+        )
+        if not os.path.exists(ratings_path):
+            return None
+
+        item_values: List[str] = []
+        with open(ratings_path, "r", encoding="utf-8", newline="") as f:
+            reader = csv.DictReader(f)
+            if not reader.fieldnames:
+                return None
+            item_col = "movieId" if "movieId" in reader.fieldnames else "item_id" if "item_id" in reader.fieldnames else None
+            if item_col is None:
+                return None
+            for row in reader:
+                item_values.append(str(row[item_col]))
+
+        ordered = np.unique(np.array(item_values, dtype=str))
+        item_ids: List[int] = []
+        for value in ordered.tolist():
+            try:
+                item_ids.append(int(value))
+            except Exception:
+                continue
+        return item_ids
 
     @property
     def sae_features(self):
         """Alias so callers using ``recommender.sae_features`` keep working."""
         return self.item_features
-    
+
     def load(self):
         """Load SAE model and pre-computed features."""
         if self._loaded:
             return
-        
+
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        resolved_model_id = self.model_id or DEFAULT_WWW_MODEL_ID
+
+        resolved_model_id = self.model_id or DEFAULT_TOPK_SAE_MODEL_ID
         local_model_path = find_local_model_path(resolved_model_id)
         if local_model_path is None:
             raise FileNotFoundError(format_missing_model_message(resolved_model_id))
 
         sae_path = str(local_model_path)
         features_cache_name = f"item_sae_features_{resolved_model_id}.pt"
-        
-        state_dict = torch.load(sae_path, map_location=device, weights_only=False)
 
-        # --- Detect checkpoint format ----------------------------------------
-        # WWW_disentangling: {epoch, job_cfg, model_state_dict, optimizer_state_dict}
-        # EasyStudy native:  {model_state_dict, config, ...} or raw state_dict
-        is_www = isinstance(state_dict, dict) and 'job_cfg' in state_dict
+        self.sae_model, sae_cfg = load_checkpoint(sae_path, device)
+        input_dim = sae_cfg["input_dim"]
+        hidden_dim = sae_cfg["embedding_dim"]
+        print(f"Loaded {sae_cfg['model_class']}: input={input_dim}, hidden={hidden_dim}, k={sae_cfg.get('k')}")
 
-        if is_www:
-            self.sae_model, www_cfg = load_www_checkpoint(sae_path, device)
-            input_dim = www_cfg.get("input_dim", www_cfg.get("embedding_dim"))
-            hidden_dim = www_cfg.get("embedding_dim")
-            print(f"Loading WWW {www_cfg['model_class']}: input={input_dim}, hidden={hidden_dim}")
-        else:
-            if isinstance(state_dict, dict) and 'model_state_dict' in state_dict:
-                model_state = state_dict['model_state_dict']
-                config = state_dict.get('config', {})
-            else:
-                model_state = state_dict
-                config = {}
-
-            input_dim = model_state['encoder.weight'].shape[1]
-            hidden_dim = model_state['encoder.weight'].shape[0]
-            k = config.get('k', 32)
-
-            is_prediction_aware = 'pre_bias' in model_state or 'latent_bias' in model_state
-
-            if is_prediction_aware:
-                self.sae_model = PredictionAwareSAE(input_dim, hidden_dim, k, tied=config.get('tied', True)).to(device)
-                print(f"Loading Prediction-Aware SAE: input={input_dim}, hidden={hidden_dim}, k={k}")
-            else:
-                self.sae_model = TopKSAE(input_dim, hidden_dim, k).to(device)
-                print(f"Loading Basic SAE: input={input_dim}, hidden={hidden_dim}, k={k}")
-
-            self.sae_model.load_state_dict(model_state)
-            self.sae_model.eval()
-        
         # Load item embeddings (from ELSA)
         embeddings_path = os.path.join(self.data_dir, "item_embeddings.pt")
         if os.path.exists(embeddings_path):
@@ -139,25 +126,12 @@ class SAERecommender:
             self.item_embeddings = data['embeddings']
             self.item_ids = data['item_ids']
             print(f"Loaded {len(self.item_ids)} item embeddings")
-        else:
-            # Try to load from text_embeddings.pt which has item_ids
-            text_emb_path = os.path.join(self.data_dir, "text_embeddings.pt")
-            if os.path.exists(text_emb_path):
-                data = torch.load(text_emb_path, map_location=device, weights_only=False)
-                self.item_ids = data['item_ids']
-                print(f"Loaded item_ids from text_embeddings.pt: {len(self.item_ids)} items")
-                
-                # Need to load ELSA embeddings separately
-                elsa_path = os.path.join(self.data_dir, "elsa_embeddings.pt")
-                if os.path.exists(elsa_path):
-                    self.item_embeddings = torch.load(elsa_path, map_location=device, weights_only=False)
-        
+
         # Pre-compute SAE activations if not cached
         features_path = os.path.join(self.data_dir, features_cache_name)
         if os.path.exists(features_path):
             data = torch.load(features_path, map_location=device, weights_only=False)
             self.item_features = data['features']
-            # Always prefer item_ids from the feature cache (they match the features matrix)
             if 'item_ids' in data and data['item_ids'] is not None:
                 self.item_ids = data['item_ids']
             if self.item_ids is not None and len(self.item_ids) != int(self.item_features.shape[0]):
@@ -170,88 +144,145 @@ class SAERecommender:
         elif self.item_embeddings is not None:
             print("Computing SAE features for all items...")
             self._compute_item_features(features_cache_name)
-        
-        # Load neuron labels
-        labels_path = os.path.join(self.data_dir, "neuron_labels.json")
-        if os.path.exists(labels_path):
-            with open(labels_path, 'r') as f:
-                self.neuron_labels = json.load(f)
-            print(f"Loaded {len(self.neuron_labels)} neuron labels")
-        
-        # Load selective neurons
-        analysis_path = os.path.join(self.data_dir, "neuron_analysis.json")
-        if os.path.exists(analysis_path):
-            with open(analysis_path, 'r') as f:
-                analysis = json.load(f)
-            # The keys are the selective neuron IDs
-            self.selective_neurons = set(int(k) for k in analysis.keys() if k.isdigit())
-            print(f"Loaded {len(self.selective_neurons)} selective neurons")
-        
+
+        # Canonicalize item_ids to training order (lexicographic np.unique over strings).
+        canonical_item_ids = self._infer_training_item_ids()
+        if canonical_item_ids is not None:
+            n_rows = None
+            if self.item_features is not None:
+                n_rows = int(self.item_features.shape[0])
+            elif self.item_embeddings is not None:
+                n_rows = int(self.item_embeddings.shape[0])
+
+            if n_rows is not None and len(canonical_item_ids) == n_rows:
+                if self.item_ids is None or [int(x) for x in self.item_ids] != canonical_item_ids:
+                    print(
+                        "[SAERecommender.load] Re-aligning item_ids to training order "
+                        "(lexicographic item_id ordering from ratings.csv)."
+                    )
+                self.item_ids = canonical_item_ids
+            else:
+                print(
+                    "[SAERecommender.load] WARNING: canonical item_ids length mismatch "
+                    f"({len(canonical_item_ids)} vs rows={n_rows}); keeping existing mapping."
+                )
+
         self._loaded = True
-        # Store cache filename for later use
         self._features_cache_name = features_cache_name
-    
+
     def _compute_item_features(self, cache_filename="item_sae_features.pt"):
         """Compute SAE activations for all items."""
         if self.sae_model is None:
             raise RuntimeError("Cannot compute features: model not loaded")
-        
+        if self.item_embeddings is None:
+            raise RuntimeError("Cannot compute features: item_embeddings.pt not loaded")
+
         device = next(self.sae_model.parameters()).device
-        
-        # ELSA is a CF model: features are the encoder columns, not SAE activations
-        from .www_models import ELSA_WWW
-        if isinstance(self.sae_model, ELSA_WWW):
-            with torch.no_grad():
-                # For ELSA: item embeddings are the L2-normalised encoder columns
-                # Shape: (input_dim=num_items, embedding_dim) — each row is one item
-                raw_emb = self.sae_model.get_item_embeddings()  # (n_items, emb_dim)
-                self.item_features = F.relu(raw_emb)  # non-negative "activations"
-                # item_ids are simply 0..n_items-1 indices in ELSA's item space
-                if self.item_ids is None or len(self.item_ids) != raw_emb.shape[0]:
-                    self.item_ids = list(range(raw_emb.shape[0]))
-            print(f"Computed ELSA item features: {self.item_features.shape}")
-        else:
-            if self.item_embeddings is None:
-                raise RuntimeError("Cannot compute features: embeddings not loaded")
-            # Normalize embeddings (same as training)
-            embeddings_norm = F.normalize(self.item_embeddings.to(device), dim=1)
-            # Get SAE activations
-            with torch.no_grad():
-                self.item_features = self.sae_model.get_feature_activations(embeddings_norm)
-        
-        # Cache for future use
+        embeddings_norm = F.normalize(self.item_embeddings.to(device), dim=1)
+        with torch.no_grad():
+            self.item_features = self.sae_model.get_feature_activations(embeddings_norm)
+
         cache_path = os.path.join(self.data_dir, cache_filename)
         torch.save({
             'features': self.item_features.cpu(),
             'item_ids': self.item_ids
         }, cache_path)
         print(f"Cached SAE features to {cache_path}")
-    
+
+    def _build_rank_deltas(
+        self,
+        base_scores: torch.Tensor,
+        final_scores: torch.Tensor,
+        valid_mask: torch.Tensor,
+        cf_scores: torch.Tensor,
+        genre_scores: torch.Tensor,
+        steering_scores: torch.Tensor,
+        top_k: int = 5,
+    ) -> Dict[str, List[Dict]]:
+        """Compute top upward/downward rank movers for debug interpretability."""
+        device = base_scores.device
+        n = base_scores.shape[0]
+
+        invalid = ~valid_mask
+        base_masked = base_scores.clone()
+        final_masked = final_scores.clone()
+        base_masked[invalid] = float("-inf")
+        final_masked[invalid] = float("-inf")
+
+        base_sorted = torch.argsort(base_masked, descending=True)
+        final_sorted = torch.argsort(final_masked, descending=True)
+
+        large = int(1e9)
+        base_rank = torch.full((n,), large, dtype=torch.long, device=device)
+        final_rank = torch.full((n,), large, dtype=torch.long, device=device)
+        valid_count = int(valid_mask.sum().item())
+        if valid_count == 0:
+            return {"top_up": [], "top_down": []}
+
+        base_rank[base_sorted[:valid_count]] = torch.arange(1, valid_count + 1, device=device)
+        final_rank[final_sorted[:valid_count]] = torch.arange(1, valid_count + 1, device=device)
+        rank_delta = base_rank - final_rank  # positive = moved up
+
+        valid_indices = torch.where(valid_mask)[0]
+        vd = rank_delta[valid_indices]
+        up_order = torch.argsort(vd, descending=True)
+        down_order = torch.argsort(vd, descending=False)
+
+        def _pack(idx_tensor: torch.Tensor) -> Dict:
+            idx = int(idx_tensor.item())
+            return {
+                "movie_id": int(self.item_ids[idx]),
+                "rank_delta": int(rank_delta[idx].item()),
+                "base_rank": int(base_rank[idx].item()),
+                "final_rank": int(final_rank[idx].item()),
+                "base_score": round(float(base_scores[idx].item()), 4),
+                "final_score": round(float(final_scores[idx].item()), 4),
+                "cf_score": round(float(cf_scores[idx].item()), 4),
+                "genre_score": round(float(genre_scores[idx].item()), 4),
+                "steering_score": round(float(steering_scores[idx].item()), 4),
+            }
+
+        top_up = []
+        for pos in up_order.tolist():
+            idx = valid_indices[pos]
+            if int(rank_delta[idx].item()) <= 0:
+                break
+            top_up.append(_pack(idx))
+            if len(top_up) >= top_k:
+                break
+
+        top_down = []
+        for pos in down_order.tolist():
+            idx = valid_indices[pos]
+            if int(rank_delta[idx].item()) >= 0:
+                break
+            top_down.append(_pack(idx))
+            if len(top_down) >= top_k:
+                break
+
+        return {"top_up": top_up, "top_down": top_down}
+
     def get_recommendations(
         self,
         feature_adjustments: Dict[int, float],
         n_items: int = 20,
         exclude_items: List[int] = None,
-        method: str = 'weighted_match',
         allowed_ids: Optional[set] = None,
-        seed_adjustments: Optional[Dict[int, float]] = None,
-    ) -> List[Dict]:
-        """
-        Generate recommendations based on feature adjustments.
+        seed_embedding: Optional[np.ndarray] = None,
+        genre_bonus: Optional[np.ndarray] = None,
+        **_kwargs,
+    ) -> Union[List[Dict], Dict]:
+        """Rank items using hybrid scoring.
 
-        When *seed_adjustments* is provided the scoring uses a two-component
-        blend so that user slider changes gradually override the seed profile:
-
-            score = (1 - beta) * seed_score  +  beta * user_score
-
-        beta is derived from the total magnitude of the user's own slider
-        moves (excluding the seed).  This means a small slider change only
-        slightly perturbs the seed ranking, and a full-range move can
-        completely replace it — giving visible incremental steering.
-
-        Without a seed, a mean-activation baseline takes the role of the
-        "seed" so single-slider moves are also meaningful (instead of
-        producing identical rankings regardless of magnitude).
+        Three signals are blended:
+        1. **ELSA collaborative filtering** — cosine similarity between
+           each item's dense ELSA embedding and the *seed_embedding*
+           (mean of elicitation/liked movies).  This is the main
+           "find similar movies" signal.
+        2. **Genre overlap** — a pre-computed per-item bonus from the
+           caller (Jaccard similarity to the seed movies' genre set).
+        3. **SAE steering** — ``item_sae_features @ adjustments``.
+           Only non-zero when the user moves sliders or likes movies.
         """
         self.load()
 
@@ -261,282 +292,189 @@ class SAERecommender:
         exclude_set = set(exclude_items or [])
         allowed_set = set(allowed_ids) if allowed_ids is not None else set(self.item_ids)
         device = self.item_features.device
+        n_items_total = self.item_features.shape[0]
+        n_features = self.item_features.shape[1]
 
-        def _to_weights(adj: Dict[int, float]) -> torch.Tensor:
-            w = torch.zeros(self.item_features.shape[1], device=device)
-            for nid, val in adj.items():
-                nid = int(nid)
-                if 0 <= nid < len(w):
-                    w[nid] = val
-            return w
-
-        def _score(weights: torch.Tensor) -> torch.Tensor:
-            if method == 'cosine_similarity':
-                ideal = F.normalize(weights.unsqueeze(0), dim=1)
-                items = F.normalize(self.item_features, dim=1)
-                return torch.matmul(items, ideal.T).squeeze()
-            return torch.matmul(self.item_features, weights)
-
-        def _minmax(t: torch.Tensor) -> torch.Tensor:
-            r = t.max() - t.min()
-            return (t - t.min()) / r if r > 0 else torch.zeros_like(t)
-
-        def _user_normalize(scores: torch.Tensor) -> torch.Tensor:
-            """Normalize user slider scores with symmetric handling.
-
-            Positive-only steering:
-            - activated items get a meaningful floor boost in [0.5, 1.0]
-            - inactive items stay at 0.0
-
-            Negative-only steering:
-            - items matching the suppressed feature are pushed toward 0.0
-            - items with near-zero activation rise toward 1.0
-
-            Mixed positive/negative steering:
-            - zero acts as a neutral midpoint (0.5)
-            - positive scores map to (0.5, 1.0]
-            - negative scores map to [0.0, 0.5)
-            """
-            pos = scores > 0
-            neg = scores < 0
-
-            if not pos.any() and not neg.any():
-                return torch.zeros_like(scores)
-
-            # Positive-only: keep the stronger "activation floor" behavior
-            # so sparse TopK features visibly affect the ranking.
-            if pos.any() and not neg.any():
-                result = torch.zeros_like(scores)
-                vals = scores[pos]
-                p_min, p_max = vals.min(), vals.max()
-                p_range = p_max - p_min
-                if p_range > 0:
-                    result[pos] = 0.5 + 0.5 * (vals - p_min) / p_range
-                else:
-                    result[pos] = 1.0
-                return result
-
-            # Negative-only: invert the ordering so that low-activation items
-            # are favored and strongly matching items are suppressed.
-            if neg.any() and not pos.any():
-                return _minmax(scores)
-
-            # Mixed signs: treat 0 as neutral midpoint.
-            result = torch.full_like(scores, 0.5)
-
-            pos_vals = scores[pos]
-            p_min, p_max = pos_vals.min(), pos_vals.max()
-            p_range = p_max - p_min
-            if p_range > 0:
-                result[pos] = 0.5 + 0.5 * (pos_vals - p_min) / p_range
-            else:
-                result[pos] = 1.0
-
-            neg_vals = scores[neg]
-            n_min = neg_vals.min()
-            n_range = 0 - n_min
-            if n_range > 0:
-                result[neg] = 0.5 * (neg_vals - n_min) / n_range
-            else:
-                result[neg] = 0.0
-
-            return result
-
-        def _compose_scores(base_scores: torch.Tensor, user_weights: torch.Tensor, strength: float) -> torch.Tensor:
-            """Compose base ranking with positive boost / negative suppression.
-
-            Positive sliders add attraction toward matching items.
-            Negative sliders subtract a penalty from items matching the
-            suppressed feature, which yields a smooth "move away from this"
-            effect instead of a sudden jump to arbitrary anti-feature items.
-            """
-            base_norm = _minmax(base_scores)
-            pos_weights = torch.clamp(user_weights, min=0)
-            neg_weights = torch.clamp(-user_weights, min=0)
-
-            has_pos = bool((pos_weights > 0).any().item())
-            has_neg = bool((neg_weights > 0).any().item())
-
-            if not has_pos and not has_neg:
-                return base_norm
-
-            if has_pos and not has_neg:
-                pos_scores = _score(pos_weights)
-                return (1 - strength) * base_norm + strength * _user_normalize(pos_scores)
-
-            if has_neg and not has_pos:
-                neg_scores = _score(neg_weights)
-                return base_norm - strength * _user_normalize(neg_scores)
-
-            pos_scores = _score(pos_weights)
-            neg_scores = _score(neg_weights)
-            return base_norm + strength * (_user_normalize(pos_scores) - _user_normalize(neg_scores))
-
-        if seed_adjustments:
-            seed_weights = _to_weights(seed_adjustments)
-            user_adj = {
-                int(k): float(v) - float(seed_adjustments.get(int(k), seed_adjustments.get(str(k), 0)))
-                for k, v in feature_adjustments.items()
-            }
-            user_adj = {k: v for k, v in user_adj.items() if abs(v) > 0.001}
-            user_weights = _to_weights(user_adj)
-
-            has_pos_user = bool((user_weights > 0).any().item())
-            has_neg_user = bool((user_weights < 0).any().item())
-            user_total = user_weights.abs().sum().item()
-
-            user_override_scale = 1.5
-
-            if user_total > 0.001:
-                seed_scores = _score(seed_weights)
-                beta = min(user_total / user_override_scale, 1.0)
-                scores = _compose_scores(seed_scores, user_weights, beta)
-            else:
-                scores = _minmax(_score(seed_weights))
-        else:
-            feature_weights = _to_weights(feature_adjustments)
-            baseline_scores = self.item_features.mean(dim=1)
-            total_adjustment = feature_weights.abs().sum().item()
-            alpha = min(total_adjustment, 1.0)
-            scores = _compose_scores(baseline_scores, feature_weights, alpha)
-
-        # Apply allowed_id mask
-        allowed_mask = None
-        if allowed_set is not None:
-            allowed_mask = torch.tensor(
-                [item_id in allowed_set for item_id in self.item_ids],
-                device=device,
-                dtype=torch.bool,
+        # --- 1. ELSA collaborative-filtering score (cosine similarity) ---
+        W_CF = 10.0
+        cf_scores = torch.zeros(n_items_total, device=device)
+        if seed_embedding is not None and self.item_embeddings is not None:
+            seed_t = torch.tensor(
+                seed_embedding, device=device, dtype=self.item_embeddings.dtype,
             )
-            allowed_count = int(allowed_mask.sum().item())
-            if allowed_count < max(25, int(0.5 * len(self.item_ids))):
-                print(
-                    "[SAERecommender.get_recommendations] WARNING: restrictive allowed_id mask "
-                    f"({allowed_count}/{len(self.item_ids)} items allowed)"
-                )
-            if not allowed_mask.any():
-                return []
-            scores_allowed = scores[allowed_mask]
-        else:
-            scores_allowed = scores
+            item_norms = F.normalize(self.item_embeddings.to(device), dim=1)
+            seed_norm = F.normalize(seed_t.unsqueeze(0), dim=1).squeeze(0)
+            cf_scores = torch.matmul(item_norms, seed_norm) * W_CF
 
-        # Normalize to [0, 1] for display
-        score_min = scores_allowed.min()
-        score_max = scores_allowed.max()
-        score_range = score_max - score_min
+        # --- 2. Genre overlap bonus ---
+        W_GENRE = 5.0
+        genre_scores = torch.zeros(n_items_total, device=device)
+        if genre_bonus is not None:
+            genre_scores = torch.tensor(
+                genre_bonus, device=device, dtype=torch.float32,
+            ) * W_GENRE
 
-        if score_range > 0:
-            norm_allowed = (scores_allowed - score_min) / score_range
-        else:
-            norm_allowed = torch.zeros_like(scores_allowed)
+        # --- 3. SAE steering score (from sliders / like boosts) ---
+        sae_profile = torch.zeros(n_features, device=device)
+        has_adjustments = False
+        for nid, val in feature_adjustments.items():
+            nid = int(nid)
+            if 0 <= nid < n_features and abs(float(val)) > 1e-6:
+                sae_profile[nid] = float(val)
+                has_adjustments = True
 
-        if allowed_mask is not None:
-            scores_normalized = torch.full_like(scores, float("-inf"))
-            scores_normalized[allowed_mask] = norm_allowed
-        else:
-            scores_normalized = norm_allowed
-        
-        # Sort by score descending (higher scores = better match)
-        sorted_indices = torch.argsort(scores_normalized, descending=True)
-        
+        base_scores = cf_scores + genre_scores
+        steering_scores = torch.zeros(n_items_total, device=device)
+        adaptive_gamma = 0.0
+        clamp_value = 0.0
+        if has_adjustments:
+            sae_scores = torch.matmul(self.item_features, sae_profile)
+
+            # Adaptive gamma: scale steering by relative variability of base
+            # signal vs SAE signal on currently allowed candidate pool.
+            allowed_mask_tmp = torch.tensor(
+                [mid in allowed_set for mid in self.item_ids],
+                device=device, dtype=torch.bool,
+            )
+            candidate_base = base_scores[allowed_mask_tmp]
+            candidate_sae = sae_scores[allowed_mask_tmp]
+
+            if int(candidate_base.numel()) >= 10:
+                q75_b = torch.quantile(candidate_base, 0.75).item()
+                q25_b = torch.quantile(candidate_base, 0.25).item()
+                q75_s = torch.quantile(candidate_sae, 0.75).item()
+                q25_s = torch.quantile(candidate_sae, 0.25).item()
+                iqr_b = max(q75_b - q25_b, 1e-6)
+                iqr_s = max(q75_s - q25_s, 1e-6)
+                raw_gamma = 0.30 * (iqr_b / iqr_s)
+                adaptive_gamma = float(np.clip(raw_gamma, 0.03, 0.35))
+                p95_b = torch.quantile(candidate_base, 0.95).item()
+                p05_b = torch.quantile(candidate_base, 0.05).item()
+                base_span = max(p95_b - p05_b, 1e-6)
+                clamp_value = 0.35 * base_span
+            else:
+                adaptive_gamma = 0.15
+                clamp_value = 2.0
+
+            steering_scores = torch.clamp(adaptive_gamma * sae_scores, -clamp_value, clamp_value)
+
+        scores = base_scores + steering_scores
+
+        # Mask disallowed items with -inf so they never appear in top-k
+        allowed_mask = torch.tensor(
+            [mid in allowed_set for mid in self.item_ids],
+            device=device, dtype=torch.bool,
+        )
+        if not allowed_mask.any():
+            return {"results": [], "debug": {}} if bool(_kwargs.get("return_debug", False)) else []
+        scores[~allowed_mask] = float("-inf")
+        base_scores[~allowed_mask] = float("-inf")
+
+        sorted_indices = torch.argsort(scores, descending=True)
+
         results = []
-        for idx in sorted_indices:
-            idx = idx.item()
+        valid_mask = allowed_mask.clone()
+        for idx_t in sorted_indices:
+            idx = idx_t.item()
             item_id = self.item_ids[idx]
-            if allowed_set is not None and item_id not in allowed_set:
-                continue
-            
             if item_id in exclude_set:
+                valid_mask[idx] = False
                 continue
-            
-            # Get which features this item activates
-            item_feats = self.item_features[idx]
-            matched_features = {}
-            
-            for neuron_id, weight in feature_adjustments.items():
-                neuron_id = int(neuron_id)
-                activation = item_feats[neuron_id].item()
-                if activation > 0:
-                    label = (self.neuron_labels or {}).get(str(neuron_id), f"Feature {neuron_id}")
-                    matched_features[label] = {
-                        'activation': round(activation, 3),
-                        'weight': round(weight, 3)
-                    }
-            
-            # Use normalized score (0-1 range) for display
             results.append({
-                'movie_id': int(item_id),
-                'score': round(scores_normalized[idx].item(), 4),
-                'matched_features': matched_features
+                "movie_id": int(item_id),
+                "score": round(scores[idx].item(), 4),
+                "cf_score": round(cf_scores[idx].item(), 4),
+                "genre_score": round(genre_scores[idx].item(), 4),
+                "steering_score": round(steering_scores[idx].item(), 4),
             })
-            
             if len(results) >= n_items:
                 break
-        
-        return results
-    
+
+        if not bool(_kwargs.get("return_debug", False)):
+            return results
+
+        movers = self._build_rank_deltas(
+            base_scores=base_scores,
+            final_scores=scores,
+            valid_mask=valid_mask,
+            cf_scores=cf_scores,
+            genre_scores=genre_scores,
+            steering_scores=steering_scores,
+            top_k=5,
+        )
+
+        # Lightweight influence indicator for user-facing hint.
+        valid_steer = steering_scores[valid_mask]
+        valid_base = (cf_scores + genre_scores)[valid_mask]
+        if int(valid_steer.numel()) > 0 and int(valid_base.numel()) > 0:
+            steer_mag = float(torch.quantile(torch.abs(valid_steer), 0.75).item())
+            base_span = float(
+                (torch.quantile(valid_base, 0.95) - torch.quantile(valid_base, 0.05)).item()
+            )
+            ratio = steer_mag / max(base_span, 1e-6)
+        else:
+            ratio = 0.0
+
+        if ratio < 0.08:
+            influence_level = "Low impact"
+        elif ratio < 0.18:
+            influence_level = "Medium impact"
+        else:
+            influence_level = "High impact"
+
+        return {
+            "results": results,
+            "debug": {
+                "adaptive_gamma": round(float(adaptive_gamma), 4),
+                "steering_clamp": round(float(clamp_value), 4),
+                "steering_ratio": round(float(ratio), 4),
+                "influence_level": influence_level,
+                "top_up": movers.get("top_up", []),
+                "top_down": movers.get("top_down", []),
+            },
+        }
+
     def get_item_features(self, item_id: int) -> Dict[str, float]:
-        """
-        Get SAE feature activations for a specific item.
-        
-        Args:
-            item_id: Movie ID
-        
-        Returns:
-            Dict mapping feature_label -> activation
-        """
+        """Get SAE feature activations for a specific item."""
         self.load()
-        
+
         if self.item_features is None or self.item_ids is None:
             return {}
-        
+
         try:
             idx = self.item_ids.index(item_id)
         except ValueError:
             return {}
-        
+
         features = self.item_features[idx]
-        
+
         result = {}
-        # Get top-k active features
         topk_values, topk_indices = torch.topk(features, min(10, len(features)))
-        
-        for val, idx in zip(topk_values, topk_indices):
+
+        for val, feat_idx in zip(topk_values, topk_indices):
             if val.item() > 0:
-                label = self.neuron_labels.get(str(idx.item()), f"Feature {idx.item()}")
+                label = (self.neuron_labels or {}).get(str(feat_idx.item()), f"Feature {feat_idx.item()}")
                 result[label] = round(val.item(), 3)
-        
+
         return result
 
 
-# Global instances - supports multiple models for A/B comparison
 _sae_recommenders: Dict[str, SAERecommender] = {}
 _default_recommender = None
 
 
 def get_sae_recommender(model_id: str = None) -> SAERecommender:
-    """
-    Get or create SAE recommender instance.
-    
-    Args:
-        model_id: Specific model to load. If None, uses default.
-                 Supports: 'www_TopKSAE_8192', 'prediction_aware_sae', 'sae_model_r4_k32', etc.
-    
-    Returns:
-        SAERecommender instance for the specified model
-    """
+    """Get or create SAE recommender instance."""
     global _sae_recommenders, _default_recommender
-    
+
     if model_id is None:
-        # Return default recommender
         if _default_recommender is None:
-            _default_recommender = SAERecommender(model_id=DEFAULT_WWW_MODEL_ID)
+            _default_recommender = SAERecommender(model_id=DEFAULT_TOPK_SAE_MODEL_ID)
         return _default_recommender
-    
-    # Check cache for specific model
+
     if model_id not in _sae_recommenders:
         _sae_recommenders[model_id] = SAERecommender(model_id=model_id)
-    
+
     return _sae_recommenders[model_id]
 
 
@@ -547,18 +485,7 @@ def generate_sae_recommendations(
     model_id: str = None,
     allowed_ids: Optional[set] = None,
 ) -> List[Dict]:
-    """
-    Convenience function to generate SAE-based recommendations.
-    
-    Args:
-        feature_adjustments: Dict mapping neuron_id -> weight
-        n_items: Number of recommendations
-        exclude_items: Items to exclude
-        model_id: Specific SAE model to use (for A/B testing)
-    
-    Returns:
-        List of recommendation dicts
-    """
+    """Convenience function to generate SAE-based recommendations."""
     recommender = get_sae_recommender(model_id=model_id)
     return recommender.get_recommendations(
         feature_adjustments=feature_adjustments,
@@ -569,22 +496,12 @@ def generate_sae_recommendations(
 
 
 def get_available_models() -> List[Dict]:
-    """
-    Get list of available SAE models for configuration.
-    
-    Returns:
-        List of model info dicts
-    """
+    """Get list of available SAE models."""
     available = []
-    
-    model_files = [
-        (DEFAULT_WWW_MODEL_ID, "WWW TopKSAE-8192 (k=32)", "Release-managed default checkpoint"),
-        ("prediction_aware_sae", "Prediction-Aware SAE", "Optional local checkpoint"),
-        ("sae_model_r4_k32", "Basic TopK SAE", "Optional local checkpoint"),
-        ("multimodal_sae", "Multimodal SAE", "Optional local checkpoint"),
+    candidates = [
+        (DEFAULT_TOPK_SAE_MODEL_ID, "TopKSAE-1024 (k=64)", "Default SAE checkpoint"),
     ]
-    
-    for model_id, name, description in model_files:
+    for model_id, name, description in candidates:
         path = find_local_model_path(model_id)
         if path is not None:
             available.append({
@@ -593,5 +510,4 @@ def get_available_models() -> List[Dict]:
                 "description": description,
                 "path": str(path)
             })
-    
     return available

@@ -41,7 +41,7 @@ def _get_sbert():
     return _sbert_model
 
 
-def _get_concept_index(model_id: str = "www_TopKSAE_8192") -> Dict:
+def _get_concept_index(model_id: str = "TopKSAE-1024") -> Dict:
     """Build or return a cached concept index from LLM labels.
 
     The index contains:
@@ -202,7 +202,7 @@ def _cosine_batch(query: np.ndarray, corpus: np.ndarray) -> np.ndarray:
 
 def text_to_concept_adjustments(
     text: str,
-    model_id: str = "www_TopKSAE_8192",
+    model_id: str = "TopKSAE-1024",
     top_k: int = 7,
     sensitivity: float = 1.0,
 ) -> Tuple[Dict[int, float], List[Dict]]:
@@ -314,7 +314,7 @@ def text_to_concept_adjustments(
 # Tag matching for display badges
 # ---------------------------------------------------------------------------
 
-def get_matched_tags(text: str, top_k: int = 5, model_id: str = "www_TopKSAE_8192") -> List[Tuple[str, float, str]]:
+def get_matched_tags(text: str, top_k: int = 5, model_id: str = "TopKSAE-1024") -> List[Tuple[str, float, str]]:
     """Get concept labels that best match the user's text (for tag badges)."""
     if not text or not text.strip():
         return []
@@ -359,7 +359,7 @@ def get_matched_tags(text: str, top_k: int = 5, model_id: str = "www_TopKSAE_819
     return results[:top_k]
 
 
-def get_neuron_labels(neuron_ids: List[int], model_id: str = "www_TopKSAE_8192") -> Dict[int, str]:
+def get_neuron_labels(neuron_ids: List[int], model_id: str = "TopKSAE-1024") -> Dict[int, str]:
     """Get human-readable labels for neuron IDs from the LLM label cache."""
     llm_path = DATA_DIR / f"llm_labels_{model_id}_llm.json"
 

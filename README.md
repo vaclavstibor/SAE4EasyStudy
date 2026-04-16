@@ -176,7 +176,25 @@ Built on [EasyStudy](https://github.com/pdokoupil/EasyStudy) by [Patrik Dokoupil
 
 ## Hard TODOs
 
-- [ ] Relabel sliders with human-understandable concepts
-  - [ ] Several repetitive label names "Quirky", "Goofy", ...
-  - [ ] Several with same Label name but slightly different descriptions >> probably merge
-- [ ] "Na te uvodni strance potom co vysvetlime o cem je studie musi byt i ten informed consent (pripravim presny text) a to tlacitko by melo rict neco jako "I give my consent, lets continue""
+
+---
+
+- Vyhledávání zaznamenat do výstupu (jak?), jestli hledal a vyhledal, hlavní rozlišit, co patří k jakému appraoch a z base, abychom potom tuto flow byly schopni bez problemu vytahnout z databaze.
+
+---
+* https://dl.acm.org/doi/epdf/10.1145/3604915.3608848
+* "Link ..." 
+---
+
+### Backbone recommender issue
+
+Potom recommender.
+Porad mi prijde ze funguje trochu divne - ted zrovna jsem zkusil v preference elicitation vybirat relativne nove blockbuster fantasy a scifi (Hobbit, Chappie, District 9,...) - vysledky jsou v podstate random, poslal bych ti screenshot, ale zrovna vse bez posteru a rozhodne nic co by se dalo nazvat blockbuster a skoro nic co by sedelo na scifi nebo fantasy.
+- Jak moc (ne)realne je natrenovat vlastni base recommender + SAE nad tim?
+- S Patrikem jsme pro posledni studie volili spis trochu mirnejsi parametry redukce, viz. https://dl.acm.org/doi/epdf/10.1145/3699682.3728335 We used MovieLens TagGenome 2021 [10], which provides a fairly up-to-date selection of movies (release date up till 2021) ... To keepthe computational requirements feasible, the dataset was reducedas follows. First, we filtered out all movies without a cover image or plot description. Then, we removed old users (who did not interact with movies released after 2015), old movies (released before 1985),and movies without recent interactions (with < 10 remaining ratings). As a result, the dataset size reduced to |U| = 18𝐾, |I| = 16𝐾,|R|>0 = 5.1𝑀, where U, I, and R ∈ R| U | × | I | correspond to set of all users, all items, and their ratings, while |R|>0 denotes numberof non-zero entries of R. The R denotes the set of all real numbers.
+
+---
+Dobře. Teď zkontroluj, jestli se to správně zachytává do results, chceme toho co nejvíce zachytávat. 
+
+Udělej test na resultsdisplay, jestli ti tam něco chybí, tak to klidně doplň. Důležité je, abychom zachytávali rozumně uživatelské akce, výstupy atd. Hlavně i odpovědi na dotazníky.
+

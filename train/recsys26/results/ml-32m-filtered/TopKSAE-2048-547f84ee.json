@@ -1,0 +1,48 @@
+{
+    "job_cfg": {
+        "dataset": "ml-32m-filtered",
+        "pretrained_model_checkpoint": "ELSA-1024-7f035e3d.ckpt",
+        "model_module": "sae",
+        "model_class": "TopKSAE",
+        "embedding_dim": 2048,
+        "reconstruction_loss": "Cosine",
+        "l1_coef": 0.0003,
+        "k": 32,
+        "epochs": 250,
+        "early_stopping": 50,
+        "batch_size": 1024,
+        "lr": 0.0003,
+        "beta1": 0.9,
+        "beta2": 0.99,
+        "seed": 42
+    },
+    "results": {
+        "val": {
+            "cosine": {
+                "mean": 0.8198500275611877,
+                "se": 0.0017661201955776486
+            },
+            "l0": {
+                "mean": 32.0,
+                "se": 0.0
+            },
+            "dead neurons": 2,
+            "recall": {
+                "mean": 0.34534138441085815,
+                "se": 0.002514053978473333
+            },
+            "recall degradation": {
+                "mean": -0.02491266280412674,
+                "se": 0.001154607988965043
+            },
+            "ndcg": {
+                "mean": 0.35182780027389526,
+                "se": 0.0026026833349538504
+            },
+            "ndcg degradation": {
+                "mean": -0.026428548619151115,
+                "se": 0.000983748043367541
+            }
+        }
+    }
+}

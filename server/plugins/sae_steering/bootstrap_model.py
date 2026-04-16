@@ -431,6 +431,64 @@ def main() -> int:
             optional=args.label_optional,
         )
 
+        cluster_output = ensure_data_dir() / f"cluster_profile_{DEFAULT_TOPK_SAE_MODEL_ID}.json"
+        cluster_candidates = (
+            f"cluster_profile_{DEFAULT_TOPK_SAE_MODEL_ID}.json",
+            "cluster_profile.json",
+        )
+        _optional_asset_download(
+            release=release,
+            assets=assets,
+            headers=headers,
+            timeout=timeout,
+            purpose="Cluster profile",
+            asset_name="",
+            candidates=cluster_candidates,
+            output_path=cluster_output,
+            force=args.force,
+            require_checksum=False,
+            optional=True,
+        )
+
+        embeddings_output = ensure_data_dir() / "item_embeddings.pt"
+        embeddings_candidates = (
+            "item_embeddings.pt",
+            "item_embeddings.pt.xz",
+            "item_embeddings.pt.gz",
+        )
+        _optional_asset_download(
+            release=release,
+            assets=assets,
+            headers=headers,
+            timeout=timeout,
+            purpose="Item embeddings",
+            asset_name="",
+            candidates=embeddings_candidates,
+            output_path=embeddings_output,
+            force=args.force,
+            require_checksum=False,
+            optional=True,
+        )
+
+        semantic_output = ensure_data_dir() / f"semantic_merged_{DEFAULT_TOPK_SAE_MODEL_ID}.json"
+        semantic_candidates = (
+            f"semantic_merged_{DEFAULT_TOPK_SAE_MODEL_ID}.json",
+            "semantic_merged.json",
+        )
+        _optional_asset_download(
+            release=release,
+            assets=assets,
+            headers=headers,
+            timeout=timeout,
+            purpose="Semantic merged labels",
+            asset_name="",
+            candidates=semantic_candidates,
+            output_path=semantic_output,
+            force=args.force,
+            require_checksum=False,
+            optional=True,
+        )
+
         print(f"Release assets ready from release: {release.get('tag_name', args.tag)}")
         return 0
     except urllib.error.HTTPError as exc:

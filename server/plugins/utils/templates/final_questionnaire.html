@@ -17,6 +17,40 @@
         font-size: 1.05rem;
         color: #5c6773;
     }
+    .resolution-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(33, 37, 41, 0.72);
+        backdrop-filter: blur(1px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 20px;
+    }
+    .resolution-overlay.show {
+        display: flex;
+    }
+    .resolution-dialog {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #dee2e6;
+        max-width: 720px;
+        width: 100%;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        padding: 20px 22px;
+    }
+    .resolution-dialog h3 {
+        margin: 0 0 8px;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #343a40;
+    }
+    .resolution-dialog p {
+        margin: 0;
+        color: #4f5965;
+        line-height: 1.55;
+    }
 </style>
 
 <div id="app">
@@ -30,12 +64,12 @@
     
         <b-row align-h="center">
             <b-col>
-                <b-form method="POST" action="{{continuation_url}}">
+                <b-form id="questionnaireForm" method="POST" action="{{continuation_url}}">
                     <input type="hidden" name="csrf_token" value="{{csrf_token()}}"/>
                     <input type="hidden" name="final_questionnaire_data" value="final_questionnaire_data"/>
                     {{ include_file(questionnaire_file) }}
                     <div class="text-center" style="margin-top:24px;margin-bottom:32px;">
-                        <b-button variant="success" type="submit" size="lg">{{finish}}</b-button>
+                        <b-button id="questionnaireSubmit" variant="success" type="submit" size="lg">{{finish}}</b-button>
                     </div>
                 </b-form>
             </b-col>
@@ -45,6 +79,13 @@
 </div>
 
 <script src="{{url_for('static', filename='message_reporting.js')}}"></script>
+<div id="resolutionOverlay" class="resolution-overlay" aria-hidden="true">
+    <div class="resolution-dialog">
+        <h3>Minimum screen resolution required</h3>
+        <p>{{ min_resolution_error }}</p>
+    </div>
+</div>
+
 <script src="{{url_for('static', filename='resolution_handling.js')}}"></script>
 <script src="{{url_for('static', filename='interaction_reporting.js')}}"></script>
 <script>
@@ -64,6 +105,27 @@
         
     },
     async mounted() {
+        const MIN_WIDTH = {{ min_resolution_width|int }};
+        const MIN_HEIGHT = {{ min_resolution_height|int }};
+        const formEl = document.getElementById("questionnaireForm");
+        const overlay = document.getElementById("resolutionOverlay");
+        const refreshResolutionGate = () => {
+            const ok = validateScreenResolution(MIN_WIDTH, MIN_HEIGHT);
+            if (overlay) {
+                overlay.classList.toggle("show", !ok);
+                overlay.setAttribute("aria-hidden", ok ? "true" : "false");
+            }
+            return ok;
+        };
+
+        formEl?.addEventListener("submit", (event) => {
+            if (!refreshResolutionGate()) {
+                event.preventDefault();
+            }
+        });
+        window.addEventListener("resize", () => refreshResolutionGate());
+        refreshResolutionGate();
+
         const hideEmbeddedHeading = {{ 'true' if hide_embedded_questionnaire_heading else 'false' }};
         if (hideEmbeddedHeading) {
             const embeddedHeading = document.querySelector('form h4.font-weight-bold');

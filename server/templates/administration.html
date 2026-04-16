@@ -539,10 +539,10 @@
 
             <template #cell(actions)="data">
               <div class="table-stack">
-                <b-overlay class="d-inline-block" :show="aboutToDelete">
+                <b-overlay class="d-inline-block" :show="deletingIndex === existingUserStudies.indexOf(data.item)">
                   <div class="study-actions" :hidden="!data.item.initialized && !data.item.error">
                     <b-button
-                      v-if="data.value"
+                      v-if="data.item.active"
                       size="sm"
                       class="table-action-btn btn-filled-warning"
                       @click="onDeactivate(existingUserStudies.indexOf(data.item))"
@@ -550,7 +550,7 @@
                       Deactivate
                     </b-button>
                     <b-button
-                      v-else-if="!data.item.error && !data.value"
+                      v-else-if="!data.item.error && !data.item.active"
                       size="sm"
                       class="table-action-btn btn-filled-success"
                       @click="onActivate(existingUserStudies.indexOf(data.item))"
@@ -568,7 +568,6 @@
 
                   <template #overlay>
                     <div
-                      v-if="existingUserStudies.indexOf(data.item) == deletingIndex"
                       ref="dialog"
                       tabindex="-1"
                       role="dialog"
@@ -615,7 +614,16 @@
                 >
                   Results
                 </a>
-                <span v-else class="empty-copy">Unavailable</span>
+                <a
+                  v-if="data.item.initialized && data.item.parent_plugin === 'sae_steering'"
+                  class="btn btn-sm table-action-btn"
+                  style="background:#e7f1ff;color:#0b57d0;"
+                  target="_blank"
+                  :href="'/sae_steering/export-raw/' + data.item.guid"
+                >
+                  Export JSON
+                </a>
+                <span v-if="!data.item.initialized" class="empty-copy">Unavailable</span>
               </div>
             </template>
           </b-table>
@@ -656,7 +664,6 @@
                 existingUserStudies: [], // Query (-> server -> database) for existing user studies,
                 tooltipTexts: [],
                 icons: [],
-                aboutToDelete: false,
                 deletingIndex: null
             }
         },
@@ -712,15 +719,12 @@
             window.location.href = "/notify?guid=" + this.existingUserStudies[idx]["guid"];
           },
           onDelete(idx) {
-            this.aboutToDelete = true;
             this.deletingIndex = idx;
           },
           onCancel() {
-            this.aboutToDelete = false;
             this.deletingIndex = null;
           },
           async onOK() {
-            // Actually delete the user study
             let userStudyId = this.existingUserStudies[this.deletingIndex]["id"];
             await fetch("/user-study/" + userStudyId, {
               method: 'DELETE',
@@ -729,7 +733,6 @@
                   'X-CSRFToken': '{{ csrf_token() }}'
               },
             }).then(resp => resp.text());
-            this.aboutToDelete = false;
             this.deletingIndex = null;
             await this.updateExistingUserStudies();
           },

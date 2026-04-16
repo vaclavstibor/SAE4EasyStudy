@@ -3,8 +3,7 @@
 Download and extract the MovieLens dataset assets required by EasyStudy.
 
 Expected release assets by default:
-  - ml-latest.zip containing the MovieLens CSVs, genome files,
-    descriptions/TMDB metadata, and the img directory
+  - ml-32m-filtered.zip containing the filtered MovieLens CSVs and the img directory
 """
 
 import argparse
@@ -20,8 +19,8 @@ from pathlib import Path, PurePosixPath
 
 
 SERVER_DIR = Path(__file__).resolve().parent
-ML_LATEST_DIR = SERVER_DIR / "static" / "datasets" / "ml-latest"
-IMG_DIR = ML_LATEST_DIR / "img"
+DATASET_DIR = SERVER_DIR / "static" / "datasets" / "ml-32m-filtered"
+IMG_DIR = DATASET_DIR / "img"
 DEFAULT_GITHUB_REPO = os.environ.get(
     "DATASET_GITHUB_REPO",
     os.environ.get("SAE_MODEL_GITHUB_REPO", "vaclavstibor/SAE4EasyStudy"),
@@ -30,17 +29,14 @@ DEFAULT_RELEASE_TAG = os.environ.get(
     "DATASET_RELEASE_TAG",
     os.environ.get("SAE_MODEL_RELEASE_TAG", "latest"),
 )
-DEFAULT_DATASET_ASSET = os.environ.get("ML_LATEST_DATASET_ASSET", "ml-latest.zip")
-DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("DATASET_DOWNLOAD_TIMEOUT", "60"))
+DEFAULT_DATASET_ASSET = os.environ.get("ML_DATASET_ASSET", "ml-32m-filtered.zip")
+DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("DATASET_DOWNLOAD_TIMEOUT", "120"))
 REQUIRED_DATASET_FILES = (
     "ratings.csv",
     "movies.csv",
     "tags.csv",
     "links.csv",
-    "genome-tags.csv",
-    "genome-scores.csv",
-    "descriptions.json",
-    "tmdb_data.json",
+    "plots.csv",
 )
 
 
@@ -112,7 +108,7 @@ def _extract_zip(zip_path: Path, destination: Path, strip_prefix: str = "") -> N
 
 
 def _dataset_ready() -> bool:
-    return all((ML_LATEST_DIR / name).exists() for name in REQUIRED_DATASET_FILES)
+    return all((DATASET_DIR / name).exists() for name in REQUIRED_DATASET_FILES)
 
 
 def _images_ready() -> bool:
@@ -133,16 +129,16 @@ def _ensure_zip_asset(local_zip: Path, release: dict, asset_name: str, headers: 
 
 def _ensure_dataset_files(release: dict, headers: dict, timeout: int, dataset_asset: str) -> None:
     if _dataset_ready() and _images_ready():
-        print(f"MovieLens dataset, metadata, and poster images already present in {ML_LATEST_DIR}")
+        print(f"MovieLens dataset and poster images already present in {DATASET_DIR}")
         return
 
-    local_zip = ML_LATEST_DIR / Path(dataset_asset).name
+    local_zip = DATASET_DIR / Path(dataset_asset).name
     zip_path = _ensure_zip_asset(local_zip, release, dataset_asset, headers, timeout)
-    print(f"Extracting {zip_path.name} into {ML_LATEST_DIR}")
-    _extract_zip(zip_path, ML_LATEST_DIR, strip_prefix="ml-latest")
+    print(f"Extracting {zip_path.name} into {DATASET_DIR}")
+    _extract_zip(zip_path, DATASET_DIR, strip_prefix="ml-32m-filtered")
 
     if not _dataset_ready():
-        missing = [name for name in REQUIRED_DATASET_FILES if not (ML_LATEST_DIR / name).exists()]
+        missing = [name for name in REQUIRED_DATASET_FILES if not (DATASET_DIR / name).exists()]
         raise RuntimeError(f"Dataset extraction finished but required files are still missing: {missing}")
     if not _images_ready():
         raise RuntimeError(
@@ -158,7 +154,7 @@ def parse_args():
     parser.add_argument(
         "--dataset-asset",
         default=DEFAULT_DATASET_ASSET,
-        help="Zip asset containing ml-latest CSVs, metadata files, and the img directory",
+        help="Zip asset containing ml-32m-filtered CSVs and the img directory",
     )
     parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""), help="Optional GitHub token")
     return parser.parse_args()

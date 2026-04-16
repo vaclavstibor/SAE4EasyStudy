@@ -485,6 +485,26 @@ def final_questionnaire():
         (request.args.get("hide_embedded_questionnaire_heading") or "").strip().lower()
         in {"1", "true", "yes"}
     )
+    min_resolution_cfg = conf.get("min_resolution") if isinstance(conf.get("min_resolution"), dict) else {}
+
+    def _safe_int(value, fallback):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return fallback
+
+    params["min_resolution_width"] = _safe_int(
+        conf.get("min_resolution_width", conf.get("min_width", min_resolution_cfg.get("width"))),
+        1280,
+    )
+    params["min_resolution_height"] = _safe_int(
+        conf.get("min_resolution_height", conf.get("min_height", min_resolution_cfg.get("height"))),
+        720,
+    )
+    params["min_resolution_error"] = conf.get(
+        "min_resolution_error",
+        tr("join_min_resolution_error"),
+    )
 
     explicit_file = request.args.get("questionnaire_file")
     if explicit_file:

@@ -133,8 +133,7 @@ def prepare_tf_model(loader):
 
     unique_user_ids, unique_movie_titles, movies, cached_train, train = prepare_tf_data(loader)
     model = get_model_mf(unique_user_ids, unique_movie_titles, movies)
-    #cache_path = os.path.join(Path(__file__).parent.absolute(), 'cache', 'utils', 'ml-latest', 'tf_weights_cache')
-    cache_path = os.path.join(get_abs_project_root_path(), 'cache', 'utils', 'ml-latest', 'tf_weights_cache')
+    cache_path = os.path.join(get_abs_project_root_path(), 'cache', 'utils', 'ml-32m-filtered', 'tf_weights_cache')
 
     # Try load
     try:

@@ -10,283 +10,373 @@
         body {
             background: #f5f7fa;
             min-height: 100vh;
+            overflow: hidden;
         }
-        .intro-container {
-            max-width: min(1120px, calc(100% - 40px));
-            margin: 48px auto;
-            padding: 0;
+        .intro-shell {
+            max-width: 1140px;
+            width: calc(100% - 32px);
+            margin: 16px auto;
+            height: calc(100vh - 32px);
         }
         .intro-card {
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            overflow: hidden;
+            background: #fff;
             border: 1px solid #dee2e6;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         .intro-header {
-            background: #007bff;
-            color: white;
-            padding: 36px 48px 28px;
+            background: linear-gradient(135deg, #007bff 0%, #0d6efd 100%);
+            color: #fff;
+            padding: 28px 34px 22px;
             text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         }
         .intro-header h1 {
-            font-size: 1.8em;
+            margin: 0 0 6px;
+            font-size: 1.7rem;
             font-weight: 700;
-            margin-bottom: 8px;
         }
         .intro-header p {
-            opacity: 0.9;
-            font-size: 1.05em;
             margin: 0;
+            opacity: 0.92;
         }
-        .intro-body {
-            padding: 32px 48px;
+        .intro-content {
+            flex: 1;
+            overflow: auto;
+            padding: 26px 34px 16px;
         }
-        .intro-body h3 {
-            font-size: 1.15em;
-            font-weight: 600;
-            margin-bottom: 12px;
-            color: #333;
+        .intro-section {
+            margin-bottom: 18px;
         }
-        .intro-body p, .intro-body li {
-            color: #555;
-            line-height: 1.7;
-            font-size: 0.95em;
-        }
-        .intro-body ul {
-            padding-left: 20px;
-        }
-        .intro-body ul li {
-            margin-bottom: 6px;
-        }
-        .step-list {
-            list-style: none;
-            padding: 0;
-            counter-reset: steps;
-        }
-        .step-list li {
-            counter-increment: steps;
-            padding: 12px 16px 12px 52px;
-            position: relative;
-            background: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border: 1px solid #dee2e6;
-        }
-        .step-list li::before {
-            content: counter(steps);
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 28px;
-            height: 28px;
-            background: #007bff;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .intro-section h3 {
+            font-size: 1.05rem;
             font-weight: 700;
-            font-size: 0.85em;
-        }
-        .intro-footer {
-            padding: 24px 48px 32px;
-            text-align: center;
-            border-top: 1px solid #dee2e6;
-        }
-        .parts-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 14px;
-            margin-bottom: 24px;
-        }
-        .part-card {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 14px 16px;
-        }
-        .part-card h4 {
-            font-size: 0.95em;
             margin-bottom: 8px;
-            color: #0d6efd;
+            color: #343a40;
         }
-        .part-card p {
-            margin-bottom: 0;
+        .intro-section p,
+        .intro-section li {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #4f5965;
         }
-        .state-summary {
+        .study-metadata {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 18px;
         }
-        .state-chip {
-            background: #eef5ff;
-            color: #0d6efd;
+        .meta-pill {
+            background: #edf4ff;
+            border: 1px solid #d7e8ff;
+            color: #1d4f91;
             border-radius: 999px;
-            padding: 6px 14px;
-            font-size: 0.85em;
+            padding: 5px 12px;
+            font-size: 0.82rem;
             font-weight: 600;
+        }
+        .part-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 10px;
+        }
+        .part-box {
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 11px 12px;
+        }
+        .part-box h4 {
+            margin: 0 0 4px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #0d6efd;
+        }
+        .part-box p {
+            margin: 0;
+            font-size: 0.88rem;
+        }
+        .steps {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .consent-box {
+            margin-top: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background: #f8f9fa;
+            padding: 14px 16px;
+            transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .consent-box.needs-attention {
+            background: #fff5f5;
+            border-color: #f3b8be;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.08);
+        }
+        .consent-box ul {
+            margin-bottom: 10px;
+        }
+        .consent-confirm {
+            border-top: 1px dashed #ced4da;
+            padding-top: 10px;
+            margin-top: 8px;
+            font-weight: 600;
+            color: #29323c;
+        }
+        .consent-required-hint {
+            display: inline-block;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+        .consent-box.needs-attention .consent-required-hint {
+            color: #b02a37;
+            font-weight: 700;
+            animation: consentPulse 1.2s ease-in-out infinite;
+        }
+        .intro-actions {
+            margin-top: 12px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            padding-top: 14px;
         }
         .btn-start {
-            background: #007bff;
-            color: white;
-            border: 1px solid #007bff;
-            padding: 0 28px;
-            min-height: 42px;
+            min-width: 340px;
+            max-width: 100%;
+            font-weight: 700;
             border-radius: 10px;
-            font-size: 1em;
-            font-weight: 600;
-            display: inline-flex;
+            padding: 10px 18px;
+        }
+        .resolution-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(33, 37, 41, 0.72);
+            backdrop-filter: blur(1px);
+            display: none;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
-            transition: transform 0.15s, box-shadow 0.15s;
-            text-decoration: none;
+            z-index: 2000;
+            padding: 20px;
         }
-        .btn-start:hover {
-            background: #0069d9;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.35);
-            color: white;
+        .resolution-overlay.show {
+            display: flex;
         }
-        .time-estimate {
-            display: inline-block;
-            background: #e7f1ff;
-            color: #007bff;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 500;
-            margin-bottom: 16px;
+        .resolution-dialog {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            max-width: 720px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 20px 22px;
         }
-
-        @media (max-width: 600px) {
-            .intro-container {
-                margin: 20px auto;
+        .resolution-dialog h3 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #343a40;
+        }
+        .resolution-dialog p {
+            margin: 0;
+            color: #4f5965;
+            line-height: 1.55;
+        }
+        @keyframes consentPulse {
+            0%, 100% { opacity: 1; transform: translateX(0); }
+            50% { opacity: 0.7; transform: translateX(4px); }
+        }
+        @media (max-width: 900px) {
+            body {
+                overflow: auto;
+            }
+            .intro-shell {
+                width: calc(100% - 16px);
+                margin: 8px auto;
+                height: auto;
+                min-height: calc(100vh - 16px);
+            }
+            .intro-card {
+                height: auto;
+                min-height: calc(100vh - 16px);
+            }
+            .intro-content {
+                padding: 18px 16px 12px;
             }
             .intro-header {
-                padding: 24px 20px 20px;
+                padding: 18px 16px 16px;
             }
             .intro-header h1 {
-                font-size: 1.4em;
+                font-size: 1.35rem;
             }
-            .intro-header p {
-                font-size: 0.92em;
-            }
-            .intro-body {
-                padding: 20px;
-            }
-            .intro-body h3 {
-                font-size: 1.05em;
-            }
-            .intro-footer {
-                padding: 20px;
-            }
-            .step-list li {
-                padding: 10px 14px 10px 46px;
-                font-size: 0.9em;
-            }
-            .step-list li::before {
-                width: 24px;
-                height: 24px;
-                font-size: 0.8em;
-                left: 12px;
-            }
-            .parts-grid {
-                grid-template-columns: 1fr;
+            .btn-start {
+                min-width: 0;
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <div class="intro-container">
+    <div class="intro-shell">
         <div class="intro-card">
             <div class="intro-header">
                 <h1>{{ title }}</h1>
                 <p>{{ subtitle|default('Interactive Recommendation Study') }}</p>
             </div>
 
-            <div class="intro-body">
-                {% if custom_intro_html %}
-                    {{ custom_intro_html|safe }}
-                {% else %}
-                    {% if time_estimate %}
-                    <div class="text-center">
-                        <span class="time-estimate">Estimated time: {{ time_estimate }}</span>
-                    </div>
+            <div class="intro-content">
+                <div class="study-metadata">
+                    <span class="meta-pill">Estimated time: {{ time_estimate }}</span>
+                    <span class="meta-pill">Minimum screen resolution: {{ min_resolution_width }}x{{ min_resolution_height }}</span>
+                    <span class="meta-pill">{{ num_iterations }} iteration{% if num_iterations != 1 %}s{% endif %} per approach</span>
+                    {% if has_questionnaire %}
+                    <span class="meta-pill">Questionnaire included</span>
                     {% endif %}
+                </div>
 
-                    <h3>What is this study about?</h3>
-                    <p>
-                        In this study, you will interact with a movie recommendation system.
-                        You will be able to <strong>steer</strong> the recommendations by adjusting
-                        interpretable features that represent movie characteristics.
-                    </p>
+                {% if custom_intro_html %}
+                    <div class="intro-section">
+                        {{ custom_intro_html|safe }}
+                    </div>
+                {% else %}
+                    <div class="intro-section">
+                        <h3>What is this study about?</h3>
+                        <p>In this study, you will compare two feedback styles in a movie recommendation system.</p>
+                        <ul>
+                            <li><strong>Explicit feedback</strong> means you directly adjust <strong>steering sliders</strong> (feature controls) to express what you want more or less of.</li>
+                            <li><strong>Implicit feedback</strong> means you do not use sliders; the system learns from your interactions with shown movies.</li>
+                        </ul>
+                    </div>
 
-                    <h3>Study Parts</h3>
-                    <div class="parts-grid">
-                        {% for part in study_parts %}
-                        <div class="part-card">
-                            <h4>{{ part.title }}</h4>
-                            <p>{{ part.description }}</p>
+                    <div class="intro-section">
+                        <h3>Study parts</h3>
+                        <div class="part-grid">
+                            {% for part in study_parts %}
+                            <div class="part-box">
+                                <h4>{{ part.title }}</h4>
+                                <p>{{ part.description }}</p>
+                            </div>
+                            {% endfor %}
                         </div>
-                        {% endfor %}
                     </div>
 
-                    <div class="state-summary">
-                        <span class="state-chip">{{ num_phases }} approach{% if num_phases != 1 %}es{% endif %}</span>
-                        <span class="state-chip">{{ num_iterations }} iteration{% if num_iterations != 1 %}s{% endif %} per approach</span>
-                        {% if has_questionnaire %}
-                        <span class="state-chip">Questionnaire included</span>
-                        {% endif %}
+                    <div class="intro-section">
+                        <h3>What will you do?</h3>
+                        <ol class="steps">
+                            <li>Select movies you like so the system knows your baseline preferences.</li>
+                            <li>Try the implicit feedback approach over {{ num_iterations }} rounds.</li>
+                            <li>Try the explicit feedback approach over {{ num_iterations }} rounds using steering sliders.</li>
+                            {% if has_questionnaire %}
+                            <li>Fill out short questionnaires about your experience.</li>
+                            {% endif %}
+                        </ol>
                     </div>
-
-                    <h3>What will you do?</h3>
-                    <ol class="step-list">
-                        <li>
-                            <strong>Select movies you like</strong> so the system knows your baseline preferences.
-                        </li>
-                        {% if num_phases > 1 %}
-                        <li>
-                            <strong>Steer recommendations with Approach A</strong> &mdash;
-                            adjust features over {{ num_iterations }} rounds using {{ steering_label_a|default('the first method') }}.
-                        </li>
-                        <li>
-                            <strong>Steer recommendations with Approach B</strong> &mdash;
-                            adjust features over {{ num_iterations }} rounds using {{ steering_label_b|default('the second method') }}.
-                        </li>
-                        {% else %}
-                        <li>
-                            <strong>Steer recommendations</strong> &mdash;
-                            adjust features over {{ num_iterations }} rounds to refine your results.
-                        </li>
-                        {% endif %}
-                        {% if has_questionnaire %}
-                        <li>
-                            <strong>Fill out a short questionnaire</strong> about your experience.
-                        </li>
-                        {% endif %}
-                    </ol>
 
                     {% if notes %}
-                    <h3>Good to know</h3>
-                    <ul>
-                        {% for note in notes %}
-                        <li>{{ note }}</li>
-                        {% endfor %}
-                    </ul>
+                    <div class="intro-section">
+                        <h3>Good to know</h3>
+                        <ul>
+                            {% for note in notes %}
+                            <li>{{ note }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
                     {% endif %}
                 {% endif %}
-            </div>
 
-            <div class="intro-footer">
-                <a href="{{ continuation_url }}" class="btn btn-start">
-                    {{ start_button_text|default("Let's Start") }}
-                </a>
+                <div class="intro-section consent-box">
+                    <h3>Informed consent</h3>
+                    <p><strong>Please check the informed consent declaration and only continue with the study if you agree with it:</strong></p>
+                    <ul>
+                        <li>I familiarized myself with the aim and targets of the research project and I do not mind to contribute on it (e.g., the research topic does not go against my beliefs etc.). I agree that authors of the project may utilize my (anonymous) responses and my demographic data while presenting research outcomes - e.g. in scientific papers. I do not require any further monetary compensation for my participation in the research beyond what has been offered via the Prolific.com service.</li>
+                        <li>We (study authors) will never publish data that could breach your identity (we do not have such data anyway:-). We also neither share your contact details to third parties nor disclose it publicly. In the prospective paper, we would like to publish an anonymized dataset of user responses. The dataset should contain following information:
+                            <ul>
+                                <li>randomly generated ID of the participant (i.e. UID = 468201)</li>
+                                <li>demographic data of the participant (e.g., age group, education, movie consumption frequency)</li>
+                                <li>participant's interactions (clicks, steering settings)</li>
+                                <li>participant's responses to questionnaires</li>
+                            </ul>
+                        </li>
+                        <li>In the released dataset, there will be no mapping between the ID of the user and their true identity (we do not have such data anyway).</li>
+                        <li>You can stop your participation at any time (just close the browser window:-).</li>
+                        <li>You can always revert your consent to use your data - just write to us an email with your details (Prolific identifier, time when you started participation etc.).</li>
+                        <li>Any disputes (hopefully, none should arise:-) will be governed by the law and jurisdiction of Czech Republic.</li>
+                    </ul>
+                    <div class="consent-confirm">
+                        <div class="consent-required-hint">Confirmation required before you can continue</div>
+                        <br>
+                        <label class="mb-0">
+                            <input type="checkbox" id="consentCheckbox">
+                            I have read the informed consent and I agree to participate in this study.
+                        </label>
+                    </div>
+                </div>
+                <div class="intro-actions">
+                    <button id="startStudyButton" type="button" class="btn btn-primary btn-lg btn-start">
+                        {{ start_button_text|default("I give my consent, let's continue") }}
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
+    <div id="resolutionOverlay" class="resolution-overlay" aria-hidden="true">
+        <div class="resolution-dialog">
+            <h3>Minimum screen resolution required</h3>
+            <p id="resolutionMessage">{{ min_resolution_error }}</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='resolution_handling.js') }}"></script>
+    <script>
+        (function() {
+            const MIN_WIDTH = {{ min_resolution_width|int }};
+            const MIN_HEIGHT = {{ min_resolution_height|int }};
+            const CONTINUATION_URL = {{ continuation_url|tojson }};
+
+            const startBtn = document.getElementById("startStudyButton");
+            const consentCheckbox = document.getElementById("consentCheckbox");
+            const consentBox = document.querySelector(".consent-box");
+            const resolutionOverlay = document.getElementById("resolutionOverlay");
+
+            function refreshGateState() {
+                const hasResolution = validateScreenResolution(MIN_WIDTH, MIN_HEIGHT);
+                const hasConsent = !!(consentCheckbox && consentCheckbox.checked);
+
+                if (resolutionOverlay) {
+                    resolutionOverlay.classList.toggle("show", !hasResolution);
+                    resolutionOverlay.setAttribute("aria-hidden", hasResolution ? "true" : "false");
+                }
+
+                if (consentBox) {
+                    consentBox.classList.toggle("needs-attention", !hasConsent);
+                }
+
+                if (startBtn) {
+                    startBtn.disabled = !(hasResolution && hasConsent);
+                }
+
+                return hasResolution && hasConsent;
+            }
+
+            if (startBtn) {
+                startBtn.addEventListener("click", function() {
+                    if (refreshGateState()) {
+                        window.location.href = CONTINUATION_URL;
+                    }
+                });
+            }
+
+            if (consentCheckbox) {
+                consentCheckbox.addEventListener("change", refreshGateState);
+            }
+
+            window.addEventListener("resize", refreshGateState);
+            refreshGateState();
+        })();
+    </script>
 </body>
 </html>

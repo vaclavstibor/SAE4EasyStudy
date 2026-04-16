@@ -76,28 +76,26 @@ class RatingsPerYearFilter:
     def __call__(self, loader):
         movies_df_indexed = loader.movies_df.set_index("movieId")
 
-        # Ensure ratings only reference movies currently present in movies_df.
-        # This avoids NaN ages when upstream filters trimmed movies metadata.
-        loader.ratings_df = loader.ratings_df[
-            loader.ratings_df.movieId.isin(movies_df_indexed.index)
-        ].reset_index(drop=True)
+       # Add column with age of each movie
+        movies_df_indexed.loc[:, "age"] = movies_df_indexed.year.max() - movies_df_indexed.year
+        
+        # Calculate number of ratings per year for each of the movies
+        loader.ratings_df.loc[:, "ratings_per_year"] = loader.ratings_df['movieId'].map(loader.ratings_df['movieId'].value_counts()) / loader.ratings_df['movieId'].map(movies_df_indexed["age"])
+        
 
-        # Add column with age of each movie.
-        # Clamp to >= 1 to avoid division by zero for movies in the newest year.
-        movies_df_indexed.loc[:, "age"] = (
-            movies_df_indexed.year.max() - movies_df_indexed.year
-        ).clip(lower=1)
 
-        rating_counts = loader.ratings_df["movieId"].value_counts()
-        ages = loader.ratings_df["movieId"].map(movies_df_indexed["age"])
-        loader.ratings_df.loc[:, "ratings_per_year"] = (
-            loader.ratings_df["movieId"].map(rating_counts) / ages
-        ).fillna(0.0)
+
+
+
+
+
+
+
+
+
 
         # Filter out movies that do not have enough yearly ratings
-        loader.ratings_df = loader.ratings_df[
-            loader.ratings_df.ratings_per_year >= self.min_ratings_per_year
-        ].reset_index(drop=True)
+        loader.ratings_df = loader.ratings_df[loader.ratings_df.ratings_per_year >= self.min_ratings_per_year]
 
 class MovieFilterByYear:
     def __init__(self, min_year):
@@ -169,7 +167,7 @@ class MLDataLoader:
         filters=None,
         rating_matrix_path=None,
         img_dir_path=None,
-        descriptions_path=None,
+        plots_csv_path=None,
         skip_matrices: bool = False,
     ):
 
@@ -199,9 +197,8 @@ class MLDataLoader:
         self.similarity_matrix = None
 
         self.img_dir_path = img_dir_path
-        self.descriptions_path = descriptions_path
+        self.plots_csv_path = plots_csv_path
 
-        self.trailer_urls = None
         self.plots = None
 
         # Optional: skip building rating/similarity matrices (for large datasets)
@@ -263,16 +260,13 @@ class MLDataLoader:
                 print(f"[DEBUG __setstate__] Sample unmapped movie_ids: {sample_not_mapped}")
 
     def get_trailer_url(self, movie_idx):
-        movie_id = str(self.movie_index_to_id[movie_idx])
-        if self.trailer_urls is None or movie_id not in self.trailer_urls:
-            return ""
-        return self.trailer_urls[movie_id]
-    
+        return ""
+
     def get_plot(self, movie_idx):
         movie_id = str(self.movie_index_to_id[movie_idx])
         if self.plots is None or movie_id not in self.plots:
             return ""
-        return self.plots[str(movie_id)]
+        return self.plots[movie_id]
 
     # Download all the images
     def download_images(self):
@@ -325,10 +319,13 @@ class MLDataLoader:
             movie_id = self.movie_index_to_id[movie_idx]
             img_path = os.path.join(self.img_dir_path, f'{movie_id}.jpg')
             
-            # If image exists on disk, use it immediately
             if os.path.exists(img_path):
                 item_id = self.movie_index_to_id[movie_idx]
-                return url_for('static', filename=f'datasets/ml-latest/img/{item_id}.jpg')
+                static_idx = self.img_dir_path.find('static')
+                if static_idx >= 0:
+                    rel = self.img_dir_path[static_idx + len('static') + 1:]
+                    return url_for('static', filename=f'{rel}/{item_id}.jpg')
+                return url_for('static', filename=f'datasets/ml-32m-filtered/img/{item_id}.jpg')
             
             # Image doesn't exist — return None immediately.
             # Never block the request thread with an IMDb download.
@@ -416,11 +413,13 @@ class MLDataLoader:
         self.movies_df_indexed = self.movies_df.set_index("movieId")
 
 
-        if self.descriptions_path:
-            with open(self.descriptions_path, "r", encoding="UTF-8") as f:
-                data = json.load(f)
-                self.trailer_urls = {movie_id: records["videos"][0] if len(records["videos"]) > 0 else "" for movie_id, records in data.items()}
-                self.plots = {movie_id: records["plot"] for movie_id, records in data.items()}
+        if self.plots_csv_path:
+            import csv as _csv
+            self.plots = {}
+            with open(self.plots_csv_path, "r", encoding="UTF-8") as f:
+                for row in _csv.DictReader(f):
+                    self.plots[str(row["movieId"])] = row.get("plot", "")
+            print(f"[load] Loaded {len(self.plots)} plots from {self.plots_csv_path}")
 
         # First check which images are downloaded so far
         print(f"[DEBUG load] Checking images in img_dir_path: {self.img_dir_path}")

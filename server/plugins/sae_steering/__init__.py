@@ -27,7 +27,6 @@ from sqlalchemy.orm import Session
 from models import UserStudy, Participation, Interaction
 from common import get_tr, load_languages, multi_lang, load_user_study_config, load_user_study_config_by_guid
 from plugins.utils.interaction_logging import log_interaction, study_ended
-from plugins.utils.preference_elicitation import load_data, enrich_results
 try:
     from .model_store import (
         DEFAULT_BOOTSTRAP_COMMAND,
@@ -74,8 +73,8 @@ _tmdb_cache = None
 DEFAULT_STEERING_MODE = "sliders"
 DEFAULT_FEATURE_SELECTION_ALGORITHM = "personalized_grouped_topk"
 DEFAULT_BASE_MODEL_ID = "elsa"
-DEFAULT_DATASET_VARIANT = "ml-latest"
-SUPPORTED_DATASET_VARIANTS = {"ml-latest"}
+DEFAULT_DATASET_VARIANT = "ml-32m-filtered"
+SUPPORTED_DATASET_VARIANTS = {"ml-32m-filtered"}
 SUPPORTED_STEERING_MODES = {"sliders", "toggles", "text", "both", "none"}
 SUPPORTED_FEATURE_SELECTION_ALGORITHMS = {
     "personalized_grouped_topk",
@@ -133,6 +132,16 @@ def _get_effective_models(conf):
         raw_order = [0, 1] if secrets.randbelow(2) == 0 else [1, 0]
         session["approach_order"] = raw_order
         print(f"[_get_effective_models] Assigned per-participant approach order: {raw_order}")
+
+        participation_id = session.get("participation_id")
+        if participation_id:
+            log_interaction(
+                participation_id,
+                "approach-order-assigned",
+                approach_order=raw_order,
+                model_names=[m.get("name", f"Model {i}") for i, m in enumerate(models)],
+                effective_order=[models[idx].get("name", f"Model {idx}") for idx in raw_order],
+            )
 
     return [models[idx] for idx in raw_order]
 
@@ -309,26 +318,27 @@ def _ensure_participation_for_guid(guid: str):
 
 
 def _load_tmdb_overviews():
-    """Load TMDB movie overviews (plots) keyed by movieId. Cached after first call."""
+    """Load movie plots keyed by movieId from plots.csv. Cached after first call."""
     global _tmdb_cache
     if _tmdb_cache is not None:
         return _tmdb_cache
-    tmdb_path = os.path.join(
-        os.path.dirname(__file__), '..', '..', 'static', 'datasets', 'ml-latest', 'tmdb_data.json'
+    plots_path = os.path.join(
+        os.path.dirname(__file__), '..', '..', 'static', 'datasets', 'ml-32m-filtered', 'plots.csv'
     )
     _tmdb_cache = {}
-    if os.path.exists(tmdb_path):
+    if os.path.exists(plots_path):
         try:
-            with open(tmdb_path, 'r', encoding='utf-8') as f:
-                raw = json.load(f)
-            for entry in raw.values():
-                mid = entry.get('movieId')
-                overview = entry.get('overview', '')
-                if mid and overview:
-                    _tmdb_cache[int(mid)] = overview
-            print(f"[TMDB] Loaded {len(_tmdb_cache)} movie overviews")
+            import csv
+            with open(plots_path, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    mid = row.get('movieId', '')
+                    plot = row.get('plot', '')
+                    if mid and plot:
+                        _tmdb_cache[int(mid)] = plot
+            print(f"[Plots] Loaded {len(_tmdb_cache)} movie plots")
         except Exception as e:
-            print(f"[TMDB] Could not load overviews: {e}")
+            print(f"[Plots] Could not load plots: {e}")
     return _tmdb_cache
 
 
@@ -380,6 +390,22 @@ def _set_phase_movie_set(session_key: str, phase_idx: int, movie_ids: set) -> No
     session[session_key] = phase_map
 
 
+def _get_phase_token_set(session_key: str, phase_idx: int) -> set:
+    """Return phase-local set of string tokens (e.g., slider cluster IDs)."""
+    phase_map = _get_phase_id_map(session_key)
+    raw_list = phase_map.get(str(int(phase_idx)), [])
+    if not isinstance(raw_list, list):
+        return set()
+    return {str(token) for token in raw_list if token is not None}
+
+
+def _set_phase_token_set(session_key: str, phase_idx: int, tokens: set) -> None:
+    """Store phase-local set of string tokens."""
+    phase_map = _get_phase_id_map(session_key)
+    phase_map[str(int(phase_idx))] = sorted({str(token) for token in tokens if token is not None})
+    session[session_key] = phase_map
+
+
 def _remember_shown_movies(phase_idx: int, movie_ids: list) -> None:
     if not movie_ids:
         return
@@ -392,12 +418,7 @@ def _remember_shown_movies(phase_idx: int, movie_ids: list) -> None:
 # Feature De-duplication Helpers
 # ============================================================================
 
-COSINE_DEDUP_THRESHOLD = 0.85
 _FUZZY_LABEL_JACCARD_THRESHOLD = 0.65
-GROUP_MERGE_COSINE_THRESHOLD = 0.90
-GROUP_SUPPORT_COSINE_THRESHOLD = 0.45
-GROUP_TEXT_JACCARD_THRESHOLD = 0.25
-GROUP_SHARED_TEXT_THRESHOLD = 3
 
 
 def _normalize_label(label: str) -> str:
@@ -436,488 +457,87 @@ def _is_near_duplicate_label(new_label: str, existing_labels: set) -> bool:
     return False
 
 
-def _build_decoder_vecs(recommender) -> dict:
-    """Extract L2-normalized decoder weight rows from the SAE for pairwise cosine dedup.
-
-    Returns {neuron_id: normalized_vector} or empty dict on failure.
-    """
-    try:
-        import torch.nn.functional as _F
-        sae = recommender.sae_model
-        if hasattr(sae, 'decoder_w'):
-            _W = sae.decoder_w.detach().cpu()
-        elif hasattr(sae, 'decoder') and hasattr(sae.decoder, 'weight'):
-            _W = sae.decoder.weight.detach().cpu().T
-        else:
-            print("[dedup] SAE model has no decoder_w or decoder.weight — cosine dedup disabled")
-            return {}
-        _W = _F.normalize(_W, dim=1)
-        return {nid: _W[nid] for nid in range(_W.shape[0])}
-    except Exception as e:
-        print(f"[dedup] Failed to extract decoder vectors: {e}")
-        return {}
-
-
-def _is_cosine_duplicate(neuron_id: int, selected_ids: list, decoder_vecs: dict) -> bool:
-    """Return True if *neuron_id* has cosine > threshold with any already-selected neuron."""
-    if not decoder_vecs or neuron_id not in decoder_vecs:
-        return False
-    vec = decoder_vecs[neuron_id]
-    for sel_id in selected_ids:
-        if sel_id in decoder_vecs:
-            cos = float(vec @ decoder_vecs[sel_id])
-            if cos > COSINE_DEDUP_THRESHOLD:
-                return True
-    return False
-
-
-_GROUP_TOKEN_STOP = {
-    'the', 'and', 'of', 'in', 'a', 'an', 'to', 'for', 'with', 'on', 'at',
-    'by', 'from', 'its', 'that', 'this', 'but', 'or', 'as', 'into', 'these',
-    'those', 'their', 'while', 'where', 'through', 'often', 'more', 'like',
-    'movie', 'movies', 'film', 'films', 'story', 'stories', 'storytelling',
-    'narrative', 'narratives', 'cinematic', 'cinema',
-}
-
-
-def _canonicalize_group_token(token: str) -> str:
-    """Light stemming for label/description token matching."""
-    token = token.strip().lower()
-    if len(token) <= 2 or token.isdigit():
-        return ''
-    if token.endswith('ies') and len(token) > 4:
-        token = token[:-3] + 'y'
-    elif token.endswith('es') and len(token) > 4 and not token.endswith('sses'):
-        token = token[:-2]
-    elif token.endswith('s') and len(token) > 4:
-        token = token[:-1]
-    return token
-
-
-def _text_token_set(text: str) -> set:
-    """Tokenize text into normalized content words for grouping."""
-    import re
-    tokens = set()
-    for raw in re.split(r'[\s·\-–—/,&:;.!?()\[\]{}"\']+', (text or '').lower()):
-        token = _canonicalize_group_token(raw)
-        if token and token not in _GROUP_TOKEN_STOP:
-            tokens.add(token)
-    return tokens
-
-
-def _feature_text_tokens(feature: dict) -> set:
-    """Return normalized content tokens from label + description."""
-    return _text_token_set(
-        f"{feature.get('label', '')} {feature.get('description', '')}"
-    )
-
-
-def _jaccard_similarity(tokens_a: set, tokens_b: set) -> float:
-    """Compute Jaccard similarity for token sets."""
-    if not tokens_a or not tokens_b:
-        return 0.0
-    union = tokens_a | tokens_b
-    if not union:
-        return 0.0
-    return len(tokens_a & tokens_b) / len(union)
-
-
-def _pairwise_decoder_cosine(neuron_a: int, neuron_b: int, decoder_vecs: dict) -> float:
-    """Cosine similarity between two decoder vectors when available."""
-    if not decoder_vecs:
-        return 0.0
-    if neuron_a not in decoder_vecs or neuron_b not in decoder_vecs:
-        return 0.0
-    return float(decoder_vecs[neuron_a] @ decoder_vecs[neuron_b])
-
-
-def _ensure_feature_group_metadata(feature: dict) -> dict:
-    """Ensure every slider payload has group metadata."""
-    feature = dict(feature)
-    member_ids = feature.get('member_ids') or [int(feature['id'])]
-    member_ids = [int(nid) for nid in member_ids]
-    if int(feature['id']) not in member_ids:
-        member_ids.insert(0, int(feature['id']))
-    seen_ids = []
-    for nid in member_ids:
-        if nid not in seen_ids:
-            seen_ids.append(nid)
-    member_labels = feature.get('member_labels') or [feature.get('label', f"Neuron N{feature['id']}")]
-    deduped_labels = []
-    for label in member_labels:
-        if label and label not in deduped_labels:
-            deduped_labels.append(label)
-    feature['member_ids'] = seen_ids
-    feature['member_labels'] = deduped_labels
-    feature['group_size'] = len(seen_ids)
-    feature.setdefault('group_movie_count', int(feature.get('movie_count', 0) or 0))
-    feature.setdefault('_base_description', feature.get('description', ''))
-    return feature
-
-
-def _feature_group_match_score(candidate: dict, anchor: dict, decoder_vecs: dict) -> float:
-    """Similarity score used for post-label grouping of related sliders."""
-    candidate_label = candidate.get('label', '')
-    anchor_label = anchor.get('label', '')
-    if _is_near_duplicate_label(candidate_label, {_normalize_label(anchor_label)}):
-        return 1.0
-
-    label_sim = _jaccard_similarity(
-        _text_token_set(candidate_label),
-        _text_token_set(anchor_label),
-    )
-    text_tokens_a = _feature_text_tokens(candidate)
-    text_tokens_b = _feature_text_tokens(anchor)
-    text_sim = _jaccard_similarity(text_tokens_a, text_tokens_b)
-    shared_text = len(text_tokens_a & text_tokens_b)
-    cosine = _pairwise_decoder_cosine(int(candidate['id']), int(anchor['id']), decoder_vecs)
-
-    if cosine >= GROUP_MERGE_COSINE_THRESHOLD:
-        return 0.95
-    if label_sim >= 0.50:
-        return 0.90
-    if label_sim >= 0.33 and text_sim >= GROUP_TEXT_JACCARD_THRESHOLD:
-        return 0.80
-    if shared_text >= GROUP_SHARED_TEXT_THRESHOLD and cosine >= GROUP_SUPPORT_COSINE_THRESHOLD:
-        return 0.75
-    if text_sim >= 0.35 and shared_text >= 2:
-        return 0.70
-    return 0.0
-
-
-def _merge_feature_group(anchor: dict, candidate: dict) -> dict:
-    """Attach *candidate* as an additional member of *anchor* slider group."""
-    anchor.update(_ensure_feature_group_metadata(anchor))
-    candidate = _ensure_feature_group_metadata(candidate)
-
-    for nid in candidate['member_ids']:
-        if nid not in anchor['member_ids']:
-            anchor['member_ids'].append(int(nid))
-
-    for label in candidate.get('member_labels', []):
-        if label and label not in anchor['member_labels']:
-            anchor['member_labels'].append(label)
-
-    anchor['group_size'] = len(anchor['member_ids'])
-    anchor['group_movie_count'] = max(
-        int(anchor.get('group_movie_count', anchor.get('movie_count', 0)) or 0),
-        int(candidate.get('group_movie_count', candidate.get('movie_count', 0)) or 0),
-    )
-    anchor['_group_score'] = float(anchor.get('_group_score', anchor.get('_user_score', 0.0))) + \
-        float(candidate.get('_user_score', 0.0))
-
-    base_desc = anchor.get('_base_description', anchor.get('description', '')) or anchor.get('label', '')
-    if anchor['group_size'] > 1:
-        anchor['description'] = (
-            f"{base_desc} This slider groups {anchor['group_size']} closely related latent features."
-        ).strip()
-    else:
-        anchor['description'] = base_desc
-    return anchor
-
-
-def _select_grouped_slider_features(
-    labeled: list,
-    score_map: dict,
-    decoder_vecs: dict,
-    num_sliders: int,
-    min_neuron_movies: int,
-) -> tuple[list, list]:
-    """Cluster similar neurons and pick one representative slider per cluster.
-
-    Algorithm:
-      1. Filter out placeholders and low-count neurons.
-      2. Build a pairwise similarity matrix (text tokens + decoder cosine).
-      3. Greedy agglomerative: walk candidates in descending user-score order;
-         merge into the most-similar existing cluster if similarity exceeds
-         CLUSTER_MERGE_SIM, else start a new cluster.
-      4. Pick up to *num_sliders* clusters, sorted by aggregate user-score.
-      5. Final diversity gate: reject clusters whose representative label is
-         Jaccard-near-duplicate of an already-selected cluster.
-
-    Each selected cluster becomes one UI slider. Its ``member_ids`` list
-    contains all merged neuron IDs; ``_member_scores`` maps nid→user_score
-    so that ``_expand_feature_adjustments`` can distribute slider deltas
-    proportionally.
-    """
-
-    CLUSTER_MERGE_SIM = 0.25
-    MAX_NEURON_MOVIES = 5000
-
-    rejections: list = []
-    valid_candidates: list = []
-
-    for raw_f in labeled:
-        f = _ensure_feature_group_metadata(raw_f)
-        f['_user_score'] = float(score_map.get(int(f['id']), 0.0))
-
-        lbl = _normalize_label(f.get('label', ''))
-        if lbl.startswith('feature ') or lbl.startswith('neuron n') or lbl.startswith('latent concept'):
-            rejections.append((f['id'], f.get('label', ''), 'placeholder'))
-            continue
-        mc = int(f.get('movie_count', 0) or 0)
-        if mc < min_neuron_movies:
-            rejections.append((f['id'], f.get('label', ''), 'low_movie_count'))
-            continue
-        if mc > MAX_NEURON_MOVIES:
-            rejections.append((f['id'], f.get('label', ''), 'too_broad'))
-            continue
-        valid_candidates.append(f)
-
-    valid_candidates.sort(key=lambda x: -x['_user_score'])
-
-    def _combined_similarity(a: dict, b: dict) -> float:
-        label_j = _jaccard_similarity(
-            _text_token_set(a.get('label', '')),
-            _text_token_set(b.get('label', '')),
-        )
-        desc_j = _jaccard_similarity(
-            _feature_text_tokens(a),
-            _feature_text_tokens(b),
-        )
-        dec_cos = _pairwise_decoder_cosine(int(a['id']), int(b['id']), decoder_vecs)
-        weighted = 0.25 * label_j + 0.45 * desc_j + 0.30 * max(dec_cos, 0.0)
-        return max(weighted, desc_j * 0.55)
-
-    clusters: list = []
-
-    for cand in valid_candidates:
-        best_cluster = None
-        best_sim = 0.0
-        for cl in clusters:
-            anchor = cl[0]
-            sim = _combined_similarity(cand, anchor)
-            if sim > best_sim:
-                best_sim = sim
-                best_cluster = cl
-        if best_cluster is not None and best_sim >= CLUSTER_MERGE_SIM:
-            best_cluster.append(cand)
-        else:
-            clusters.append([cand])
-
-    LABEL_DIVERSITY_JACCARD = 0.45
-
-    def _label_too_similar(lbl: str, existing: list) -> bool:
-        """Reject if label-token Jaccard >= threshold with ANY selected slider."""
-        norm = _normalize_label(lbl)
-        tokens_new = _text_token_set(lbl)
-        for sel in existing:
-            if _normalize_label(sel.get('label', '')) == norm:
-                return True
-            tokens_old = _text_token_set(sel.get('label', ''))
-            if _jaccard_similarity(tokens_new, tokens_old) >= LABEL_DIVERSITY_JACCARD:
-                return True
-        return False
-
-    selected: list = []
-
-    for cl in sorted(clusters,
-                     key=lambda c: -sum(f['_user_score'] for f in c)):
-        if len(selected) >= num_sliders:
-            break
-        anchor = cl[0]
-        lbl = anchor.get('label', '')
-        if _label_too_similar(lbl, selected):
-            for f in cl:
-                rejections.append((f['id'], f.get('label', ''), 'cluster_dup_label'))
-            continue
-
-        member_ids = []
-        member_labels = []
-        member_scores: dict = {}
-        total_score = 0.0
-        max_mc = 0
-        for f in cl:
-            nid = int(f['id'])
-            if nid not in member_ids:
-                member_ids.append(nid)
-            fl = f.get('label', '')
-            if fl and fl not in member_labels:
-                member_labels.append(fl)
-            sc = f['_user_score']
-            member_scores[nid] = sc
-            total_score += sc
-            max_mc = max(max_mc, int(f.get('movie_count', 0) or 0))
-
-        rep = dict(anchor)
-        rep['member_ids'] = member_ids
-        rep['member_labels'] = member_labels
-        rep['_member_scores'] = member_scores
-        rep['group_size'] = len(member_ids)
-        rep['group_movie_count'] = max_mc
-        rep['_group_score'] = total_score
-        rep['_user_score'] = anchor['_user_score']
-        if len(member_ids) > 1:
-            base_desc = anchor.get('description', anchor.get('label', ''))
-            rep['description'] = (
-                f"{base_desc} "
-                f"This slider groups {len(member_ids)} closely related latent features."
-            ).strip()
-        selected.append(rep)
-
-    selected.sort(key=lambda f: (
-        -float(f.get('_group_score', f.get('_user_score', 0.0))),
-        -int(f.get('group_size', 1)),
-        -int(f.get('movie_count', 0) or 0),
-    ))
-    return selected[:num_sliders], rejections
-
-
-MEMBER_SUPPORT_WEIGHT = 0.20
-
-
 def _expand_feature_adjustments(
     raw_adjustments: dict,
-    current_features=None,
-    cluster_map=None,
+    cluster_map: dict = None,
 ) -> dict:
-    """Expand grouped slider IDs and cluster IDs into neuron-level deltas.
+    """Expand cluster-level slider deltas into neuron-level deltas.
 
-    For grouped sliders the **anchor neuron** (first in ``member_ids``,
-    the highest-scoring cluster representative) receives the **full slider
-    delta**.  Every other member neuron receives a smaller support fraction
-    (``MEMBER_SUPPORT_WEIGHT * delta``).  This keeps the slider signal
-    strong enough to visibly shift recommendations even against a seed
-    profile with 200+ active neurons totalling ~37 in weight.
+    Every cluster slider value is applied **equally** to all member neurons.
     """
     feature_adjustments: dict = {}
-    current_features = current_features or []
     cluster_map = cluster_map or {}
 
-    grouped_members: dict = {}
-    for feature in current_features:
-        gf = _ensure_feature_group_metadata(feature)
-        fid = str(gf['id'])
-        grouped_members[fid] = [int(nid) for nid in gf['member_ids']]
-
     for key, val in (raw_adjustments or {}).items():
-        if key.startswith("cluster_") and key in cluster_map:
-            neuron_ids = cluster_map.get(key) or []
-            if neuron_ids:
-                per_neuron = float(val)
-                for nid in neuron_ids:
-                    skey = str(nid)
-                    feature_adjustments[skey] = feature_adjustments.get(skey, 0.0) + per_neuron
+        delta = float(val)
+        if abs(delta) < 0.0001:
             continue
-
-        ids = grouped_members.get(str(key))
-        if ids:
-            anchor = ids[0]
-            delta = float(val)
-            for nid in ids:
-                w = 1.0 if nid == anchor else MEMBER_SUPPORT_WEIGHT
+        neuron_ids = cluster_map.get(key)
+        if neuron_ids:
+            for nid in neuron_ids:
                 skey = str(nid)
-                feature_adjustments[skey] = feature_adjustments.get(skey, 0.0) + delta * w
+                feature_adjustments[skey] = feature_adjustments.get(skey, 0.0) + delta
         else:
-            skey = str(key)
-            feature_adjustments[skey] = feature_adjustments.get(skey, 0.0) + float(val)
+            feature_adjustments[key] = feature_adjustments.get(key, 0.0) + delta
 
     return feature_adjustments
 
 
 # ============================================================================
-# Semantic Cluster Profile ("Static User Profile")
+# Semantic Cluster Registry (from offline labeling pipeline)
 # ============================================================================
 
-# Genre buckets that define each cluster's identity.
-# These MUST match the bucket definitions in generate_cluster_profile.py.
-_CLUSTER_GENRE_CENTROIDS = {
-    "Action & Adventure":       {"Action": 1.0, "Adventure": 0.7, "IMAX": 0.3},
-    "Sci-Fi & Fantasy":         {"Sci-Fi": 1.0, "Fantasy": 0.8},
-    "Thriller & Crime":         {"Thriller": 1.0, "Crime": 0.8, "Mystery": 0.5, "Film-Noir": 0.3},
-    "Horror & Suspense":        {"Horror": 1.0, "Thriller": 0.3},
-    "Comedy & Lighthearted":    {"Comedy": 1.0, "Musical": 0.3},
-    "Romance & Family":         {"Romance": 1.0, "Children": 0.7, "Animation": 0.5},
-    "Documentary & Niche":      {"Documentary": 1.0, "War": 0.5, "Western": 0.5},
-}
+_semantic_clusters_cache: dict = {}  # model_id -> parsed data
 
 
-def _compute_user_genre_vector(selected_movies, model_id: str = None, dataset_variant: str = DEFAULT_DATASET_VARIANT):
-    """Build a genre vector from the user's selected movies."""
-    try:
-        from plugins.utils.data_loading import load_ml_dataset
-        loader = load_ml_dataset(ml_variant=_normalize_dataset_variant(dataset_variant))
-        movies_df = loader.movies_df_indexed
-    except Exception:
-        return None
+def _load_semantic_clusters(model_id: str = None) -> dict:
+    """Load pre-computed semantic clusters from semantic_merged JSON.
 
-    genre_vec = {}
-    n = 0
-    for mid in selected_movies:
-        try:
-            mid = int(mid)
-            if mid not in movies_df.index:
-                continue
-            row = movies_df.loc[mid]
-            gs = row.get("genres", "")
-            if isinstance(gs, str):
-                for g in gs.split("|"):
-                    g = g.strip()
-                    if g and g != "(no genres listed)":
-                        genre_vec[g] = genre_vec.get(g, 0) + 1.0
-            n += 1
-        except (ValueError, TypeError, KeyError):
-            continue
-    if n > 0:
-        for g in genre_vec:
-            genre_vec[g] /= n
-    return genre_vec if genre_vec else None
-
-
-def _compute_cluster_genre_centroids(cluster_profile, model_id: str = None):
-    """Return the ideal genre centroid for each cluster.
-
-    Uses the fixed genre-bucket definitions (not computed from neuron
-    activations, which converge to the dataset average and lose
-    discriminative power).
+    Returns dict with:
+        clusters: list of {cluster_id, label, description, neuron_ids, support}
+        cluster_map: {cluster_id: [neuron_ids]}
+        neuron_to_cluster: {neuron_id: cluster_id}
     """
-    result = {}
-    for c in cluster_profile:
-        label = c.get("label", "")
-        centroid = _CLUSTER_GENRE_CENTROIDS.get(label, {})
-        if not centroid:
-            for key, val in _CLUSTER_GENRE_CENTROIDS.items():
-                if key.split(" & ")[0] in label or key.split(" & ")[-1] in label:
-                    centroid = val
-                    break
-        result[c["id"]] = centroid
-    return result
+    resolved = model_id or DEFAULT_TOPK_SAE_MODEL_ID
+    if resolved in _semantic_clusters_cache:
+        return _semantic_clusters_cache[resolved]
 
-
-def _build_cluster_profile(model_id: str = None, num_clusters: int = 7):
-    """Load pre-generated semantic cluster profile.
-
-    The profile must be generated offline via generate_cluster_profile.py
-    (KMeans on sentence embeddings of LLM labels + LLM-based naming).
-
-    Returns a list of cluster dicts:
-        [{id, label, description, genres, neuron_ids}, ...]
-    """
     data_dir = os.path.join(os.path.dirname(__file__), "data")
-    cache_path = os.path.join(data_dir, f"cluster_profile_{model_id or 'default'}.json")
+    path = os.path.join(data_dir, f"semantic_merged_{resolved}.json")
+    if not os.path.exists(path):
+        raise RuntimeError(
+            f"Semantic clusters not found: {path}. "
+            f"Copy from labeling/artifacts/."
+        )
 
-    if os.path.exists(cache_path):
-        try:
-            with open(cache_path) as f:
-                cached = json.load(f)
-            if cached and len(cached) >= 1:
-                print(f"[cluster_profile] Loaded {len(cached)} clusters from {cache_path}")
-                return cached
-        except Exception as e:
-            print(f"[cluster_profile] Error reading cache: {e}")
+    with open(path, "r", encoding="utf-8") as f:
+        raw = json.load(f)
 
-    print(f"[cluster_profile] No pre-generated profile found at {cache_path}")
-    print(f"[cluster_profile] Run: python generate_cluster_profile.py --model {model_id or 'default'}")
-    return [{"id": f"cluster_{i}", "label": f"Cluster {i+1}", "description": "",
-             "genres": [], "neuron_ids": []} for i in range(num_clusters)]
+    clusters = []
+    cluster_map = {}
+    neuron_to_cluster = {}
+    for c in raw.get("clusters", []):
+        cid = c["cluster_id"]
+        nids = [int(n) for n in c["neuron_ids"]]
+        clusters.append({
+            "cluster_id": cid,
+            "label": c["label"],
+            "description": c.get("description", ""),
+            "neuron_ids": nids,
+            "support": c.get("support", len(nids)),
+        })
+        cluster_map[cid] = nids
+        for nid in nids:
+            neuron_to_cluster[nid] = cid
 
-
-def _get_cluster_for_neuron(neuron_id: int, cluster_profile: list) -> str:
-    """Return the cluster_id a neuron belongs to, or '' if none."""
-    for c in cluster_profile:
-        if neuron_id in c["neuron_ids"]:
-            return c["id"]
-    return ""
+    result = {
+        "clusters": clusters,
+        "cluster_map": cluster_map,
+        "neuron_to_cluster": neuron_to_cluster,
+    }
+    _semantic_clusters_cache[resolved] = result
+    print(f"[clusters] Loaded {len(clusters)} clusters ({sum(len(v) for v in cluster_map.values())} neurons) from {path}")
+    return result
 
 
 # ============================================================================
@@ -951,9 +571,9 @@ def available_datasets():
     """Return list of supported datasets"""
     return jsonify([
         {
-            "name": "MovieLens Latest",
-            "id": "ml-latest",
-            "description": "Full MovieLens dataset"
+            "name": "MovieLens 32M Filtered",
+            "id": "ml-32m-filtered",
+            "description": "Curated MovieLens dataset (8328 movies)"
         }
     ])
 
@@ -1020,75 +640,28 @@ def available_feature_selection_algorithms():
 
 @bp.route("/available-neurons")
 def available_neurons():
-    """
-    Return list of all available neurons for manual selection in study creation.
-    
-    Uses the active SAE model's LLM labels when possible.
-    """
+    """Return list of all available clusters for manual selection in study creation."""
     model_id = request.args.get("model_id") or DEFAULT_TOPK_SAE_MODEL_ID
     if not model_id or str(model_id).strip().lower() == "none":
         model_id = DEFAULT_TOPK_SAE_MODEL_ID
-    neurons = []
 
     try:
-        from .sae_recommender import get_sae_recommender
-        from .llm_labeling import get_llm_labels
-        from .dynamic_labeling import get_dynamic_labels
-
-        rec = get_sae_recommender(model_id=model_id)
-        rec.load()
-        if rec.item_features is None or rec.item_ids is None:
-            return jsonify([])
-
-        labels = {}
-        try:
-            labels = dict(get_llm_labels(
-                model_id=model_id,
-                item_features=rec.item_features,
-                item_ids=rec.item_ids,
-            ))
-        except Exception:
-            labels = {}
-
-        try:
-            dyn = get_dynamic_labels(
-                model_id=model_id,
-                item_features=rec.item_features,
-                item_ids=rec.item_ids,
-            )
-            for nid, info in dyn.items():
-                nid_int = int(nid)
-                if nid_int not in labels:
-                    labels[nid_int] = info
-        except Exception:
-            pass
-
-        for nid, info in labels.items():
-            label = (info or {}).get("label", "")
-            description = (info or {}).get("description", "")
-            if not label or label.lower().startswith("feature "):
-                continue
-            neurons.append({
-                "id": int(nid),
-                "label": label,
-                "category": info.get("category", "latent"),
-                "description": description or f"Neuron {nid}",
-                "score": info.get("activation_count", 0),
+        sc = _load_semantic_clusters(model_id)
+        clusters = []
+        for c in sc["clusters"]:
+            clusters.append({
+                "id": c["cluster_id"],
+                "label": c["label"],
+                "category": "latent",
+                "description": c.get("description", ""),
+                "score": c["support"],
             })
-
-        neurons.sort(key=lambda n: (-n.get("score", 0), n["label"].lower()))
-        neurons = neurons[:150]
-
+        clusters.sort(key=lambda n: (-n["score"], n["label"].lower()))
+        return jsonify(clusters)
     except Exception as e:
         print(f"[available_neurons] Error: {e}")
         traceback.print_exc()
-        # Return fallback neurons
-        neurons = [
-            {'id': i, 'label': f'Feature {i}', 'category': 'other', 'description': f'Neuron {i}'}
-            for i in range(20)
-        ]
-    
-    return jsonify(neurons)
+        return jsonify([])
 
 
 # ============================================================================
@@ -1114,13 +687,31 @@ def long_initialization(guid):
         
         import shutil
 
-        # Move uploaded questionnaire file into cache if provided
-        if "questionnaire_file" in conf:
-            src = os.path.join("cache", __plugin_name__, "uploads", conf["questionnaire_file"])
-            if os.path.exists(src):
-                shutil.move(src, get_cache_path(guid, conf["questionnaire_file"]))
+        # Default questionnaire files bundled with the plugin
+        _DEFAULT_QUESTIONNAIRE_DIR = os.path.join(
+            os.path.dirname(__file__), '..', '..', '..', 'data', 'recsys2026'
+        )
 
-        # Move uploaded phase questionnaire files into cache if provided
+        def _resolve_questionnaire(filename):
+            """Move an uploaded file into cache, or fall back to bundled default."""
+            if not filename:
+                return
+            dest = get_cache_path(guid, filename)
+            if os.path.exists(dest):
+                return
+            uploaded = os.path.join("cache", __plugin_name__, "uploads", filename)
+            if os.path.exists(uploaded):
+                shutil.move(uploaded, dest)
+                return
+            bundled = os.path.join(_DEFAULT_QUESTIONNAIRE_DIR, filename)
+            if os.path.exists(bundled):
+                shutil.copy2(bundled, dest)
+                print(f"[init] Copied bundled questionnaire {filename}")
+
+        # Final questionnaire
+        _resolve_questionnaire(conf.get("questionnaire_file"))
+
+        # Phase questionnaires (global + per-model)
         phase_files = set()
         if conf.get("phase_questionnaire_file"):
             phase_files.add(conf["phase_questionnaire_file"])
@@ -1128,9 +719,7 @@ def long_initialization(guid):
             if model.get("phase_questionnaire_file"):
                 phase_files.add(model["phase_questionnaire_file"])
         for phase_file in phase_files:
-            src = os.path.join("cache", __plugin_name__, "uploads", phase_file)
-            if os.path.exists(src):
-                shutil.move(src, get_cache_path(guid, phase_file))
+            _resolve_questionnaire(phase_file)
 
         print(f"Initialized SAE steering study with GUID: {guid}")
         
@@ -1189,6 +778,34 @@ def on_joined():
     return redirect(url_for(f"{__plugin_name__}.study_intro"))
 
 
+def _get_min_resolution_settings(conf):
+    """Return normalized min-resolution settings for client-side gating."""
+    min_resolution_cfg = conf.get("min_resolution") if isinstance(conf.get("min_resolution"), dict) else {}
+
+    def _safe_int(value, fallback):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return fallback
+
+    width = _safe_int(
+        conf.get("min_resolution_width", conf.get("min_width", min_resolution_cfg.get("width"))),
+        1280,
+    )
+    height = _safe_int(
+        conf.get("min_resolution_height", conf.get("min_height", min_resolution_cfg.get("height"))),
+        720,
+    )
+    error_message = conf.get(
+        "min_resolution_error",
+        (
+            f"This study requires at least {width}x{height} resolution. "
+            "Please resize your browser window (or switch to a larger screen) before continuing."
+        ),
+    )
+    return width, height, error_message
+
+
 @bp.route("/study-intro", methods=["GET"])
 def study_intro():
     """Show intro page explaining what the study involves before proceeding."""
@@ -1199,6 +816,7 @@ def study_intro():
     comparison_mode = conf.get("comparison_mode", "side_by_side")
     num_phases = len(models) if comparison_mode == "sequential" else 1
     num_iterations = conf.get("num_iterations", 3)
+    min_resolution_width, min_resolution_height, min_resolution_error = _get_min_resolution_settings(conf)
     has_questionnaire = bool(conf.get("questionnaire_file")) or bool(conf.get("phase_questionnaire_file")) or any(
         model.get("phase_questionnaire_file") or conf.get("phase_questionnaire_file")
         for model in models
@@ -1227,13 +845,17 @@ def study_intro():
         "subtitle": conf.get("study_subtitle", "Interactive Recommendation Study"),
         "custom_intro_html": custom_intro_html,
         "time_estimate": conf.get("time_estimate", "10-15 minutes"),
+        "start_button_text": conf.get("start_button_text", "I give my consent, let's continue"),
         "num_phases": num_phases,
         "num_iterations": num_iterations,
         "has_questionnaire": has_questionnaire,
+        "min_resolution_width": min_resolution_width,
+        "min_resolution_height": min_resolution_height,
+        "min_resolution_error": min_resolution_error,
         "steering_label_a": steering_label_a,
         "steering_label_b": steering_label_b,
         "notes": conf.get("intro_notes", [
-            "There are no right or wrong answers — just explore what you like.",
+            "There are no right or wrong answers (except for attention checks).",
             "Your data is anonymous and used for research purposes only.",
         ]),
         "study_parts": [
@@ -1242,12 +864,12 @@ def study_intro():
                 "description": "Choose a few movies you like so the system can estimate your starting taste profile.",
             },
             {
-                "title": "Iteration review",
-                "description": "At the start of each round, review the shown recommendations and confirm your movie selections before continuing.",
+                "title": "Implicit feedback phase",
+                "description": "Refine recommendations without sliders; the system learns from your interactions with shown movies.",
             },
             {
-                "title": "Steering",
-                "description": "After approval, refine the next recommendations with the steering controls available in the current approach.",
+                "title": "Explicit feedback phase",
+                "description": "Refine recommendations by directly adjusting steering sliders representing interpretable features.",
             },
             {
                 "title": "Questionnaires",
@@ -1311,6 +933,17 @@ def item_search():
         lang = get_lang()
         tr = get_tr(languages, lang) if lang != "en" else None
         results = search_for_movie("movie", pattern, tr)
+
+        participation_id = session.get("participation_id")
+        if participation_id:
+            log_interaction(
+                participation_id,
+                "elicitation-search",
+                query=pattern,
+                result_count=len(results),
+                result_titles=[r.get("movie", "")[:80] for r in results[:10]],
+                phase="elicitation",
+            )
         
         return jsonify(results)
         
@@ -1324,300 +957,92 @@ def item_search():
 # Feature Display & Steering
 # ============================================================================
 
-def _load_cached_model_labels(model_id: str = None) -> dict:
-    """Load pre-generated label caches without requiring runtime SAE activations."""
-    data_dir = Path(__file__).parent / "data"
-    resolved_model_id = model_id or DEFAULT_TOPK_SAE_MODEL_ID
-    labels: dict = {}
+def _select_cluster_features(model_id: str = None, top_k: int = 21) -> list:
+    """Pick the best ``top_k`` clusters from semantic_merged for the UI.
 
-    def _candidate_paths(pattern: str, specific_name: str) -> list:
-        specific = data_dir / specific_name
-        if specific.exists():
-            return [specific]
-        return sorted(data_dir.glob(pattern))
+    Each returned feature represents one cluster (1+ neurons).
+    Scoring per cluster: mean(selectivity) * log(sum(activation_count) + 1).
+    Diversity: limit repeated words across cluster labels.
+    """
+    import re as _re
 
-    def _merge_from_paths(paths: list) -> None:
-        for path in paths:
-            try:
-                with open(path, "r", encoding="utf-8") as handle:
-                    raw = json.load(handle)
-                for nid_str, info in raw.items():
-                    try:
-                        nid = int(nid_str)
-                    except (TypeError, ValueError):
-                        continue
-                    if nid in labels:
-                        continue
-                    label = (info.get("label") or "").strip()
-                    if not label:
-                        continue
-                    labels[nid] = {
-                        "label": label,
-                        "description": info.get("description", ""),
-                        "activation_count": info.get("activation_count", 0),
-                        "selectivity": info.get("selectivity", 0.0),
-                        "tags": info.get("tags", []),
-                        "genres": info.get("genres", []),
-                    }
-            except Exception as exc:
-                print(f"[_load_cached_model_labels] Failed to read {path.name}: {exc}")
+    STOP_WORDS = {
+        'the', 'and', 'of', 'in', 'a', 'an', 'to', 'for', 'with', 'on',
+        'at', 'by', 'from', 'its', 'that', 'this', 'but', 'or', 'as',
+    }
 
-    _merge_from_paths(_candidate_paths("llm_labels_*_llm.json", f"llm_labels_{resolved_model_id}_llm.json"))
-    _merge_from_paths(_candidate_paths("dynamic_labels_*_v*.json", f"dynamic_labels_{resolved_model_id}_v2.json"))
-    return labels
+    effective_model_id = model_id or DEFAULT_TOPK_SAE_MODEL_ID
+    sc = _load_semantic_clusters(effective_model_id)
+    from .llm_labeling import get_llm_labels
+    neuron_stats = get_llm_labels(model_id=effective_model_id)
 
+    candidates = []
+    for cluster in sc["clusters"]:
+        label = cluster["label"]
+        if not label:
+            continue
+        nids = cluster["neuron_ids"]
+        total_act = 0
+        sels = []
+        for nid in nids:
+            info = neuron_stats.get(nid, {})
+            total_act += info.get("activation_count", 0)
+            sel = info.get("selectivity", 0)
+            if sel > 0:
+                sels.append(sel)
+        mean_sel = np.mean(sels) if sels else 0
+        if total_act < 50 or mean_sel < 0.3:
+            continue
+        score = mean_sel * np.log(total_act + 1)
+        candidates.append({
+            "cluster_id": cluster["cluster_id"],
+            "label": label,
+            "description": cluster.get("description", ""),
+            "neuron_ids": nids,
+            "score": score,
+            "total_act": total_act,
+        })
 
-def _get_cached_sae_features(top_k: int = 21, model_id: str = None) -> list:
-    """Build a feature list from cached label catalogs when SAE runtime data is absent."""
-    try:
-        from .dynamic_labeling import select_features_for_display
+    candidates.sort(key=lambda x: -x["score"])
 
-        cached_labels = _load_cached_model_labels(model_id=model_id)
-        if not cached_labels:
-            return []
+    selected = []
+    used_words: dict = {}
+    MAX_WORD_USES = 2
 
-        features = select_features_for_display(cached_labels, top_k=top_k)
-        for feature in features:
-            info = cached_labels.get(int(feature["id"]), {})
-            if info.get("description"):
-                feature["description"] = info["description"]
-            if info.get("activation_count"):
-                feature["movie_count"] = info["activation_count"]
-        if features:
-            print(
-                f"[_get_cached_sae_features] Using cached labels for "
-                f"{model_id or DEFAULT_TOPK_SAE_MODEL_ID}: {len(features)} features"
-            )
-        return features
-    except Exception as exc:
-        print(f"[_get_cached_sae_features] Failed: {exc}")
-        return []
+    for c in candidates:
+        if len(selected) >= top_k:
+            break
+        words = {
+            w for w in _re.split(r'[\s·\-–—/,&]+', c["label"].lower())
+            if len(w) > 2 and w not in STOP_WORDS
+        }
+        if any(used_words.get(w, 0) >= MAX_WORD_USES for w in words):
+            continue
+        selected.append(c)
+        for w in words:
+            used_words[w] = used_words.get(w, 0) + 1
+
+    features = []
+    for s in selected:
+        features.append({
+            "id": s["cluster_id"],
+            "label": s["label"],
+            "category": "latent",
+            "description": s["description"],
+            "member_ids": s["neuron_ids"],
+            "activation": 0.5,
+            "movie_count": s["total_act"],
+        })
+    features.sort(key=lambda f: -f["movie_count"])
+    return features
 
 
 def get_sae_features(top_k: int = 21, model_id: str = None) -> list:
-    """
-    Select the most interpretable SAE neurons as user-facing features.
-
-    **Model-agnostic**: works for ANY SAE model (prediction-aware, WWW TopK,
-    basic SAE, etc.) by dynamically deriving neuron labels from the model's
-    actual activations + MovieLens genome tags.
-
-    Pipeline:
-      1. Load the SAE recommender (which has pre-computed item_features).
-      2. Call dynamic_labeling.get_dynamic_labels() to derive human-readable
-         labels from the activation patterns + MovieLens metadata.
-      3. Call dynamic_labeling.select_features_for_display() to pick a
-         diverse, interpretable subset for the steering UI.
-      4. Falls back to static neuron_labels.json only if the dynamic
-         system fails.
-    """
-    try:
-        # --- LLM labels are the ONLY labeling path ---
-        from .sae_recommender import get_sae_recommender
-        from .dynamic_labeling import select_features_for_display
-
-        recommender = get_sae_recommender(model_id=model_id)
-        recommender.load()
-
-        if recommender.item_features is not None and recommender.item_ids is not None:
-            effective_model_id = model_id or recommender.model_id or 'default'
-            if effective_model_id is None:
-                effective_model_id = DEFAULT_TOPK_SAE_MODEL_ID
-
-            dynamic_labels = None
-            try:
-                from .llm_labeling import get_llm_labels
-                dynamic_labels = get_llm_labels(
-                    model_id=effective_model_id,
-                    item_features=recommender.item_features,
-                    item_ids=recommender.item_ids,
-                )
-                print(f"[get_sae_features] Using LLM labels ({len(dynamic_labels)} neurons)")
-            except RuntimeError as e:
-                print(f"[get_sae_features] LLM labeling error: {e}")
-                raise
-            except Exception as e:
-                print(f"[get_sae_features] LLM labels failed: {e}")
-
-            if dynamic_labels:
-                features = select_features_for_display(dynamic_labels, top_k=top_k)
-                if features:
-                    # Enrich features with LLM description if available
-                    for f in features:
-                        nid = f['id']
-                        info = dynamic_labels.get(nid, {})
-                        if info.get('description'):
-                            f['description'] = info['description']
-                    return features
-
-        cached_features = _get_cached_sae_features(top_k=top_k, model_id=model_id)
-        if cached_features:
-            return cached_features
-
-        print("[get_sae_features] Dynamic labeling unavailable, trying static fallback")
-
-    except Exception as e:
-        print(f"[get_sae_features] Dynamic labeling failed: {e}")
-        cached_features = _get_cached_sae_features(top_k=top_k, model_id=model_id)
-        if cached_features:
-            return cached_features
-        traceback.print_exc()
-
-    # --- Static fallback is only safe for the legacy prediction-aware model ---
-    if model_id in (None, "prediction_aware_sae"):
-        return _get_sae_features_static(top_k=top_k)
-    return _get_fallback_features()
-
-
-def _get_sae_features_static(top_k: int = 21) -> list:
-    """
-    Static fallback: uses neuron_labels.json and neuron_analysis.json
-    (only valid for the prediction-aware SAE model).
-    """
-    from pathlib import Path
-
-    data_dir = Path(__file__).parent / "data"
-    features = []
-
-    KNOWN_GENRES = {
-        'action', 'adventure', 'animation', 'children', 'comedy', 'crime',
-        'documentary', 'drama', 'fantasy', 'film-noir', 'horror', 'imax',
-        'musical', 'mystery', 'romance', 'sci-fi', 'science fiction',
-        'thriller', 'war', 'western', 'family',
-    }
-
-    def _is_decade(t):
-        return len(t) >= 4 and t[-1] == 's' and t[:-1].isdigit()
-
-    def _is_trivial(t):
-        return t in KNOWN_GENRES or _is_decade(t)
-
-    def _label_has_concept(label):
-        tokens = {t.strip().lower() for t in label.split('•') if t.strip()}
-        return any(not _is_trivial(t) for t in tokens)
-
-    def _clean_label(label):
-        parts = [t.strip() for t in label.split('•') if t.strip()]
-        has_concept = any(not _is_trivial(p.lower()) for p in parts)
-        if has_concept:
-            parts = [p for p in parts if not _is_decade(p.strip().lower())]
-        return ' · '.join(p.title() for p in parts) if parts else label
-
-    try:
-        labels_path = data_dir / "neuron_labels.json"
-        analysis_path = data_dir / "neuron_analysis.json"
-        if not labels_path.exists() or not analysis_path.exists():
-            return _get_fallback_features()
-
-        with open(labels_path) as f:
-            neuron_labels = json.load(f)
-        with open(analysis_path) as f:
-            neuron_analysis = json.load(f)
-
-        blocked_tokens = {
-            'nudity', 'sex', 'prostitution', 'erotic', 'erotica',
-            'softcore', 'rape', 'silent film', 'transvestism',
-        }
-
-        candidates = []
-        for nid_str, info in neuron_analysis.items():
-            if not info.get('selective'):
-                continue
-            label = neuron_labels.get(nid_str, '')
-            if not label or 'Niche' in label or 'General' in label:
-                continue
-            if any(tok in label.lower() for tok in blocked_tokens):
-                continue
-
-            act_count = info.get('activation_count', 0)
-            act_sum = info.get('activation_sum', 0)
-            selectivity = info.get('selectivity', 0)
-
-            if act_count < 50 or act_count > 30000:
-                continue
-            if selectivity < 0.85:
-                continue
-
-            avg_act = act_sum / max(act_count, 1)
-            has_concept = _label_has_concept(label)
-            concept_bonus = 2.0 if has_concept else 1.0
-            score = selectivity * np.log(act_count + 1) * avg_act * concept_bonus
-
-            candidates.append({
-                'neuron_id': int(nid_str),
-                'label': label,
-                'clean_label': _clean_label(label),
-                'score': score,
-                'has_concept': has_concept,
-                'activation_count': act_count,
-            })
-
-        candidates.sort(key=lambda x: -x['score'])
-
-        selected = []
-        used_tokens = set()
-        pure_genre_count = 0
-
-        for c in candidates:
-            if len(selected) >= top_k:
-                break
-            tokens = {t.strip().lower() for t in c['label'].split('•') if t.strip()}
-            content = {t for t in tokens if not _is_decade(t)}
-            if content and content <= used_tokens:
-                continue
-            if not c['has_concept']:
-                if pure_genre_count >= 7:
-                    continue
-                pure_genre_count += 1
-            selected.append(c)
-            used_tokens |= content
-
-        for s in selected:
-            features.append({
-                'id': s['neuron_id'],
-                'label': s['clean_label'],
-                'category': 'latent',
-                'description': f"Latent concept (N{s['neuron_id']}): {s['clean_label']}",
-                'top_tags': [],
-                'activation': 0.5,
-                'movie_count': s['activation_count'],
-            })
-
-        features.sort(key=lambda f: -f['movie_count'])
-        print(f"[SAE Features/Static] {len(features)} neurons selected")
-        return features
-
-    except Exception as e:
-        print(f"[SAE Features/Static] Error: {e}")
-        traceback.print_exc()
-        return _get_fallback_features()
-
-
-def _get_fallback_features() -> list:
-    """Fallback POC features when SAE data not available."""
-    feature_labels = [
-        ("Action", "genre", "Action and adventure movies"),
-        ("Comedy", "genre", "Funny and light-hearted films"),
-        ("Drama", "genre", "Character-driven emotional stories"),
-        ("Sci-Fi", "genre", "Science fiction and futuristic"),
-        ("Horror", "genre", "Scary and suspenseful"),
-        ("Romance", "genre", "Love stories and relationships"),
-        ("Thriller", "genre", "Tension and mystery"),
-        ("Animation", "genre", "Animated films"),
-    ]
-    
-    return [
-        {
-            'id': i,
-            'label': label,
-            'category': cat,
-            'description': desc,
-            'top_tags': [{'name': label, 'category': cat, 'weight': 0.8}],
-            'activation': 0.5,
-            'specificity': 1.0
-        }
-        for i, (label, cat, desc) in enumerate(feature_labels)
-    ]
+    """Select the most interpretable cluster-level features for the UI."""
+    effective_model_id = model_id or DEFAULT_TOPK_SAE_MODEL_ID
+    features = _select_cluster_features(model_id=effective_model_id, top_k=top_k)
+    print(f"[get_sae_features] Selected {len(features)} cluster features")
+    return features
 
 
 def _personalized_features(
@@ -1625,185 +1050,101 @@ def _personalized_features(
     model_id: str = None,
     num_sliders: int = 21,
 ) -> list:
-    """Select SAE neurons personalized to THIS user's elicitation picks.
+    """Select clusters personalized to the user's elicitation picks.
 
-    Pipeline (follows P3 SeqSAE / P2 RecSAE correlation approach):
-      1. Load the SAE item_features matrix (neuron activations per movie).
-      2. Compute mean activation across the user's selected movies.
-      3. Rank neurons by mean activation for this user → these are the
-         concepts most relevant to what the user already likes.
-      4. Pick top neurons ensuring label diversity (no duplicates).
-      5. Fall back to the global top-N if the user selected no movies
-         or the SAE model is unavailable.
-
-    This ensures each user sees a DIFFERENT set of sliders tailored to
-    their taste profile from preference elicitation.
+    For each cluster, compute mean SAE activation across member neurons
+    on the user's selected movies.  Rank clusters by that score,
+    apply diversity filtering, return top-k.
     """
+    import re as _re
     import torch as _torch
 
-    # Fall back to global features if no elicitation data
     if not selected_movies:
-        print("[_personalized_features] No selected movies → global fallback")
         return get_sae_features(top_k=num_sliders, model_id=model_id)
 
-    print(f"[_personalized_features] Starting with {len(selected_movies)} movies, "
-          f"model={model_id}, num_sliders={num_sliders}")
+    effective_model_id = model_id or DEFAULT_TOPK_SAE_MODEL_ID
 
-    try:
-        from .sae_recommender import get_sae_recommender
+    from .sae_recommender import get_sae_recommender
+    recommender = get_sae_recommender(model_id=effective_model_id)
+    recommender.load()
 
-        recommender = get_sae_recommender(model_id=model_id)
-        recommender.load()
-
-        if recommender.item_features is None or recommender.item_ids is None:
-            print("[_personalized_features] item_features/item_ids None → global fallback")
-            return get_sae_features(top_k=num_sliders, model_id=model_id)
-
-        # Build movieId → index lookup
-        id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
-
-        # Compute mean SAE activation across selected movies
-        acts = []
-        for mid in selected_movies:
-            idx = id_to_idx.get(int(mid))
-            if idx is not None:
-                a = recommender.item_features[idx]
-                if isinstance(a, _torch.Tensor):
-                    a = a.cpu().numpy()
-                acts.append(a)
-
-        if not acts:
-            print(f"[_personalized_features] No movies matched item_ids "
-                  f"(tried {len(selected_movies)}) → global fallback")
-            return get_sae_features(top_k=num_sliders, model_id=model_id)
-
-        print(f"[_personalized_features] {len(acts)}/{len(selected_movies)} movies matched")
-        mean_act = np.mean(acts, axis=0)
-
-        # Compute per-neuron activation count (number of movies that activate it)
-        features_np = recommender.item_features
-        if isinstance(features_np, _torch.Tensor):
-            features_np = features_np.cpu().numpy()
-        neuron_act_counts = np.sum(features_np > 0, axis=0)  # shape: (n_neurons,)
-
-        # Rank neurons by user-specific activation strength
-        neuron_scores = list(enumerate(mean_act))
-        neuron_scores.sort(key=lambda x: x[1], reverse=True)
-
-        # Get labels for top candidate neurons (fetch more than needed for diversity filtering)
-        # Skip neurons that activate on fewer than 20 movies — too niche / unreliable
-        MIN_NEURON_MOVIES = 20
-        candidate_ids = [
-            int(nid) for nid, sc in neuron_scores
-            if sc > 0 and int(neuron_act_counts[nid]) >= MIN_NEURON_MOVIES
-        ][:num_sliders * 8]
-
-        if not candidate_ids:
-            print("[_personalized_features] No candidate neurons with positive activation "
-                  "→ global fallback")
-            return get_sae_features(top_k=num_sliders, model_id=model_id)
-        print(f"[_personalized_features] {len(candidate_ids)} candidate neurons "
-              f"(top: N{candidate_ids[0]} score={mean_act[candidate_ids[0]]:.4f})")
-
-        labeled = get_neurons_by_ids(candidate_ids, model_id=model_id)
-
-        # Supplement with dynamic labels for neurons that got placeholder names
-        try:
-            from .dynamic_labeling import get_dynamic_labels
-            dyn_labels = get_dynamic_labels(
-                model_id=model_id or DEFAULT_TOPK_SAE_MODEL_ID,
-                item_features=recommender.item_features,
-                item_ids=recommender.item_ids,
-            )
-            for f in labeled:
-                lbl = f.get('label', '').lower().strip()
-                if (lbl.startswith('feature ') or lbl.startswith('neuron n')
-                        or lbl.startswith('latent concept')):
-                    dl = dyn_labels.get(f['id']) or dyn_labels.get(str(f['id']))
-                    if dl and dl.get('label'):
-                        f['label'] = dl['label']
-                        f['description'] = dl.get('description', f.get('description', ''))
-                        f['movie_count'] = dl.get('activation_count', f.get('movie_count', 0))
-        except Exception as e_dyn:
-            print(f"[_personalized_features] Dynamic label supplement failed: {e_dyn}")
-
-        score_map = {int(nid): sc for nid, sc in neuron_scores}
-
-        # Build decoder-weight vectors for cosine de-duplication (shared helper)
-        decoder_vecs = _build_decoder_vecs(recommender)
-
-        selected, merge_rejections = _select_grouped_slider_features(
-            labeled=labeled,
-            score_map=score_map,
-            decoder_vecs=decoder_vecs,
-            num_sliders=num_sliders,
-            min_neuron_movies=MIN_NEURON_MOVIES,
-        )
-        if merge_rejections:
-            reason_counts = {}
-            for _, _, reason in merge_rejections:
-                reason_counts[reason] = reason_counts.get(reason, 0) + 1
-            print(f"[_personalized_features] Candidate post-filter summary: {reason_counts}")
-        seen_labels = {_normalize_label(f.get('label', '')) for f in selected}
-
-        # Pad with dynamic labels if still short
-        if len(selected) < num_sliders:
-            used_ids = {nid for f in selected for nid in f.get('member_ids', [f['id']])}
-            try:
-                from .dynamic_labeling import get_dynamic_labels, select_features_for_display
-                dyn = get_dynamic_labels(
-                    model_id=model_id or DEFAULT_TOPK_SAE_MODEL_ID,
-                    item_features=recommender.item_features,
-                    item_ids=recommender.item_ids,
-                )
-                dyn_features = select_features_for_display(dyn, top_k=num_sliders * 2)
-                for df in dyn_features:
-                    if df['id'] not in used_ids:
-                        df = _ensure_feature_group_metadata(df)
-                        if _is_near_duplicate_label(df.get('label', ''), seen_labels):
-                            continue
-                        if _is_cosine_duplicate(df['id'], [s['id'] for s in selected], decoder_vecs):
-                            continue
-                        seen_labels.add(_normalize_label(df.get('label', '')))
-                        selected.append(df)
-                        used_ids.add(df['id'])
-                        if len(selected) >= num_sliders:
-                            break
-            except Exception:
-                pass
-
-        # Final fallback: global LLM-labeled features (with full dedup)
-        if len(selected) < num_sliders:
-            used_ids = {nid for f in selected for nid in f.get('member_ids', [f['id']])}
-            global_features = get_sae_features(top_k=num_sliders * 2, model_id=model_id)
-            for gf in global_features:
-                if gf['id'] not in used_ids:
-                    gf = _ensure_feature_group_metadata(gf)
-                    if _is_near_duplicate_label(gf.get('label', ''), seen_labels):
-                        continue
-                    if _is_cosine_duplicate(gf['id'], [s['id'] for s in selected], decoder_vecs):
-                        continue
-                    seen_labels.add(_normalize_label(gf.get('label', '')))
-                    selected.append(gf)
-                    used_ids.add(gf['id'])
-                    if len(selected) >= num_sliders:
-                        break
-
-        print(f"[_personalized_features] User selected {len(selected_movies)} movies → "
-              f"{len(selected)} personalized neurons (top user-score: "
-              f"{selected[0].get('_user_score', 0):.3f} for '{selected[0].get('label', '?')}')")
-
-        for f in selected:
-            f.pop('_user_score', None)
-            f.pop('_group_score', None)
-            f.pop('_base_description', None)
-
-        return selected[:num_sliders]
-
-    except Exception as e:
-        print(f"[_personalized_features] Error: {e}")
-        traceback.print_exc()
+    if recommender.item_features is None or recommender.item_ids is None:
         return get_sae_features(top_k=num_sliders, model_id=model_id)
+
+    id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
+    acts = []
+    for mid in selected_movies:
+        idx = id_to_idx.get(int(mid))
+        if idx is not None:
+            a = recommender.item_features[idx]
+            if isinstance(a, _torch.Tensor):
+                a = a.cpu().numpy()
+            acts.append(a)
+
+    if not acts:
+        return get_sae_features(top_k=num_sliders, model_id=model_id)
+
+    mean_act = np.mean(acts, axis=0)
+    print(f"[_personalized_features] {len(acts)}/{len(selected_movies)} movies matched")
+
+    sc = _load_semantic_clusters(effective_model_id)
+
+    STOP_WORDS = {
+        'the', 'and', 'of', 'in', 'a', 'an', 'to', 'for', 'with', 'on',
+        'at', 'by', 'from', 'its', 'that', 'this', 'but', 'or', 'as',
+    }
+
+    candidates = []
+    for cluster in sc["clusters"]:
+        nids = cluster["neuron_ids"]
+        cluster_score = float(np.mean([mean_act[n] for n in nids if n < len(mean_act)]))
+        if cluster_score <= 0:
+            continue
+        total_act = sum(mean_act[n] for n in nids if n < len(mean_act))
+        candidates.append({
+            "cluster_id": cluster["cluster_id"],
+            "label": cluster["label"],
+            "description": cluster.get("description", ""),
+            "neuron_ids": nids,
+            "score": cluster_score,
+            "total_act": int(total_act * 100),
+        })
+
+    candidates.sort(key=lambda x: -x["score"])
+
+    selected = []
+    used_words: dict = {}
+    MAX_WORD_USES = 2
+
+    for c in candidates:
+        if len(selected) >= num_sliders:
+            break
+        words = {
+            w for w in _re.split(r'[\s·\-–—/,&]+', c["label"].lower())
+            if len(w) > 2 and w not in STOP_WORDS
+        }
+        if any(used_words.get(w, 0) >= MAX_WORD_USES for w in words):
+            continue
+        selected.append(c)
+        for w in words:
+            used_words[w] = used_words.get(w, 0) + 1
+
+    if selected:
+        print(f"[_personalized_features] {len(selected)} clusters "
+              f"(top: {selected[0]['label']} score={selected[0]['score']:.4f})")
+
+    features = []
+    for s in selected:
+        features.append({
+            "id": s["cluster_id"],
+            "label": s["label"],
+            "category": "latent",
+            "description": s["description"],
+            "member_ids": s["neuron_ids"],
+            "activation": 0.5,
+            "movie_count": s["total_act"],
+        })
+    return features
 
 
 def _select_slider_features(selected_movies: list, conf: dict, active_model_cfg: dict, num_sliders: int) -> list:
@@ -1813,54 +1154,59 @@ def _select_slider_features(selected_movies: list, conf: dict, active_model_cfg:
     active_sae_model_id = active_model_cfg.get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
 
     if algorithm == "global_label_topk":
-        feature_source = lambda n: get_sae_features(top_k=n, model_id=active_sae_model_id)
-    else:
-        feature_source = lambda n: _personalized_features(
-            selected_movies=selected_movies,
-            model_id=active_sae_model_id,
-            num_sliders=n,
-        )
+        return get_sae_features(top_k=num_sliders, model_id=active_sae_model_id)
 
-    if conf.get("selected_neurons"):
-        features = get_neurons_by_ids(conf["selected_neurons"], model_id=active_sae_model_id)
-        if len(features) < num_sliders:
-            pinned_ids = {f['id'] for f in features}
-            pinned_labels = {_normalize_label(f.get('label', '')) for f in features}
-            extra = feature_source(num_sliders * 2)
-            for ef in extra:
-                if ef['id'] not in pinned_ids:
-                    if _is_near_duplicate_label(ef.get('label', ''), pinned_labels):
-                        continue
-                    pinned_labels.add(_normalize_label(ef.get('label', '')))
-                    features.append(ef)
-                    if len(features) >= num_sliders:
-                        break
-        return features[:num_sliders]
-
-    return feature_source(num_sliders)[:num_sliders]
+    return _personalized_features(
+        selected_movies=selected_movies,
+        model_id=active_sae_model_id,
+        num_sliders=num_sliders,
+    )
 
 
 @bp.route("/show-features", methods=["GET"])
 def show_features():
     """Initialize session state and redirect to steering interface."""
-    selected_movies = request.args.get("selectedMovies", "")
-    selected_movies = selected_movies.split(",") if selected_movies else []
-    selected_movies = [int(m) for m in selected_movies if m]
+    selected_movies_raw = request.args.get("selectedMovies", "")
+    selected_indices = [int(m) for m in selected_movies_raw.split(",") if m]
+
+    # The elicitation frontend sends loader-internal positional indices,
+    # but the SAE pipeline works with movieIds.  Convert here once.
+    from plugins.utils.data_loading import load_ml_dataset
+    loader = load_ml_dataset()
+    selected_movies = []
+    for idx in selected_indices:
+        mid = loader.movie_index_to_id.get(idx)
+        if mid is not None:
+            selected_movies.append(int(mid))
+        else:
+            selected_movies.append(idx)
 
     session["elicitation_selected_movies"] = selected_movies
     session["iteration"] = 1
     session["cumulative_adjustments"] = {}
     session["feature_adjustments"] = {}
+    session["boosted_liked_ids"] = []
     session["current_phase"] = 0
     session["phase_data"] = {}
     session["seen_movies_per_phase"] = {}
     session["persistent_liked_by_phase"] = {}
+    session["shown_sliders_per_phase"] = {}
+    session["steered_sliders_per_phase"] = {}
     session["last_shown_movies_per_phase"] = {}
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
 
     conf = _normalize_study_config(load_user_study_config(session.get("user_study_id")))
     _get_effective_models(conf)
+
+    participation_id = session.get("participation_id")
+    if participation_id:
+        log_interaction(
+            participation_id,
+            "elicitation-completed",
+            selected_movies=selected_movies,
+            approach_order=session.get("approach_order"),
+        )
 
     return redirect(url_for(f"{__plugin_name__}.steering_interface"))
 
@@ -1967,6 +1313,7 @@ def _do_advance_phase(next_phase_idx):
     session["iteration"] = 1
     session["cumulative_adjustments"] = {}
     session["feature_adjustments"] = {}
+    session["boosted_liked_ids"] = []
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
     session.pop("excluded_movies_from_text", None)
@@ -1987,6 +1334,7 @@ def steering_interface():
             "num_recommendations": 20,
             "steering_mode": DEFAULT_STEERING_MODE,
         })
+    min_resolution_width, min_resolution_height, min_resolution_error = _get_min_resolution_settings(conf)
     tr = get_tr(languages, get_lang())
 
     selected_movies = session.get("elicitation_selected_movies", [])
@@ -2005,21 +1353,28 @@ def steering_interface():
         num_sliders=NUM_SLIDERS,
     )
 
-    # --- All personalized features are user_activated (rotatable) ---
-    for f in features:
-        f["role"] = "user_activated"
-    # Keep only the top NUM_SLIDERS features (no static split anymore)
     features = features[:NUM_SLIDERS]
 
-    # --- Build semantic cluster profile (replaces old "baseline features") ---
-    cluster_profile = _build_cluster_profile(model_id=active_sae_model_id) if conf.get("show_general_features", True) else []
-    # Tag each dynamic feature with its cluster membership
-    for f in features:
-        f["cluster_id"] = _get_cluster_for_neuron(f["id"], cluster_profile)
+    sc = _load_semantic_clusters(active_sae_model_id)
+    cluster_map = sc["cluster_map"]
+
+    all_clusters_catalog = [
+        {
+            "id": c["cluster_id"],
+            "label": c["label"],
+            "description": c.get("description", ""),
+            "member_ids": c["neuron_ids"],
+            "movie_count": c.get("support", len(c["neuron_ids"])),
+        }
+        for c in sc["clusters"]
+    ]
 
     session["current_features"] = features
-    session["cluster_profile"] = cluster_profile
-    session["static_feature_ids"] = []
+    session["cluster_map"] = cluster_map
+    shown_phase = current_phase_tmp if (conf.get("comparison_mode", "side_by_side") == "sequential" and len(_get_effective_models(conf)) >= 2) else 0
+    shown_ids = _get_phase_token_set("shown_sliders_per_phase", shown_phase)
+    shown_ids.update({str(f.get("id")) for f in features if f.get("id") is not None})
+    _set_phase_token_set("shown_sliders_per_phase", shown_phase, shown_ids)
 
     max_iterations = conf.get("num_iterations", 3)
     comparison_mode = conf.get("comparison_mode", "side_by_side")
@@ -2063,91 +1418,87 @@ def steering_interface():
         from plugins.utils.data_loading import load_ml_dataset
         loader = load_ml_dataset(ml_variant=_get_study_dataset_variant(conf))
 
-        seed_adjustments = {}
+        # ------------------------------------------------------------------
+        # Compute ELSA seed embedding (dense 512-dim collaborative filtering
+        # space) from the user's selected movies.  This is the primary
+        # "find similar movies" signal — much more effective than sparse
+        # SAE activations (k=32) which share almost no neurons even between
+        # sequels.
+        # ------------------------------------------------------------------
+        elsa_seed = None
+        seed_genres = set()
         if selected_movies:
             try:
                 from .sae_recommender import get_sae_recommender
                 _rec = get_sae_recommender(model_id=active_sae_model_id)
                 _rec.load()
-                if _rec.item_features is not None and _rec.item_ids is not None:
+                if _rec.item_embeddings is not None and _rec.item_ids is not None:
                     _id2idx = {int(mid): i for i, mid in enumerate(_rec.item_ids)}
-                    _acts = []
+                    _embs = []
                     for mid in selected_movies:
                         idx = _id2idx.get(int(mid))
                         if idx is not None:
-                            a = _rec.item_features[idx]
-                            if isinstance(a, _torch_init.Tensor):
-                                a = a.cpu().numpy()
-                            _acts.append(a)
-                    if _acts:
-                        _mean_act = np.mean(_acts, axis=0)
-                        # Seed ALL neurons with positive mean activation,
-                        # not just displayed features.  The recommendation
-                        # engine uses the full weight vector, so including
-                        # non-displayed neurons makes initial recs truly
-                        # personalized even when displayed features have
-                        # zero activation (TopK SAE sparsity).
-                        displayed_ids = {f['id'] for f in features}
-                        for nid in range(len(_mean_act)):
-                            val = float(_mean_act[nid])
-                            if val > 0:
-                                seed_adjustments[str(nid)] = round(val, 4)
-                        # Ensure displayed features are always in seed
-                        # (for slider position, even if 0)
-                        for f in features:
-                            nid = f['id']
-                            if str(nid) not in seed_adjustments:
-                                seed_adjustments[str(nid)] = 0.0
-                        top_val = max(seed_adjustments.values()) if seed_adjustments else 0
-                        n_active = sum(1 for v in seed_adjustments.values() if v > 0)
-                        print(f"[steering_interface] User preference projected: "
-                              f"{len(selected_movies)} movies → {n_active} active neurons, "
-                              f"top weight = {top_val:.3f}")
+                            emb = _rec.item_embeddings[idx]
+                            if isinstance(emb, _torch_init.Tensor):
+                                emb = emb.cpu().numpy()
+                            _embs.append(emb)
+                        try:
+                            row = loader.movies_df_indexed.loc[int(mid)]
+                            for g in str(row.genres).split("|"):
+                                g = g.strip()
+                                if g and g != "(no genres listed)":
+                                    seed_genres.add(g)
+                        except (KeyError, AttributeError):
+                            pass
+                    if _embs:
+                        elsa_seed = np.mean(_embs, axis=0).astype(np.float32)
+                        print(f"[steering_interface] ELSA seed: "
+                              f"{len(_embs)}/{len(selected_movies)} movies matched, "
+                              f"dim={len(elsa_seed)}, genres={seed_genres}")
             except Exception as e:
-                print(f"[steering_interface] Could not project user preferences: {e}")
+                print(f"[steering_interface] Could not compute ELSA seed: {e}")
                 traceback.print_exc()
 
-        # Fallback: small uniform seed so the page isn't empty
-        if not seed_adjustments or max(seed_adjustments.values()) == 0:
-            seed_adjustments = {str(f['id']): 0.1 for f in features}
+        session["elsa_seed"] = elsa_seed.tolist() if elsa_seed is not None else None
+        session["elsa_seed_movie_count"] = len(selected_movies) if elsa_seed is not None else 0
+        session["seed_genres"] = list(seed_genres)
+        session["cumulative_adjustments"] = {}
+        session["feature_adjustments"] = {}
 
-        # Store the initial projected preferences so the UI can show
-        # them as the initial slider positions.
-        session["initial_seed_adjustments"] = seed_adjustments
-        # Also seed the cumulative adjustments so the first "Get Recommendations"
-        # click (even without any slider changes) uses the projected profile.
-        session["cumulative_adjustments"] = dict(seed_adjustments)
-        session["feature_adjustments"] = dict(seed_adjustments)
-
+        _empty_adj = {}
         if is_sequential:
             seen_for_phase = _get_phase_movie_set("seen_movies_per_phase", current_phase)
             all_excluded_movies = list(set(selected_movies + list(seen_for_phase)))
-            initial_recs = generate_steered_recommendations_for_model(
+            _payload = generate_steered_recommendations_for_model(
                 loader=loader, selected_movies=all_excluded_movies,
-                feature_adjustments=seed_adjustments,
+                feature_adjustments=_empty_adj,
                 model_config=active_model, k=num_recommendations)
+            initial_recs, _initial_debug = _unwrap_recommendation_payload(_payload)
         elif enable_comparison and len(models) >= 2:
             seen_a = _get_phase_movie_set("seen_movies_per_phase", 0)
             seen_b = _get_phase_movie_set("seen_movies_per_phase", 1)
-            initial_recs_a = generate_steered_recommendations_for_model(
+            _payload_a = generate_steered_recommendations_for_model(
                 loader=loader, selected_movies=list(set(selected_movies + list(seen_a))),
-                feature_adjustments=seed_adjustments,
+                feature_adjustments=_empty_adj,
                 model_config=models[0], k=num_recommendations)
-            initial_recs_b = generate_steered_recommendations_for_model(
+            _payload_b = generate_steered_recommendations_for_model(
                 loader=loader, selected_movies=list(set(selected_movies + list(seen_b))),
-                feature_adjustments=seed_adjustments,
+                feature_adjustments=_empty_adj,
                 model_config=models[1], k=num_recommendations)
+            initial_recs_a, _initial_debug_a = _unwrap_recommendation_payload(_payload_a)
+            initial_recs_b, _initial_debug_b = _unwrap_recommendation_payload(_payload_b)
         else:
             if models:
                 seen_single = _get_phase_movie_set("seen_movies_per_phase", 0)
-                initial_recs = generate_steered_recommendations_for_model(
+                _payload = generate_steered_recommendations_for_model(
                     loader=loader, selected_movies=list(set(selected_movies + list(seen_single))),
-                    feature_adjustments=seed_adjustments,
+                    feature_adjustments=_empty_adj,
                     model_config=models[0], k=num_recommendations)
+                initial_recs, _initial_debug = _unwrap_recommendation_payload(_payload)
             else:
                 initial_recs = generate_steered_recommendations(
                     loader=loader, selected_movies=selected_movies,
-                    feature_adjustments=seed_adjustments, k=num_recommendations)
+                    feature_adjustments=_empty_adj, k=num_recommendations)
 
         shown_map = _get_phase_id_map("last_shown_movies_per_phase")
         if is_sequential:
@@ -2170,38 +1521,6 @@ def steering_interface():
 
     title = active_model_cfg.get("name", tr("sae_steering_title"))
 
-    # Compute initial cluster values from the user's MOVIE GENRES,
-    # not from SAE neuron weights.  Each cluster has a characteristic
-    # genre profile (from its neurons' activated movies).  We compute
-    # the user's genre vector from their selected movies and project
-    # it onto each cluster's genre centroid (cosine similarity).
-    # Then center and normalize to [-1, +1].
-    initial_cluster_values = {}
-    if cluster_profile and selected_movies:
-        try:
-            user_genre_vec = _compute_user_genre_vector(
-                selected_movies,
-                active_sae_model_id,
-                _get_study_dataset_variant(conf),
-            )
-            cluster_centroids = _compute_cluster_genre_centroids(
-                cluster_profile, active_sae_model_id
-            )
-            if user_genre_vec is not None and cluster_centroids:
-                sims = {}
-                for cid, centroid in cluster_centroids.items():
-                    dot = sum(user_genre_vec.get(g, 0) * centroid.get(g, 0) for g in set(user_genre_vec) | set(centroid))
-                    norm_u = max(sum(v**2 for v in user_genre_vec.values())**0.5, 1e-8)
-                    norm_c = max(sum(v**2 for v in centroid.values())**0.5, 1e-8)
-                    sims[cid] = dot / (norm_u * norm_c)
-                g_mean = sum(sims.values()) / max(len(sims), 1)
-                devs = {cid: s - g_mean for cid, s in sims.items()}
-                max_dev = max(abs(d) for d in devs.values()) or 0.001
-                initial_cluster_values = {cid: round(d / max_dev, 4) for cid, d in devs.items()}
-        except Exception as e:
-            print(f"[steering_interface] Could not compute cluster values: {e}")
-            traceback.print_exc()
-
     params = {
         "title": title,
         "features": features,
@@ -2221,140 +1540,21 @@ def steering_interface():
         "total_phases": total_phases,
         "next_phase_name": next_phase_name,
         "has_phase_questionnaire_for_current_phase": has_phase_questionnaire_for_current_phase,
-        "seed_adjustments": session.get("initial_seed_adjustments", {}),
-        "cluster_profile": cluster_profile,
-        "initial_cluster_values": initial_cluster_values,
-        "show_general_features": conf.get("show_general_features", True),
+        "seed_adjustments": {},
+        "cluster_map": cluster_map,
+        "all_clusters_catalog": all_clusters_catalog,
         "feature_selection_algorithm": active_model_cfg.get("feature_selection_algorithm", conf.get("feature_selection_algorithm")),
         "preferences_approved": bool(session.get("iteration_preferences_approved", False)),
         "iteration_locked_final": bool(session.get("iteration_locked_final", False)),
         "num_recommendations": num_recommendations,
         "header_subtitle": _get_steering_subtitle(steering_mode),
         "header_guidance": _get_steering_guidance(steering_mode),
+        "min_resolution_width": min_resolution_width,
+        "min_resolution_height": min_resolution_height,
+        "min_resolution_error": min_resolution_error,
     }
 
     return render_template("steering_interface.html", **params)
-
-
-def get_neurons_by_ids(neuron_ids, model_id: str = None):
-    """
-    Get feature info for specific neuron IDs (admin-selected or personalized).
-
-    Uses LLM labels as the primary source (via label_neurons_by_ids_llm),
-    falls back to dynamic TF-IDF labels, then static labels, then generic names.
-    """
-    features = []
-
-    # --- Try LLM labels first ---
-    all_labels: dict = {}  # neuron_id (int) -> label info dict
-    cached_labels = _load_cached_model_labels(model_id=model_id)
-    if cached_labels:
-        all_labels.update({
-            int(nid): cached_labels[int(nid)]
-            for nid in neuron_ids
-            if int(nid) in cached_labels
-        })
-
-    try:
-        from .sae_recommender import get_sae_recommender
-        from .llm_labeling import label_neurons_by_ids_llm
-
-        recommender = get_sae_recommender(model_id=model_id)
-        recommender.load()
-
-        if recommender.item_features is not None and recommender.item_ids is not None:
-            effective_model_id = model_id or recommender.model_id or DEFAULT_TOPK_SAE_MODEL_ID
-            all_labels = label_neurons_by_ids_llm(
-                neuron_ids=[int(n) for n in neuron_ids],
-                model_id=effective_model_id,
-                item_features=recommender.item_features,
-                item_ids=recommender.item_ids,
-            )
-    except Exception as e:
-        print(f"[get_neurons_by_ids] LLM labels unavailable, trying dynamic: {e}")
-        # Fall back to dynamic TF-IDF labels
-        try:
-            from .sae_recommender import get_sae_recommender
-            from .dynamic_labeling import label_neurons_by_ids
-
-            recommender = get_sae_recommender(model_id=model_id)
-            recommender.load()
-
-            if recommender.item_features is not None and recommender.item_ids is not None:
-                effective_model_id = model_id or recommender.model_id or DEFAULT_TOPK_SAE_MODEL_ID
-                all_labels = label_neurons_by_ids(
-                    neuron_ids=[int(n) for n in neuron_ids],
-                    model_id=effective_model_id,
-                    item_features=recommender.item_features,
-                    item_ids=recommender.item_ids,
-                )
-        except Exception as e2:
-            print(f"[get_neurons_by_ids] Dynamic labels also unavailable: {e2}")
-            traceback.print_exc()
-
-    # --- Static labels as secondary fallback ---
-    static_labels = {}
-    static_analysis = {}
-    try:
-        from pathlib import Path
-        data_dir = Path(__file__).parent / "data"
-        labels_path = data_dir / "neuron_labels.json"
-        analysis_path = data_dir / "neuron_analysis.json"
-        if labels_path.exists():
-            with open(labels_path) as f:
-                static_labels = json.load(f)
-        if analysis_path.exists():
-            with open(analysis_path) as f:
-                static_analysis = json.load(f)
-    except Exception:
-        pass
-
-    try:
-        for neuron_id in neuron_ids:
-            nid = int(neuron_id)
-            nid_str = str(neuron_id)
-            label = None
-            description = None
-            movie_count = 0
-
-            # LLM / dynamic label (from cache or freshly computed)
-            if nid in all_labels:
-                dl = all_labels[nid]
-                label = dl.get('label', '')
-                description = dl.get('description', '')
-                movie_count = dl.get('activation_count', 0)
-
-            # Static fallback — only use for movie_count, NOT for the label.
-            # Old static labels like "Comedy · Suicide Attempt" are confusing;
-            # prefer showing "Neuron N{id}" until the LLM labels it properly.
-            if not label:
-                info = static_analysis.get(nid_str, {})
-                movie_count = movie_count or info.get('activation_count', 0)
-
-            if not label:
-                label = f"Neuron N{neuron_id}"
-
-            if not description:
-                description = f"Latent concept (N{neuron_id}): {label}"
-
-            features.append({
-                'id': nid,
-                'label': label,
-                'category': 'latent',
-                'description': description,
-                'activation': 0.5,
-                'movie_count': movie_count,
-            })
-
-    except Exception as e:
-        print(f"[get_neurons_by_ids] Error: {e}")
-        traceback.print_exc()
-        features = [
-            {'id': int(nid), 'label': f'Feature {nid}', 'category': 'other', 'activation': 0.5, 'movie_count': 0}
-            for nid in neuron_ids
-        ]
-
-    return features
 
 
 @bp.route("/adjust-features", methods=["POST"])
@@ -2382,13 +1582,10 @@ def adjust_features():
             data.get("preferences_approved", session.get("iteration_preferences_approved", False))
         )
 
-        # Expand cluster-level adjustments and grouped sliders into neuron deltas
-        cluster_profile = session.get("cluster_profile", [])
-        cluster_map = {c["id"]: c["neuron_ids"] for c in cluster_profile}
-        current_features = session.get("current_features", [])
+        # Expand cluster-level slider deltas into neuron-level deltas
+        cluster_map = session.get("cluster_map", {})
         feature_adjustments = _expand_feature_adjustments(
             raw_adjustments=raw_adjustments,
-            current_features=current_features,
             cluster_map=cluster_map,
         )
         if suppressed_genres:
@@ -2442,22 +1639,19 @@ def adjust_features():
         else:
             _remember_shown_movies(0, shown_map.get("0", []))
 
-        # ---- Cumulative preference accumulation ----
-        # Track TWO things separately:
-        #   1. cumulative_adjustments: full weight vector for the model
-        #      (seed profile + all slider changes)
-        #   2. user_touched_features: IDs of features the user explicitly
-        #      moved sliders for (NOT seed neurons) — used by
-        #      _compute_updated_sliders to decide which sliders to rotate out
-        #
-        # Slider amplification: the frontend sends deltas in [-1, +1] but
-        # the SAE scoring needs larger magnitudes to visibly shift the
-        # top-20 over a seed profile that sums to ~10.  Scale factor 3
-        # means a full-range slider move (+1) adds +3 to the neuron weight,
-        # enough to noticeably re-rank recommendations.
-        SLIDER_AMP = 1.0
+        # Track cluster-level touches (for slider rotation) from raw_adjustments
+        # and accumulate neuron-level weights for the model from expanded feature_adjustments.
+        # Scoring is a raw dot-product (item_features @ profile), so the
+        # amplification factor controls how strongly a full-range slider
+        # move shifts the ranking relative to the elicitation seed.
+        SLIDER_AMP = 2.0
         previous_adjustments = session.get("cumulative_adjustments", {})
         user_touched = set(session.get("user_touched_features", []))
+
+        for key, val in (raw_adjustments or {}).items():
+            if abs(float(val)) > 0.001:
+                user_touched.add(str(key))
+
         for key, val in feature_adjustments.items():
             skey = str(key)
             prev = float(previous_adjustments.get(skey, 0))
@@ -2465,7 +1659,6 @@ def adjust_features():
             new = raw_delta * SLIDER_AMP
             if abs(raw_delta) > 0.001:
                 previous_adjustments[skey] = round(prev + new, 4)
-                user_touched.add(skey)
             elif skey in previous_adjustments and abs(prev) < 0.001:
                 del previous_adjustments[skey]
 
@@ -2480,31 +1673,59 @@ def adjust_features():
         session["feature_adjustments"] = previous_adjustments
 
         # ---- Persistent selections (per approach/phase) ----
-        # Selected movies in each approach are remembered only inside that
-        # approach to keep profile evolution independent across approaches.
+        # Store the *current* liked set for this phase (replace semantics),
+        # not a monotonic union. This ensures de-selections are respected.
         active_phase_for_profile = current_phase if is_sequential_cfg else 0
-        persistent_liked = _get_phase_movie_set("persistent_liked_by_phase", active_phase_for_profile)
-        for mid in client_liked:
-            if mid is not None:
-                mid = int(mid)
-                persistent_liked.add(mid)
-        _set_phase_movie_set("persistent_liked_by_phase", active_phase_for_profile, persistent_liked)
+        current_liked_set = {int(m) for m in client_liked if m is not None}
+        _set_phase_movie_set("persistent_liked_by_phase", active_phase_for_profile, current_liked_set)
 
-        # ---- Liked-movie neuron boost (equivalent weight to slider interaction) ----
-        if client_liked:
-            like_boost = _boost_from_liked_movies(client_liked, strength=0.30, model_id=active_sae_id)
-            for nid, val in like_boost.items():
-                skey = str(nid)
-                # Add to model adjustments (positive only)
-                if val > 0:
-                    feature_adjustments[skey] = round(
-                        float(feature_adjustments.get(skey, 0)) + val, 4
-                    )
-            # Also update cumulative so UI reflects the change
-            session["cumulative_adjustments"] = {
-                **session.get("cumulative_adjustments", {}),
-                **{k: v for k, v in feature_adjustments.items()}
-            }
+        # ---- Liked-movie boost via ELSA seed update ----
+        # Instead of boosting individual SAE neurons (which are too sparse
+        # to be meaningful), we shift the ELSA seed embedding toward liked
+        # movies.  This directly improves the collaborative-filtering signal.
+        current_liked = set(int(m) for m in client_liked)
+        already_boosted = set(int(m) for m in session.get("boosted_liked_ids", []))
+        new_likes = [m for m in current_liked if m not in already_boosted]
+        removed_likes = [m for m in already_boosted if m not in current_liked]
+
+        # Calibrate like influence by interface:
+        # - slider-based phases already have an explicit steering channel
+        #   => reduce like contribution to keep channels separable
+        # - non-steering phases rely on likes as the main explicit signal
+        effective_mode = _normalize_steering_mode(steering_mode_for_iteration)
+        like_weight = 0.25 if effective_mode in {"sliders", "both", "toggles"} else 0.5
+
+        if new_likes or removed_likes:
+            _update_elsa_seed_with_likes(
+                current_liked, active_sae_id, LIKE_WEIGHT=like_weight, LIKE_CAP=10,
+            )
+
+        session["boosted_liked_ids"] = list(current_liked)
+
+        # Also update genre set from liked movies
+        # Recompute from elicitation + current likes to honor de-selections.
+        from plugins.utils.data_loading import load_ml_dataset as _load_ds
+        _ldr = _load_ds(ml_variant=_get_study_dataset_variant(conf))
+        seed_genres = set()
+        for mid in session.get("elicitation_selected_movies", []):
+            try:
+                row = _ldr.movies_df_indexed.loc[int(mid)]
+                for g in str(row.genres).split("|"):
+                    g = g.strip()
+                    if g and g != "(no genres listed)":
+                        seed_genres.add(g)
+            except (KeyError, AttributeError):
+                pass
+        for mid in current_liked:
+            try:
+                row = _ldr.movies_df_indexed.loc[int(mid)]
+                for g in str(row.genres).split("|"):
+                    g = g.strip()
+                    if g and g != "(no genres listed)":
+                        seed_genres.add(g)
+            except (KeyError, AttributeError):
+                pass
+        session["seed_genres"] = list(seed_genres)
 
         current_iteration = session.get("iteration", 1)
         participation_id = session.get("participation_id")
@@ -2536,8 +1757,6 @@ def adjust_features():
         from plugins.utils.data_loading import load_ml_dataset
         loader = load_ml_dataset(ml_variant=_get_study_dataset_variant(conf))
 
-        _seed = session.get("initial_seed_adjustments")
-        
         # --- Sequential mode detection ---
         comparison_mode = conf.get("comparison_mode", "side_by_side")
         is_sequential = comparison_mode == "sequential" and len(models) >= 2
@@ -2561,20 +1780,21 @@ def adjust_features():
             "total_phases": total_phases,
             "interaction_mode": interaction_mode
         }
+        debug_insights = {}
 
         if is_sequential:
             active_model = session.get("active_model_config", models[current_phase])
             seen_in_phase = _get_phase_movie_set("seen_movies_per_phase", current_phase)
             all_excluded_movies = list(set(selected_movies + excluded_movie_ids + list(seen_in_phase)))
-            recommendations = generate_steered_recommendations_for_model(
+            _payload = generate_steered_recommendations_for_model(
                 loader=loader,
                 selected_movies=all_excluded_movies,
                 feature_adjustments=feature_adjustments,
                 model_config=active_model,
                 k=num_recommendations,
                 suppressed_genres=suppressed_genres,
-                seed_adjustments=_seed,
             )
+            recommendations, debug_insights = _unwrap_recommendation_payload(_payload)
             response_data["recommendations"] = recommendations
 
             if participation_id:
@@ -2603,25 +1823,26 @@ def adjust_features():
             all_excluded_movies_a = list(set(selected_movies + excluded_movie_ids + list(seen_a)))
             all_excluded_movies_b = list(set(selected_movies + excluded_movie_ids + list(seen_b)))
             
-            recommendations_a = generate_steered_recommendations_for_model(
+            _payload_a = generate_steered_recommendations_for_model(
                 loader=loader,
                 selected_movies=all_excluded_movies_a,
                 feature_adjustments=feature_adjustments,
                 model_config=model_a_config,
                 k=num_recommendations,
                 suppressed_genres=suppressed_genres,
-                seed_adjustments=_seed,
             )
             
-            recommendations_b = generate_steered_recommendations_for_model(
+            _payload_b = generate_steered_recommendations_for_model(
                 loader=loader,
                 selected_movies=all_excluded_movies_b,
                 feature_adjustments=feature_adjustments,
                 model_config=model_b_config,
                 k=num_recommendations,
                 suppressed_genres=suppressed_genres,
-                seed_adjustments=_seed,
             )
+            recommendations_a, debug_a = _unwrap_recommendation_payload(_payload_a)
+            recommendations_b, debug_b = _unwrap_recommendation_payload(_payload_b)
+            debug_insights = {"model_a": debug_a, "model_b": debug_b}
             
             print(f"[A/B Comparison] Model A produced {len(recommendations_a)} recommendations (requested: {num_recommendations})")
             print(f"[A/B Comparison] Model B produced {len(recommendations_b)} recommendations (requested: {num_recommendations})")
@@ -2661,7 +1882,6 @@ def adjust_features():
                     model_config=models[0],
                     k=num_recommendations,
                     suppressed_genres=suppressed_genres,
-                    seed_adjustments=_seed,
                 )
             else:
                 recommendations = generate_steered_recommendations(
@@ -2670,6 +1890,7 @@ def adjust_features():
                     feature_adjustments=feature_adjustments,
                     k=num_recommendations
                 )
+                debug_insights = {}
             response_data["recommendations"] = recommendations
             shown_map = _get_phase_id_map("last_shown_movies_per_phase")
             shown_map["0"] = [int(r.get("movie_idx")) for r in recommendations if r.get("movie_idx") is not None]
@@ -2691,18 +1912,16 @@ def adjust_features():
         elif _sm in ("sliders", "both", "toggles"):
             NUM_SLIDERS = conf.get("num_sliders", 16)
             current_features = session.get("current_features", [])
-            # Pass only USER-TOUCHED adjustments to decide which sliders
-            # rotate out.  Seed-profile neurons must NOT trigger rotation.
-            slider_only_adjustments = {
-                k: v for k, v in feature_adjustments.items()
-                if k in user_touched
+            touched_cluster_adjustments = {
+                cid: 1.0 for cid in user_touched if cid.startswith("cluster_")
             }
             updated_features = _compute_updated_sliders(
                 current_features=current_features,
-                cumulative_adjustments=slider_only_adjustments,
-                liked_movie_ids=list(persistent_liked),
+                cumulative_adjustments=touched_cluster_adjustments,
+                liked_movie_ids=list(current_liked_set),
                 model_id=active_sae_id,
                 num_sliders=NUM_SLIDERS,
+                phase_idx=active_phase_for_profile,
             )
             if updated_features and updated_features != current_features:
                 session["current_features"] = updated_features
@@ -2711,35 +1930,26 @@ def adjust_features():
                 new_count = len([f for f in updated_features if f['id'] not in old_ids])
                 print(f"[adjust_features] Sliders refreshed: {new_count} new features")
 
-        # Cluster values: sum cumulative neuron weights per cluster,
-        # then use mean-per-neuron with deviation from global mean.
-        # Simpler and consistent with the fixed genre-centroid approach.
-        if cluster_profile:
-            cumul = session.get("cumulative_adjustments", {})
-            # Which clusters are the user's cumulative adjustments pulling toward?
-            # Weight each cluster by its share of the total adjustment weight.
-            raw_cv = {}
-            for c in cluster_profile:
-                nids = c["neuron_ids"]
-                if nids:
-                    vals = [float(cumul.get(str(nid), 0)) for nid in nids]
-                    raw_cv[c["id"]] = sum(abs(v) for v in vals) / len(nids)
-                else:
-                    raw_cv[c["id"]] = 0.0
-            # Also factor in sign: positive cumulative = boost
-            signed_cv = {}
-            for c in cluster_profile:
-                nids = c["neuron_ids"]
-                if nids:
-                    vals = [float(cumul.get(str(nid), 0)) for nid in nids]
-                    signed_cv[c["id"]] = sum(vals) / len(nids)
-                else:
-                    signed_cv[c["id"]] = 0.0
-            g_mean = sum(signed_cv.values()) / max(len(signed_cv), 1)
-            devs = {cid: v - g_mean for cid, v in signed_cv.items()}
-            max_dev = max(abs(d) for d in devs.values()) or 0.001
-            cluster_values = {cid: round(d / max_dev, 4) for cid, d in devs.items()}
-            response_data["cluster_values"] = cluster_values
+        # Optional debug payload for research interpretability.
+        response_data["debug_insights"] = debug_insights or {}
+        if debug_insights:
+            if "influence_level" in debug_insights:
+                print(
+                    "[adjust_features] influence="
+                    f"{debug_insights.get('influence_level')} "
+                    f"(gamma={debug_insights.get('adaptive_gamma')}, "
+                    f"ratio={debug_insights.get('steering_ratio')})"
+                )
+            else:
+                for model_key in ("model_a", "model_b"):
+                    dbg = (debug_insights or {}).get(model_key, {})
+                    if dbg:
+                        print(
+                            f"[adjust_features] {model_key} influence="
+                            f"{dbg.get('influence_level')} "
+                            f"(gamma={dbg.get('adaptive_gamma')}, "
+                            f"ratio={dbg.get('steering_ratio')})"
+                        )
 
         # Increment iteration
         session["iteration"] = current_iteration + 1
@@ -2760,50 +1970,66 @@ def adjust_features():
         }), 200
 
 
-def generate_steered_recommendations_for_model(loader, selected_movies, feature_adjustments, model_config, k=20, suppressed_genres=None, seed_adjustments=None):
+def _compute_genre_bonus(recommender, loader, seed_genres: set) -> np.ndarray:
+    """Pre-compute Jaccard genre similarity for every item vs the seed genres."""
+    n_items = len(recommender.item_ids)
+    bonus = np.zeros(n_items, dtype=np.float32)
+    if not seed_genres:
+        return bonus
+    for i, mid in enumerate(recommender.item_ids):
+        mid = int(mid)
+        try:
+            row = loader.movies_df_indexed.loc[mid]
+            item_genres = {
+                g.strip() for g in str(row.genres).split("|")
+                if g.strip() and g.strip() != "(no genres listed)"
+            }
+            if item_genres:
+                overlap = len(item_genres & seed_genres)
+                union = len(item_genres | seed_genres)
+                bonus[i] = overlap / union
+        except (KeyError, AttributeError):
+            pass
+    return bonus
+
+
+def _unwrap_recommendation_payload(payload):
+    """Normalize recommendation function output to (recs, debug)."""
+    if isinstance(payload, dict):
+        return payload.get("recommendations", []), payload.get("debug", {})
+    return payload or [], {}
+
+
+def generate_steered_recommendations_for_model(loader, selected_movies, feature_adjustments, model_config, k=20, suppressed_genres=None):
     """
     Generate recommendations for a specific model configuration (for A/B testing).
     
-    Args:
-        loader: Movie data loader
-        selected_movies: User's selected movies from elicitation (and excluded from text)
-        feature_adjustments: Neuron adjustments from steering
-        model_config: Dict with 'base', 'sae' keys specifying model
-        k: Number of recommendations
-        suppressed_genres: List of genre names to filter out completely
-    
-    Returns:
-        List of recommendation dicts
+    Uses hybrid scoring: ELSA cosine (collaborative filtering) + genre Jaccard
+    + SAE neuron adjustments (from sliders/likes).
     """
     suppressed_genres = suppressed_genres or []
     sae_model_id = model_config.get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
-    base_model_id = model_config.get("base", "elsa")
     
     try:
         from .sae_recommender import get_sae_recommender
         
-        # Get recommender for the specific SAE model (supports A/B comparison)
         recommender = get_sae_recommender(model_id=sae_model_id)
         recommender.load()
 
         if recommender.item_features is None or recommender.item_ids is None:
             print(
-                "[generate_steered_recommendations_for_model] SAE runtime activations "
+                "[generate_steered_recs] SAE runtime activations "
                 "missing; falling back to metadata-based recommendations"
             )
             return _fallback_genre_recommendations(loader, selected_movies, feature_adjustments, k)
         
-        print(f"[generate_steered_recommendations_for_model] Using SAE model: {sae_model_id}")
-        print(f"[generate_steered_recommendations_for_model] Feature adjustments: {feature_adjustments}")
-        
-        # Convert adjustments
         neuron_adjustments = {
             int(key): float(value) for key, value in feature_adjustments.items()
         }
+        n_adj = sum(1 for v in neuron_adjustments.values() if abs(v) > 0.001)
+        print(f"[generate_steered_recs] SAE model={sae_model_id}, "
+              f"non-zero adjustments={n_adj}")
         
-        print(f"[generate_steered_recommendations_for_model] Neuron adjustments: {neuron_adjustments}")
-        
-        # All movie references (from elicitation and selections) are movieIds.
         exclude_movie_ids = []
         for movie_ref in selected_movies:
             try:
@@ -2812,52 +2038,55 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
                 continue
         
         allowed_ids = set(loader.movies_df_indexed.index.tolist())
-        try:
-            model_item_ids = {int(mid) for mid in recommender.item_ids}
-            overlap_count = len(model_item_ids & allowed_ids)
-            overlap_ratio = overlap_count / max(len(model_item_ids), 1)
-            print(
-                "[generate_steered_recommendations_for_model] "
-                f"ID overlap model<->dataset: {overlap_count}/{len(model_item_ids)} ({overlap_ratio:.1%})"
-            )
-            if overlap_ratio < 0.7:
-                print(
-                    "[generate_steered_recommendations_for_model] WARNING: low model↔dataset ID overlap; "
-                    "check dataset variant vs feature cache/checkpoint provenance."
-                )
-        except Exception as exc:
-            print(f"[generate_steered_recommendations_for_model] Could not compute ID overlap diagnostics: {exc}")
 
-        # NOTE: Image filter disabled — it was too restrictive and reduced
-        # recommendation quality.  Movies without posters will show a
-        # placeholder icon in the UI.
-        # if hasattr(loader, 'movie_index_to_url') and loader.movie_index_to_url:
-        #     ids_with_images = set()
-        #     for movie_idx in loader.movie_index_to_url:
-        #         try:
-        #             ids_with_images.add(loader.movie_index_to_id[movie_idx])
-        #         except (KeyError, IndexError):
-        #             continue
-        #     if ids_with_images:
-        #         allowed_ids = allowed_ids & ids_with_images
-        #         print(f"[...] Restricted to {len(allowed_ids)} movies with images")
+        # Retrieve ELSA seed embedding and genre set from session
+        elsa_seed_list = session.get("elsa_seed")
+        elsa_seed = np.array(elsa_seed_list, dtype=np.float32) if elsa_seed_list else None
+        seed_genres = set(session.get("seed_genres", []))
 
-        # Request many more than needed so that filtering (unknown IDs,
-        # missing metadata, suppressed genres) still leaves at least k items.
-        seed_neuron_adjustments = None
-        if seed_adjustments:
-            seed_neuron_adjustments = {
-                int(key): float(value) for key, value in seed_adjustments.items()
-            }
+        genre_bonus = _compute_genre_bonus(recommender, loader, seed_genres) if seed_genres else None
 
-        raw_recommendations = recommender.get_recommendations(
+        if elsa_seed is not None:
+            print(f"[generate_steered_recs] ELSA seed active, genres={seed_genres}")
+
+        rec_payload = recommender.get_recommendations(
             feature_adjustments=neuron_adjustments,
             n_items=max(k * 15, 300),
             exclude_items=exclude_movie_ids,
             allowed_ids=allowed_ids,
-            seed_adjustments=seed_neuron_adjustments,
+            seed_embedding=elsa_seed,
+            genre_bonus=genre_bonus,
+            return_debug=True,
         )
-        print(f"[generate_steered_recommendations_for_model] Raw recommendations: {len(raw_recommendations)}")
+        raw_recommendations = rec_payload.get("results", []) if isinstance(rec_payload, dict) else rec_payload
+        debug_payload = rec_payload.get("debug", {}) if isinstance(rec_payload, dict) else {}
+        print(f"[generate_steered_recs] Raw recommendations: {len(raw_recommendations)}")
+        if debug_payload:
+            print(
+                "[generate_steered_recs] influence="
+                f"{debug_payload.get('influence_level')} "
+                f"(gamma={debug_payload.get('adaptive_gamma')}, "
+                f"clamp={debug_payload.get('steering_clamp')}, "
+                f"ratio={debug_payload.get('steering_ratio')})"
+            )
+            for item in (debug_payload.get("top_up") or [])[:5]:
+                print(
+                    "[generate_steered_recs] top_up "
+                    f"movie_id={item.get('movie_id')} "
+                    f"delta={item.get('rank_delta')} "
+                    f"base={item.get('base_rank')}->final={item.get('final_rank')} "
+                    f"(cf={item.get('cf_score')}, genre={item.get('genre_score')}, "
+                    f"steer={item.get('steering_score')})"
+                )
+            for item in (debug_payload.get("top_down") or [])[:5]:
+                print(
+                    "[generate_steered_recs] top_down "
+                    f"movie_id={item.get('movie_id')} "
+                    f"delta={item.get('rank_delta')} "
+                    f"base={item.get('base_rank')}->final={item.get('final_rank')} "
+                    f"(cf={item.get('cf_score')}, genre={item.get('genre_score')}, "
+                    f"steer={item.get('steering_score')})"
+                )
         
         # Format results - include image URLs; skip items with missing metadata or unknown IDs
         overviews = _load_tmdb_overviews()
@@ -2935,7 +2164,10 @@ def generate_steered_recommendations_for_model(loader, selected_movies, feature_
         if len(results) < k:
             print(f"[generate_steered_recommendations_for_model] WARNING: only {len(results)} results after filtering (target {k})")
         print(f"[generate_steered_recommendations_for_model] Returning {len(results)} recommendations (target {k})")
-        return results[:k]
+        return {
+            "recommendations": results[:k],
+            "debug": debug_payload,
+        }
         
     except Exception as e:
         print(f"[generate_steered_recommendations_for_model] Error: {e}")
@@ -2951,13 +2183,16 @@ def generate_steered_recommendations(loader, selected_movies, feature_adjustment
     sites that don't have a model_config dict handy.
     """
     default_config = {"sae": DEFAULT_TOPK_SAE_MODEL_ID}
-    return generate_steered_recommendations_for_model(
+    payload = generate_steered_recommendations_for_model(
         loader=loader,
         selected_movies=selected_movies,
         feature_adjustments=feature_adjustments,
         model_config=default_config,
         k=k,
     )
+    if isinstance(payload, dict):
+        return payload.get("recommendations", [])
+    return payload
 
 
 def _fallback_genre_recommendations(loader, selected_movies, feature_adjustments, k=20):
@@ -3029,149 +2264,170 @@ def _fallback_genre_recommendations(loader, selected_movies, feature_adjustments
     return scored_movies[:k]
 
 
-@bp.route("/get-recommendations", methods=["GET"])
-def get_recommendations():
-    """Get recommendations based on current feature settings"""
-    # TODO: Generate recommendations with steering applied
-    recommendations = []
-    
-    return jsonify(recommendations)
-
-
 def _compute_updated_sliders(
     current_features: list,
     cumulative_adjustments: dict,
     liked_movie_ids: list,
     model_id: str = None,
     num_sliders: int = 21,
+    phase_idx: int = 0,
 ) -> list:
-    """Recompute the dynamic slider feature list after an iteration.
+    """Recompute cluster slider list after an iteration.
 
-    User-adjusted sliders rotate OUT (their cumulative effect is baked
-    into the model).  Freed slots are filled by engagement-driven
-    discovery neurons from selected movies, then by
-    globally popular features as a fallback.  Every new slider starts
-    at 0 in the UI — it represents a DELTA from the current state.
+    Simple queue policy:
+    - sliders touched by user are marked as "steered" and removed from
+      future auto-pools (unless explicitly searched/edited),
+    - sliders already shown are not re-shown,
+    - exploit panel is derived primarily from last shown recommendations in the
+      active phase (plus likes), then global fallback.
     """
-    import torch as _torch
-
-    # Identify features the user explicitly touched this round
     touched_ids = set()
     for fid_str, val in cumulative_adjustments.items():
-        if abs(float(val)) > 0.001:
-            touched_ids.add(int(fid_str))
+        if fid_str.startswith("cluster_") and abs(float(val)) > 0.001:
+            touched_ids.add(fid_str)
 
+    shown_ids = _get_phase_token_set("shown_sliders_per_phase", phase_idx)
+    steered_ids = _get_phase_token_set("steered_sliders_per_phase", phase_idx)
+
+    if touched_ids:
+        steered_ids.update({str(cid) for cid in touched_ids})
+        _set_phase_token_set("steered_sliders_per_phase", phase_idx, steered_ids)
+
+    # Exploit source: strictly current recommendation context in this phase.
+    last_shown_map = _get_phase_id_map("last_shown_movies_per_phase")
+    last_shown_phase = last_shown_map.get(str(int(phase_idx)), [])
+    profile_movies = sorted({int(mid) for mid in last_shown_phase if mid is not None})
+
+    profile_pool = []
+    if profile_movies:
+        profile_pool = _personalized_features(
+            selected_movies=profile_movies,
+            model_id=model_id,
+            num_sliders=max(num_sliders * 4, num_sliders + 24),
+        )
+    # Global pool order is already a top-ranked ordering from
+    # cluster selection (interpretable/high-coverage clusters first).
+    global_pool = get_sae_features(top_k=num_sliders * 8, model_id=model_id)
+
+    selected = []
+    used_ids = set()
+    seen_labels = set()
+    source_counts = {"exploit": 0, "explore": 0}
+
+    # Only-exploit policy: all visible sliders come from phase-local
+    # recommendation context. Global pool is used only as a safety fallback.
+    exploit_target = num_sliders
+    explore_target = 0
+
+    def _append_from_pool(pool: list, target_size: int, source: str, allow_shown: bool = False):
+        if not pool:
+            return
+        for gf in pool:
+            if len(selected) >= target_size:
+                break
+            cid = str(gf.get("id"))
+            if cid in used_ids:
+                continue
+            if (not allow_shown) and cid in shown_ids:
+                continue
+            if cid in steered_ids:
+                continue
+            if _is_near_duplicate_label(gf.get("label", ""), seen_labels):
+                continue
+            selected.append(gf)
+            used_ids.add(cid)
+            seen_labels.add(_normalize_label(gf.get("label", "")))
+            source_counts[source] = source_counts.get(source, 0) + 1
+
+    # Stage 1: exploit (profile-conditioned sliders)
+    _append_from_pool(profile_pool, exploit_target, source="exploit", allow_shown=False)
+
+    # Stage 2: top-up unseen exploit frontier if needed
+    _append_from_pool(profile_pool, num_sliders, source="exploit", allow_shown=False)
+
+    # Safety fallback: if exploit frontier is exhausted, use global unseen
+    # non-steered clusters to avoid empty UI.
+    if len(selected) < num_sliders:
+        _append_from_pool(global_pool, num_sliders, source="explore", allow_shown=True)
+    if len(selected) < num_sliders:
+        _append_from_pool(profile_pool, num_sliders, source="exploit", allow_shown=True)
+
+    shown_ids.update({str(f.get("id")) for f in selected if f.get("id") is not None})
+    _set_phase_token_set("shown_sliders_per_phase", phase_idx, shown_ids)
+
+    print(
+        f"[_compute_updated_sliders] phase={phase_idx} "
+        f"touched={len(touched_ids)} shown_pool={len(shown_ids)} "
+        f"steered_pool={len(steered_ids)} returned={len(selected)} "
+        f"(exploit={source_counts.get('exploit', 0)}, explore={source_counts.get('explore', 0)})"
+    )
+    return selected[:num_sliders]
+
+
+def _update_elsa_seed_with_likes(
+    current_liked_ids: set,
+    model_id: str = None,
+    LIKE_WEIGHT: float = 0.5,
+    LIKE_CAP: int = 10,
+):
+    """Recompute the ELSA seed embedding to incorporate liked movies.
+
+    The seed is a weighted average of:
+      * original elicitation movies  (weight = 1.0 each)
+      * currently liked movies       (weight = LIKE_WEIGHT each)
+
+    We recompute from scratch each time to cleanly handle un-likes.
+    To avoid profile drift, liked contribution is saturated to ``LIKE_CAP``.
+    """
+    import torch as _torch
     try:
         from .sae_recommender import get_sae_recommender
-        recommender = get_sae_recommender(model_id=model_id)
-        recommender.load()
+        rec = get_sae_recommender(model_id=model_id)
+        rec.load()
+        if rec.item_embeddings is None or rec.item_ids is None:
+            return
 
-        if recommender.item_features is None or recommender.item_ids is None:
-            return current_features
+        id_to_idx = {int(mid): i for i, mid in enumerate(rec.item_ids)}
 
-        MIN_NEURON_MOVIES = 20
+        # Reconstruct the original elicitation seed
+        original_movies = session.get("elicitation_selected_movies", [])
+        original_count = session.get("elsa_seed_movie_count", len(original_movies))
 
-        id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
-        decoder_vecs = _build_decoder_vecs(recommender)
+        weighted_sum = np.zeros(rec.item_embeddings.shape[1], dtype=np.float32)
+        total_weight = 0.0
 
-        features_np = recommender.item_features
-        if isinstance(features_np, _torch.Tensor):
-            features_np = features_np.cpu().numpy()
-        neuron_act_counts = np.sum(features_np > 0, axis=0)
-
-        # Build engagement signal from selected movies
-        liked_acts = []
-        for mid in (liked_movie_ids or []):
+        for mid in original_movies:
             idx = id_to_idx.get(int(mid))
             if idx is not None:
-                a = features_np[idx]
-                liked_acts.append(a)
-        preference_signal = np.mean(liked_acts, axis=0) if liked_acts else None
+                emb = rec.item_embeddings[idx]
+                if isinstance(emb, _torch.Tensor):
+                    emb = emb.cpu().numpy()
+                weighted_sum += emb.astype(np.float32)
+                total_weight += 1.0
 
-        neuron_scores = sorted(
-            enumerate(preference_signal), key=lambda x: x[1], reverse=True
-        ) if preference_signal is not None else []
+        liked_sorted = sorted(int(x) for x in current_liked_ids)
+        effective_liked = liked_sorted[: max(0, int(LIKE_CAP))]
 
-        # Keep UNTOUCHED features (user didn't adjust them)
-        kept = []
-        used_ids = set()
-        seen_labels = set()
-        for f in current_features:
-            if f['id'] not in touched_ids:
-                f = _ensure_feature_group_metadata(f)
-                kept.append(f)
-                used_ids.update(f.get('member_ids', [f['id']]))
-                seen_labels.add(_normalize_label(f.get('label', '')))
-        used_ids.update(touched_ids)
+        for mid in effective_liked:
+            idx = id_to_idx.get(int(mid))
+            if idx is not None:
+                emb = rec.item_embeddings[idx]
+                if isinstance(emb, _torch.Tensor):
+                    emb = emb.cpu().numpy()
+                weighted_sum += emb.astype(np.float32) * LIKE_WEIGHT
+                total_weight += LIKE_WEIGHT
 
-        slots = num_sliders - len(kept)
-        selected_ids = [f['id'] for f in kept]
-
-        # Fill freed slots — engagement-based discovery neurons
-        # Only consider neurons with ≥MIN_NEURON_MOVIES activations and a real label
-        new_neuron_ids = []
-        for nid, score in neuron_scores:
-            if len(new_neuron_ids) >= slots * 4:
-                break
-            if nid not in used_ids and score > 0 and int(neuron_act_counts[nid]) >= MIN_NEURON_MOVIES:
-                new_neuron_ids.append(int(nid))
-
-        if new_neuron_ids:
-            new_features = get_neurons_by_ids(new_neuron_ids, model_id=model_id)
-            for nf in new_features:
-                if len(kept) >= num_sliders:
-                    break
-                nf = _ensure_feature_group_metadata(nf)
-                mc = nf.get('movie_count', 0)
-                if mc < MIN_NEURON_MOVIES:
-                    continue
-                lbl = nf.get('label', '')
-                if lbl.lower().startswith('feature ') or lbl.lower().startswith('neuron n') or lbl.lower().startswith('latent concept'):
-                    continue
-                if _is_near_duplicate_label(lbl, seen_labels):
-                    continue
-                if _is_cosine_duplicate(nf['id'], selected_ids, decoder_vecs):
-                    continue
-                nf["role"] = "user_activated"
-                kept.append(nf)
-                used_ids.update(nf.get('member_ids', [nf['id']]))
-                seen_labels.add(_normalize_label(lbl))
-                selected_ids.append(nf['id'])
-
-        # Fallback: global popular features (same quality filters)
-        if len(kept) < num_sliders:
-            global_features = get_sae_features(top_k=num_sliders * 4, model_id=model_id)
-            for gf in global_features:
-                if len(kept) >= num_sliders:
-                    break
-                gf = _ensure_feature_group_metadata(gf)
-                if gf['id'] in used_ids:
-                    continue
-                mc = gf.get('movie_count', 0)
-                if mc < MIN_NEURON_MOVIES:
-                    continue
-                lbl = gf.get('label', '')
-                if lbl.lower().startswith('feature ') or lbl.lower().startswith('neuron n') or lbl.lower().startswith('latent concept'):
-                    continue
-                if _is_near_duplicate_label(lbl, seen_labels):
-                    continue
-                if _is_cosine_duplicate(gf['id'], selected_ids, decoder_vecs):
-                    continue
-                gf['role'] = 'user_activated'
-                kept.append(gf)
-                used_ids.update(gf.get('member_ids', [gf['id']]))
-                seen_labels.add(_normalize_label(lbl))
-                selected_ids.append(gf['id'])
-
-        n_rotated = sum(1 for f in current_features if f['id'] in touched_ids)
-        n_new = len(kept) - (len(current_features) - n_rotated)
-        print(f"[_compute_updated_sliders] {n_rotated} rotated out, {n_new} new discovery features")
-        return kept[:num_sliders]
-
+        if total_weight > 0:
+            new_seed = weighted_sum / total_weight
+            session["elsa_seed"] = [round(float(v), 6) for v in new_seed]
+            n_liked = len(current_liked_ids)
+            n_effective = len(effective_liked)
+            print(f"[_update_elsa_seed_with_likes] Updated seed: "
+                  f"{len(original_movies)} elicitation + {n_liked} liked "
+                  f"(effective={n_effective}, cap={LIKE_CAP}, weight={LIKE_WEIGHT})")
     except Exception as e:
-        print(f"[_compute_updated_sliders] Error: {e}")
+        print(f"[_update_elsa_seed_with_likes] Error: {e}")
         traceback.print_exc()
-        return current_features
 
 
 def _boost_from_liked_movies(liked_movie_ids: list, strength: float = 0.30, model_id: str = None) -> dict:
@@ -3212,92 +2468,6 @@ def _boost_from_liked_movies(liked_movie_ids: list, strength: float = 0.30, mode
         print(f"[_boost_from_liked_movies] Error: {e}")
         traceback.print_exc()
         return {}
-
-
-def _build_top_features(raw_adjustments: dict, top_n: int = 7, model_id: str = None) -> list:
-    """Return the top-N most impacted neurons with human-readable labels.
-
-    Prefers LLM labels (with full description), falls back to dynamic/static.
-    """
-    from pathlib import Path
-
-    data_dir = Path(__file__).parent / "data"
-
-    label_lookup: dict = {}  # nid -> {label, description, activation_count}
-
-    # LLM labels (best quality)
-    try:
-        llm_path = None
-        if model_id:
-            llm_path = data_dir / f"llm_labels_{model_id}_llm.json"
-        if not llm_path or not llm_path.exists():
-            for p in data_dir.glob("llm_labels_*_llm.json"):
-                llm_path = p
-                break
-        if llm_path and llm_path.exists():
-            with open(llm_path) as f:
-                llm_raw = json.load(f)
-            for nid_str, info in llm_raw.items():
-                lbl = info.get('label', '')
-                if lbl and not lbl.lower().startswith('feature '):
-                    label_lookup[int(nid_str)] = {
-                        'label': lbl,
-                        'description': info.get('description', ''),
-                        'movie_count': info.get('activation_count', 0),
-                    }
-    except Exception:
-        pass
-
-    # Dynamic labels as fallback
-    if not label_lookup:
-        try:
-            import glob as _glob
-            dyn_files = _glob.glob(str(data_dir / "dynamic_labels_*_v*.json"))
-            if model_id:
-                specific = data_dir / f"dynamic_labels_{model_id}_v2.json"
-                if specific.exists():
-                    dyn_files = [str(specific)]
-            if dyn_files:
-                with open(dyn_files[0]) as f:
-                    dyn = json.load(f)
-                for nid_str, info in dyn.items():
-                    lbl = info.get('label', '')
-                    if lbl:
-                        label_lookup[int(nid_str)] = {
-                            'label': lbl,
-                            'description': info.get('description', ''),
-                            'movie_count': info.get('activation_count', 0),
-                        }
-        except Exception:
-            pass
-
-    sorted_neurons = sorted(raw_adjustments.items(),
-                            key=lambda x: abs(x[1]), reverse=True)
-
-    results = []
-    seen_labels: set = set()
-
-    for neuron_id, weight in sorted_neurons:
-        neuron_id = int(neuron_id)
-        info = label_lookup.get(neuron_id)
-        label = info['label'] if info else f"Feature {neuron_id}"
-        if label in seen_labels:
-            continue
-        seen_labels.add(label)
-
-        direction = "boost" if weight > 0 else "suppress"
-        results.append({
-            "neuron_id": neuron_id,
-            "label": label,
-            "description": info.get('description', '') if info else '',
-            "movie_count": info.get('movie_count', 0) if info else 0,
-            "weight": round(float(weight), 3),
-            "direction": direction,
-        })
-        if len(results) >= top_n:
-            break
-
-    return results
 
 
 @bp.route("/text-to-adjustments", methods=["POST"])
@@ -3410,10 +2580,9 @@ def text_to_adjustments_endpoint():
 
 @bp.route("/search-features", methods=["GET"])
 def search_features():
-    """Search all labeled SAE features by name (substring match).
+    """Search all clusters by label (substring match).
 
-    Returns JSON list of {id, label, description, movie_count}.
-    Uses LLM labels (cached) as primary, dynamic labels as fallback.
+    Returns JSON list of {id, label, description, member_ids}.
     """
     query = request.args.get("q", "").strip().lower()
     if len(query) < 2:
@@ -3422,40 +2591,8 @@ def search_features():
     conf = _normalize_study_config(load_user_study_config(session.get("user_study_id")))
     active_sae_id = _get_active_sae_model_id(conf)
 
-    labels = {}
-
     try:
-        from .sae_recommender import get_sae_recommender
-        rec = get_sae_recommender(model_id=active_sae_id)
-        rec.load()
-        if rec.item_features is None or rec.item_ids is None:
-            return jsonify([])
-
-        # LLM labels (cached, never triggers runtime LLM)
-        try:
-            from .llm_labeling import get_llm_labels
-            labels = dict(get_llm_labels(
-                model_id=active_sae_id,
-                item_features=rec.item_features,
-                item_ids=rec.item_ids,
-            ))
-        except Exception:
-            pass
-
-        # Dynamic labels fill gaps
-        try:
-            from .dynamic_labeling import get_dynamic_labels
-            dyn = get_dynamic_labels(
-                model_id=active_sae_id,
-                item_features=rec.item_features,
-                item_ids=rec.item_ids,
-            )
-            for nid, info in dyn.items():
-                nid_int = int(nid)
-                if nid_int not in labels:
-                    labels[nid_int] = info
-        except Exception:
-            pass
+        sc = _load_semantic_clusters(active_sae_id)
     except Exception as e:
         print(f"[search-features] Error: {e}")
         return jsonify([])
@@ -3463,10 +2600,8 @@ def search_features():
     current_feature_ids = {f['id'] for f in session.get("current_features", [])}
 
     results = []
-    for nid, info in labels.items():
-        nid = int(nid)
-        label = info.get('label', '')
-        desc = info.get('description', '')
+    for cluster in sc["clusters"]:
+        label = cluster["label"]
         if query in label.lower():
             label_lower = label.lower()
             if label_lower == query:
@@ -3478,11 +2613,12 @@ def search_features():
             else:
                 match_rank = 3
             results.append({
-                'id': nid,
+                'id': cluster["cluster_id"],
                 'label': label,
-                'description': desc,
-                'movie_count': info.get('activation_count', 0),
-                'already_shown': nid in current_feature_ids,
+                'description': cluster.get("description", ""),
+                'member_ids': cluster["neuron_ids"],
+                'movie_count': cluster.get("support", len(cluster["neuron_ids"])),
+                'already_shown': cluster["cluster_id"] in current_feature_ids,
                 'match_rank': match_rank,
             })
     results.sort(key=lambda x: (x['already_shown'], x['match_rank'], -x['movie_count'], len(x['label'])))
@@ -3513,6 +2649,7 @@ def approve_preferences():
     conf = _normalize_study_config(load_user_study_config(session.get("user_study_id")))
     active_model = _get_active_model_config(conf)
     participation_id = session.get("participation_id")
+    is_final_confirmation = bool(session.get("iteration_locked_final", False))
     if participation_id:
         log_interaction(
             participation_id,
@@ -3522,6 +2659,7 @@ def approve_preferences():
             model_id=active_model.get("sae", DEFAULT_TOPK_SAE_MODEL_ID),
             steering_mode=active_model.get("steering_mode", DEFAULT_STEERING_MODE),
             liked_movies=data.get("liked_movies", []),
+            is_final_confirmation=is_final_confirmation,
         )
 
     return jsonify({"status": "ok", "approved": True})
@@ -3558,6 +2696,63 @@ def log_movie_feedback():
         return jsonify({"status": "ok"})
     except Exception as e:
         print(f"[log_movie_feedback] Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 200
+
+
+# ============================================================================
+# Generic client-side UI event logging
+# ============================================================================
+
+@bp.route("/log-ui-event", methods=["POST"])
+def log_ui_event():
+    """Log a fine-grained client-side UI event (slider touch, search, etc.)."""
+    try:
+        data = request.get_json(force=True) or {}
+        participation_id = session.get("participation_id")
+        if not participation_id:
+            return jsonify({"status": "skip"}), 200
+
+        event_type = data.pop("event_type", "ui-event")
+        log_interaction(
+            participation_id,
+            event_type,
+            iteration=session.get("iteration", 1),
+            phase=session.get("current_phase", 0),
+            **data,
+        )
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"[log_ui_event] Error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 200
+
+
+# ============================================================================
+# Autosave – periodic client-side state snapshots for crash resilience
+# ============================================================================
+
+@bp.route("/autosave", methods=["POST"])
+def autosave():
+    """Persist a client-side state snapshot so progress can be recovered."""
+    try:
+        data = request.get_json(force=True) or {}
+        participation_id = session.get("participation_id")
+        if not participation_id:
+            return jsonify({"status": "skip", "reason": "no participation"}), 200
+
+        log_interaction(
+            participation_id,
+            "autosave",
+            iteration=session.get("iteration", 1),
+            phase=session.get("current_phase", 0),
+            liked_movies=data.get("liked_movies", []),
+            feature_adjustments=data.get("feature_adjustments", {}),
+            activity_snapshot=data.get("activity_snapshot", {}),
+            timestamp=data.get("timestamp"),
+            trigger=data.get("trigger", "periodic"),
+        )
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        print(f"[autosave] Error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 200
 
 
@@ -3695,32 +2890,32 @@ def fetch_results(guid):
 
     final_score_maps = {
         "f1_preference": {
-            "A_strongly": -2,
-            "A_slightly": -1,
+            "without_control_strongly": -2,
+            "without_control_slightly": -1,
             "no_preference": 0,
-            "B_slightly": 1,
-            "B_strongly": 2,
+            "with_control_slightly": 1,
+            "with_control_strongly": 2,
         },
         "f2_better_recs": {
-            "A_clearly": -2,
-            "A_slightly": -1,
+            "without_control_clearly": -2,
+            "without_control_slightly": -1,
             "same": 0,
-            "B_slightly": 1,
-            "B_clearly": 2,
+            "with_control_slightly": 1,
+            "with_control_clearly": 2,
         },
         "f3_more_control": {
-            "A_clearly": -2,
-            "A_slightly": -1,
+            "without_control_clearly": -2,
+            "without_control_slightly": -1,
             "same": 0,
-            "B_slightly": 1,
-            "B_clearly": 2,
+            "with_control_slightly": 1,
+            "with_control_clearly": 2,
         },
         "f4_more_responsive": {
-            "A_clearly": -2,
-            "A_slightly": -1,
+            "without_control_clearly": -2,
+            "without_control_slightly": -1,
             "same": 0,
-            "B_slightly": 1,
-            "B_clearly": 2,
+            "with_control_slightly": 1,
+            "with_control_clearly": 2,
         },
     }
 
@@ -3814,6 +3009,9 @@ def fetch_results(guid):
             "time_joined": p.time_joined.isoformat() if p.time_joined else None,
             "time_finished": p.time_finished.isoformat() if p.time_finished else None,
             "language": p.language,
+            "approach_order": None,
+            "elicitation_selected_movies": None,
+            "search_events": [],
             "phase_models": {},
             "phase_behavior": {},
             "phase_movie_feedback": {},
@@ -3830,7 +3028,24 @@ def fetch_results(guid):
 
         for interaction in interactions:
             data = _safe_parse_json(interaction.data)
-            if interaction.interaction_type == "feature-adjustment":
+
+            if interaction.interaction_type == "approach-order-assigned":
+                participant_data["approach_order"] = data.get("approach_order")
+
+            elif interaction.interaction_type == "elicitation-completed":
+                participant_data["elicitation_selected_movies"] = data.get("selected_movies")
+
+            elif interaction.interaction_type in ("elicitation-search", "feature-search"):
+                participant_data["search_events"].append({
+                    "type": interaction.interaction_type,
+                    "time": interaction.time.isoformat() if interaction.time else None,
+                    "query": data.get("query"),
+                    "result_count": data.get("result_count"),
+                    "phase": data.get("phase"),
+                    "iteration": data.get("iteration"),
+                })
+
+            elif interaction.interaction_type == "feature-adjustment":
                 phase_idx = str(int(data.get("phase", 0)))
                 phase_entry = phase_behavior.setdefault(
                     phase_idx,
@@ -3914,8 +3129,11 @@ def fetch_results(guid):
             is_steered_phase = any(
                 key in answers for key in ("p2e_responsiveness", "p3a_label_clarity", "p4a_ease")
             )
-            expected = "6" if is_steered_phase else "3"
-            passed = str(raw_attention).strip() == expected
+            attention_value = str(raw_attention).strip()
+            if is_steered_phase:
+                passed = attention_value in {"1", "2", "3"}
+            else:
+                passed = attention_value == "7"
             phase_attention_passes.append(passed)
             results["sample"]["attention_checks"]["phase_total"] += 1
             if passed:
@@ -3924,7 +3142,7 @@ def fetch_results(guid):
         final_attention_value = final_questionnaire.get("f_attention_check")
         final_attention_pass = None
         if final_attention_value is not None:
-            final_attention_pass = str(final_attention_value).strip() == "5"
+            final_attention_pass = str(final_attention_value).strip() == "same"
             results["sample"]["attention_checks"]["final_total"] += 1
             if final_attention_pass:
                 results["sample"]["attention_checks"]["final_passed"] += 1
@@ -3994,6 +3212,20 @@ def fetch_results(guid):
             first_phase, second_phase = phase_keys[0], phase_keys[1]
             first_answers = phase_questionnaires.get(first_phase, {})
             second_answers = phase_questionnaires.get(second_phase, {})
+            steered_markers = ("p2e_responsiveness", "p3a_label_clarity", "p4a_ease")
+            first_is_steered = any(marker in first_answers for marker in steered_markers)
+            second_is_steered = any(marker in second_answers for marker in steered_markers)
+
+            with_control_phase = None
+            without_control_phase = None
+            with_control_answers = None
+            without_control_answers = None
+            if first_is_steered and not second_is_steered:
+                with_control_phase, with_control_answers = first_phase, first_answers
+                without_control_phase, without_control_answers = second_phase, second_answers
+            elif second_is_steered and not first_is_steered:
+                with_control_phase, with_control_answers = second_phase, second_answers
+                without_control_phase, without_control_answers = first_phase, first_answers
 
             for item_key in phase_shared_items:
                 left = _to_float(first_answers.get(item_key))
@@ -4001,52 +3233,57 @@ def fetch_results(guid):
                 if left is not None and right is not None:
                     phase_shared_diffs[item_key].append(right - left)
 
-            quality_left = [v for v in [_to_float(first_answers.get(x)) for x in quality_items] if v is not None]
-            quality_right = [v for v in [_to_float(second_answers.get(x)) for x in quality_items] if v is not None]
-            if quality_left and quality_right:
-                quality_diff = _mean(quality_right) - _mean(quality_left)
+            quality_with = [v for v in [_to_float((with_control_answers or {}).get(x)) for x in quality_items] if v is not None]
+            quality_without = [v for v in [_to_float((without_control_answers or {}).get(x)) for x in quality_items] if v is not None]
+            if quality_with and quality_without:
+                quality_diff = _mean(quality_with) - _mean(quality_without)
                 quality_diffs.append(quality_diff)
 
-            sat_left = [v for v in [_to_float(first_answers.get(x)) for x in satisfaction_items] if v is not None]
-            sat_right = [v for v in [_to_float(second_answers.get(x)) for x in satisfaction_items] if v is not None]
-            if sat_left and sat_right:
-                satisfaction_diffs.append(_mean(sat_right) - _mean(sat_left))
+            sat_with = [v for v in [_to_float((with_control_answers or {}).get(x)) for x in satisfaction_items] if v is not None]
+            sat_without = [v for v in [_to_float((without_control_answers or {}).get(x)) for x in satisfaction_items] if v is not None]
+            if sat_with and sat_without:
+                satisfaction_diffs.append(_mean(sat_with) - _mean(sat_without))
 
-            control_left = [v for v in [_to_float(first_answers.get(x)) for x in control_items] if v is not None]
-            control_right = [v for v in [_to_float(second_answers.get(x)) for x in control_items] if v is not None]
-            if control_left and control_right:
-                control_diffs.append(_mean(control_right) - _mean(control_left))
+            control_with = [v for v in [_to_float((with_control_answers or {}).get(x)) for x in control_items] if v is not None]
+            control_without = [v for v in [_to_float((without_control_answers or {}).get(x)) for x in control_items] if v is not None]
+            if control_with and control_without:
+                control_diffs.append(_mean(control_with) - _mean(control_without))
 
             preference_score = None
             pref_choice = final_questionnaire.get("f1_preference")
             if pref_choice in final_score_maps["f1_preference"]:
                 preference_score = final_score_maps["f1_preference"][pref_choice]
 
-            if preference_score is not None and quality_left and quality_right:
+            if preference_score is not None and quality_with and quality_without:
                 link_pref_quality.append(
-                    {"preference_score": preference_score, "quality_diff": _mean(quality_right) - _mean(quality_left)}
+                    {"preference_score": preference_score, "quality_diff": _mean(quality_with) - _mean(quality_without)}
                 )
-            if preference_score is not None and control_left and control_right:
+            if preference_score is not None and control_with and control_without:
                 link_control.append(
-                    {"preference_score": preference_score, "control_diff": _mean(control_right) - _mean(control_left)}
+                    {"preference_score": preference_score, "control_diff": _mean(control_with) - _mean(control_without)}
                 )
 
-            responsiveness_left = _to_float(first_answers.get("p2e_responsiveness"))
-            responsiveness_right = _to_float(second_answers.get("p2e_responsiveness"))
+            responsiveness_without = _to_float((without_control_answers or {}).get("p2e_responsiveness"))
+            responsiveness_with = _to_float((with_control_answers or {}).get("p2e_responsiveness"))
             responsiveness_diff = None
-            if responsiveness_left is not None and responsiveness_right is not None:
-                responsiveness_diff = responsiveness_right - responsiveness_left
-            elif responsiveness_right is not None:
-                responsiveness_diff = responsiveness_right
-            elif responsiveness_left is not None:
-                responsiveness_diff = -responsiveness_left
+            if responsiveness_without is not None and responsiveness_with is not None:
+                responsiveness_diff = responsiveness_with - responsiveness_without
+            elif responsiveness_with is not None:
+                responsiveness_diff = responsiveness_with
+            elif responsiveness_without is not None:
+                responsiveness_diff = -responsiveness_without
             if preference_score is not None and responsiveness_diff is not None:
                 link_responsiveness.append(
                     {"preference_score": preference_score, "responsiveness_diff": responsiveness_diff}
                 )
 
             if pref_choice:
-                target_phase = second_phase if pref_choice.startswith("B_") else first_phase
+                if pref_choice.startswith("with_control_"):
+                    target_phase = with_control_phase
+                elif pref_choice.startswith("without_control_"):
+                    target_phase = without_control_phase
+                else:
+                    target_phase = None
                 if pref_choice == "no_preference":
                     target_phase = None
                 if target_phase is not None:
@@ -4189,7 +3426,7 @@ def fetch_results(guid):
         entry = {"distribution": _build_distribution(values)}
         if item_key in final_score_values and final_score_values[item_key]:
             entry["mean_score"] = _round_or_none(_mean(final_score_values[item_key]), 3)
-            entry["score_scale"] = "A=-2 ... B=+2"
+            entry["score_scale"] = "without explicit control=-2 ... with explicit control=+2"
         if item_key in ("f19_movie_familiarity", "f21_ml_familiarity"):
             numeric_values = [_to_float(v) for v in values]
             numeric_values = [x for x in numeric_values if x is not None]
@@ -4240,16 +3477,16 @@ def fetch_results(guid):
     def _build_link_summary(rows, value_key):
         if not rows:
             return {"n": 0, "mean_by_preference": {}}
-        buckets = {"A": [], "neutral": [], "B": []}
+        buckets = {"without_control": [], "neutral": [], "with_control": []}
         for row in rows:
             pref = row.get("preference_score", 0)
             metric_value = row.get(value_key)
             if metric_value is None:
                 continue
             if pref < 0:
-                buckets["A"].append(metric_value)
+                buckets["without_control"].append(metric_value)
             elif pref > 0:
-                buckets["B"].append(metric_value)
+                buckets["with_control"].append(metric_value)
             else:
                 buckets["neutral"].append(metric_value)
         return {
@@ -4307,14 +3544,20 @@ def fetch_results(guid):
     ml_mod = results["moderators"]["ml_familiarity"]
 
     if pref_mean is not None:
-        direction = "Approach B" if pref_mean > 0 else "Approach A" if pref_mean < 0 else "No clear winner"
+        direction = (
+            "Approach with explicit control"
+            if pref_mean > 0
+            else "Approach without explicit control"
+            if pref_mean < 0
+            else "No clear winner"
+        )
         results["insights"].append(
             {
                 "id": "preference",
                 "title": "Overall preference",
                 "finding": f"{direction} is preferred on average.",
                 "strength": _round_or_none(abs(pref_mean), 3),
-                "metric": "f1_preference mean (A=-2, B=+2)",
+                "metric": "f1_preference mean (without control=-2, with control=+2)",
             }
         )
     if quality_link:
@@ -4322,14 +3565,22 @@ def fetch_results(guid):
             {
                 "id": "quality",
                 "title": "Preference vs recommendation quality",
-                "finding": "Participants preferring B also report stronger quality gains when B-A quality diff is positive.",
-                "strength": _round_or_none((quality_link.get("B", 0) - quality_link.get("A", 0)), 3),
-                "metric": "Mean quality_diff (B-A) by preference group",
+                "finding": "Participants preferring explicit control also report stronger quality gains when with-minus-without quality diff is positive.",
+                "strength": _round_or_none(
+                    (quality_link.get("with_control", 0) - quality_link.get("without_control", 0)), 3
+                ),
+                "metric": "Mean quality_diff (with - without) by preference group",
             }
         )
     if control_link or resp_link:
-        strength_control = (control_link.get("B", 0) - control_link.get("A", 0)) if control_link else 0
-        strength_resp = (resp_link.get("B", 0) - resp_link.get("A", 0)) if resp_link else 0
+        strength_control = (
+            (control_link.get("with_control", 0) - control_link.get("without_control", 0))
+            if control_link else 0
+        )
+        strength_resp = (
+            (resp_link.get("with_control", 0) - resp_link.get("without_control", 0))
+            if resp_link else 0
+        )
         results["insights"].append(
             {
                 "id": "control_responsiveness",
@@ -4354,6 +3605,68 @@ def fetch_results(guid):
             )
 
     return jsonify(results)
+
+
+# ============================================================================
+# Raw Data Export
+# ============================================================================
+
+@bp.route("/export-raw/<guid>")
+def export_raw_data(guid):
+    """Export complete raw study data as JSON for offline analysis.
+
+    Each participation includes every ``Interaction`` row in chronological order
+    so that the full user journey can be reconstructed.
+    """
+    user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
+    if not user_study:
+        return jsonify({"error": "Study not found"}), 404
+
+    study_config = _safe_parse_json(user_study.settings)
+
+    all_participations = Participation.query.filter(
+        Participation.user_study_id == user_study.id
+    ).order_by(Participation.time_joined.asc()).all()
+
+    participants_data = []
+    for p in all_participations:
+        interactions = Interaction.query.filter(
+            Interaction.participation == p.id
+        ).order_by(Interaction.time.asc()).all()
+
+        interaction_rows = []
+        for ix in interactions:
+            interaction_rows.append({
+                "id": ix.id,
+                "type": ix.interaction_type,
+                "time": ix.time.isoformat() if ix.time else None,
+                "data": _safe_parse_json(ix.data),
+            })
+
+        participants_data.append({
+            "participation_id": p.id,
+            "uuid": p.uuid,
+            "email": p.participant_email,
+            "language": p.language,
+            "time_joined": p.time_joined.isoformat() if p.time_joined else None,
+            "time_finished": p.time_finished.isoformat() if p.time_finished else None,
+            "extra_data": _safe_parse_json(p.extra_data),
+            "interactions": interaction_rows,
+        })
+
+    export = {
+        "study_guid": guid,
+        "study_id": user_study.id,
+        "study_config": study_config,
+        "exported_at": datetime.datetime.utcnow().isoformat(),
+        "participants_total": len(participants_data),
+        "participants_completed": sum(1 for p in participants_data if p["time_finished"]),
+        "participants": participants_data,
+    }
+
+    response = jsonify(export)
+    response.headers["Content-Disposition"] = f"attachment; filename=study_{guid}_export.json"
+    return response
 
 
 # ============================================================================

@@ -44,56 +44,67 @@
 <div class="text-center mb-4">
   <h4 class="font-weight-bold">Final Questionnaire</h4>
   <p class="text-muted small">Now that you have tried both approaches, please answer the following questions.<br>
-  There are no right or wrong answers - we value your honest experience.</p>
+  There are no right or wrong answers (except for attention checks) - we value your honest experience.</p>
 </div>
 
 <!-- SECTION 1 - Approach Comparison -->
 <div class="card mb-3">
   <div class="card-header font-weight-bold text-primary">Approach Comparison</div>
   <div class="card-body">
-    <p class="q-section-note">Think back to Approach A (first) and Approach B (second).</p>
+    <p class="q-section-note">Compare the approach with explicit control and the approach without explicit control.</p>
 
     <div class="form-group">
       <label class="font-weight-bold">F1. Which approach did you prefer overall?</label>
       <div class="likert-row">
-        <label><input type="radio" name="f1_preference" value="A_strongly" required><span>Strongly prefer A</span></label>
-        <label><input type="radio" name="f1_preference" value="A_slightly"><span>Slightly prefer A</span></label>
+        <label><input type="radio" name="f1_preference" value="without_control_strongly" required><span>Strongly prefer without explicit control</span></label>
+        <label><input type="radio" name="f1_preference" value="without_control_slightly"><span>Slightly prefer without explicit control</span></label>
         <label><input type="radio" name="f1_preference" value="no_preference"><span>No preference</span></label>
-        <label><input type="radio" name="f1_preference" value="B_slightly"><span>Slightly prefer B</span></label>
-        <label><input type="radio" name="f1_preference" value="B_strongly"><span>Strongly prefer B</span></label>
+        <label><input type="radio" name="f1_preference" value="with_control_slightly"><span>Slightly prefer with explicit control</span></label>
+        <label><input type="radio" name="f1_preference" value="with_control_strongly"><span>Strongly prefer with explicit control</span></label>
       </div>
     </div>
 
     <div class="form-group">
       <label class="font-weight-bold">F2. Which approach gave you better movie recommendations?</label>
       <div class="likert-row">
-        <label><input type="radio" name="f2_better_recs" value="A_clearly" required><span>A - clearly</span></label>
-        <label><input type="radio" name="f2_better_recs" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="without_control_clearly" required><span>Without explicit control - clearly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="without_control_slightly"><span>Without explicit control - slightly</span></label>
         <label><input type="radio" name="f2_better_recs" value="same"><span>About the same</span></label>
-        <label><input type="radio" name="f2_better_recs" value="B_slightly"><span>B - slightly</span></label>
-        <label><input type="radio" name="f2_better_recs" value="B_clearly"><span>B - clearly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="with_control_slightly"><span>With explicit control - slightly</span></label>
+        <label><input type="radio" name="f2_better_recs" value="with_control_clearly"><span>With explicit control - clearly</span></label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="font-weight-bold">F2x. Which approach provided more recommendations? To answer this attention check question correctly, you must select "About the same".</label>
+      <div class="likert-row">
+        <label><input type="radio" name="f_attention_check" value="without_control_clearly" required><span>Without explicit control - clearly</span></label>
+        <label><input type="radio" name="f_attention_check" value="without_control_slightly"><span>Without explicit control - slightly</span></label>
+        <label><input type="radio" name="f_attention_check" value="same"><span>About the same</span></label>
+        <label><input type="radio" name="f_attention_check" value="with_control_slightly"><span>With explicit control - slightly</span></label>
+        <label><input type="radio" name="f_attention_check" value="with_control_clearly"><span>With explicit control - clearly</span></label>
       </div>
     </div>
 
     <div class="form-group">
       <label class="font-weight-bold">F3. Which approach gave you more control over the recommendations?</label>
       <div class="likert-row">
-        <label><input type="radio" name="f3_more_control" value="A_clearly" required><span>A - clearly</span></label>
-        <label><input type="radio" name="f3_more_control" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="without_control_clearly" required><span>Without explicit control - clearly</span></label>
+        <label><input type="radio" name="f3_more_control" value="without_control_slightly"><span>Without explicit control - slightly</span></label>
         <label><input type="radio" name="f3_more_control" value="same"><span>About the same</span></label>
-        <label><input type="radio" name="f3_more_control" value="B_slightly"><span>B - slightly</span></label>
-        <label><input type="radio" name="f3_more_control" value="B_clearly"><span>B - clearly</span></label>
+        <label><input type="radio" name="f3_more_control" value="with_control_slightly"><span>With explicit control - slightly</span></label>
+        <label><input type="radio" name="f3_more_control" value="with_control_clearly"><span>With explicit control - clearly</span></label>
       </div>
     </div>
 
     <div class="form-group mb-0">
       <label class="font-weight-bold">F4. Which approach felt more responsive to your adjustments?</label>
       <div class="likert-row">
-        <label><input type="radio" name="f4_more_responsive" value="A_clearly" required><span>A - clearly</span></label>
-        <label><input type="radio" name="f4_more_responsive" value="A_slightly"><span>A - slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="without_control_clearly" required><span>Without explicit control - clearly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="without_control_slightly"><span>Without explicit control - slightly</span></label>
         <label><input type="radio" name="f4_more_responsive" value="same"><span>About the same</span></label>
-        <label><input type="radio" name="f4_more_responsive" value="B_slightly"><span>B - slightly</span></label>
-        <label><input type="radio" name="f4_more_responsive" value="B_clearly"><span>B - clearly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="with_control_slightly"><span>With explicit control - slightly</span></label>
+        <label><input type="radio" name="f4_more_responsive" value="with_control_clearly"><span>With explicit control - clearly</span></label>
       </div>
     </div>
 
@@ -141,25 +152,6 @@
       <div class="likert-anchors"><span>Not at all familiar</span><span>Expert</span></div>
     </div>
 
-  </div>
-</div>
-
-<div class="card mb-3">
-  <div class="card-header font-weight-bold text-primary">Attention Check</div>
-  <div class="card-body">
-    <div class="form-group mb-0">
-      <label class="font-weight-bold">AC1. Attention check: please select <em>5</em> for this item.</label>
-      <div class="likert-row">
-        <label><input type="radio" name="f_attention_check" value="1" required><span>1</span></label>
-        <label><input type="radio" name="f_attention_check" value="2"><span>2</span></label>
-        <label><input type="radio" name="f_attention_check" value="3"><span>3</span></label>
-        <label><input type="radio" name="f_attention_check" value="4"><span>4</span></label>
-        <label><input type="radio" name="f_attention_check" value="5"><span>5</span></label>
-        <label><input type="radio" name="f_attention_check" value="6"><span>6</span></label>
-        <label><input type="radio" name="f_attention_check" value="7"><span>7</span></label>
-      </div>
-      <div class="likert-anchors"><span>Strongly disagree</span><span>Strongly agree</span></div>
-    </div>
   </div>
 </div>
 

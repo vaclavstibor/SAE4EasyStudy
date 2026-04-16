@@ -1,0 +1,19 @@
+Training sparse autoencoder using config {'dataset': 'ml-32m-filtered', 'pretrained_model_checkpoint': 'ELSA-2048-76e4370a.ckpt', 'model_module': 'sae', 'model_class': 'TopKSAE', 'embedding_dim': 16384, 'reconstruction_loss': 'Cosine', 'l1_coef': 0.0003, 'k': 16, 'epochs': 250, 'early_stopping': 50, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'seed': 42}
+Source model config: {'dataset': 'ml-32m-filtered', 'val_user_ratio': 0.2, 'test_user_ratio': 0.0, 'target_interaction_ratio': 0.2, 'model_module': 'elsa', 'model_class': 'ELSA', 'embedding_dim': 2048, 'epochs': 25, 'early_stopping': 10, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'eval_topk': 20, 'eval_topks': '10,20', 'seed': 42}
+Dataset info: users=30966, items=8328, interactions=2954801
+Train split info: users=24773, items=8328, interactions=2368369
+Val split info: users=6193, items=8328, interactions=586432
+Test split info: users=0, items=8328, interactions=0
+Loaded checkpoint from /mnt/batch/tasks/shared/LS_root/mounts/clusters/ab-finetuning/code/Users/Vaclav.Stibor/EasyStudy/train/recsys26/checkpoints/ml-32m-filtered/ELSA-2048-76e4370a.ckpt (after 10 epochs)
+Train user embeddings shape=(24773, 2048), val user embeddings shape=(6193, 2048)
+No checkpoint found, starting from scratch.
+Reached early stopping condition, terminating training.
+Loading best model from epoch 57 with val loss 0.23721.
+Training loop for TopKSAE-16384-ef43284e took 99.4686 seconds.
+model = TopKSAE-16384-ef43284e | split = val | cosine = 0.741987 +- 0.001672
+model = TopKSAE-16384-ef43284e | split = val | l0 = 16.000000 +- 0.000000
+model = TopKSAE-16384-ef43284e | split = val | dead neurons = 1365
+model = TopKSAE-16384-ef43284e | split = val | recall @ 20 = 0.330866 +- 0.002471
+model = TopKSAE-16384-ef43284e | split = val | recall degradation @ 20 = -0.041045 +- 0.001366
+model = TopKSAE-16384-ef43284e | split = val | ndcg @ 20 = 0.337404 +- 0.002540
+model = TopKSAE-16384-ef43284e | split = val | ndcg degradation @ 20 = -0.044267 +- 0.001191

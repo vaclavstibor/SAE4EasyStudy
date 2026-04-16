@@ -1,0 +1,18 @@
+Training sparse autoencoder using config {'dataset': 'ml-32m-filtered', 'pretrained_model_checkpoint': 'ELSA-1024-66e73686.ckpt', 'model_module': 'sae', 'model_class': 'TopKSAE', 'embedding_dim': 4096, 'reconstruction_loss': 'Cosine', 'l1_coef': 0.0003, 'k': 32, 'epochs': 60, 'early_stopping': 12, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'seed': 42}
+Source model config: {'dataset': 'ml-32m-filtered', 'val_user_ratio': 0.2, 'test_user_ratio': 0.0, 'target_interaction_ratio': 0.2, 'model_module': 'elsa', 'model_class': 'ELSA', 'embedding_dim': 1024, 'epochs': 10, 'early_stopping': 3, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'eval_topk': 20, 'eval_topks': '10,20', 'seed': 42}
+Dataset info: users=30966, items=8328, interactions=2954801
+Train split info: users=24773, items=8328, interactions=2368369
+Val split info: users=6193, items=8328, interactions=586432
+Test split info: users=0, items=8328, interactions=0
+Loaded checkpoint from /mnt/batch/tasks/shared/LS_root/mounts/clusters/ab-finetuning/code/Users/Vaclav.Stibor/EasyStudy/train/recsys26/checkpoints/ml-32m-filtered/ELSA-1024-66e73686.ckpt (after 10 epochs)
+Train user embeddings shape=(24773, 1024), val user embeddings shape=(6193, 1024)
+No checkpoint found, starting from scratch.
+Loading best model from epoch 60 with val loss 0.16170.
+Training loop for TopKSAE-4096-4a9737ef took 10.7805 seconds.
+model = TopKSAE-4096-4a9737ef | split = val | cosine = 0.821580 +- 0.001549
+model = TopKSAE-4096-4a9737ef | split = val | l0 = 32.000000 +- 0.000000
+model = TopKSAE-4096-4a9737ef | split = val | dead neurons = 27
+model = TopKSAE-4096-4a9737ef | split = val | recall @ 20 = 0.345870 +- 0.002514
+model = TopKSAE-4096-4a9737ef | split = val | recall degradation @ 20 = -0.017487 +- 0.001052
+model = TopKSAE-4096-4a9737ef | split = val | ndcg @ 20 = 0.352416 +- 0.002598
+model = TopKSAE-4096-4a9737ef | split = val | ndcg degradation @ 20 = -0.018981 +- 0.000873

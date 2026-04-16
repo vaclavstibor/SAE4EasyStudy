@@ -1,0 +1,11 @@
+Training ELSA model using config {'dataset': 'ml-32m-filtered', 'val_user_ratio': 0.2, 'test_user_ratio': 0.0, 'target_interaction_ratio': 0.2, 'model_module': 'elsa', 'model_class': 'ELSA', 'embedding_dim': 512, 'epochs': 10, 'early_stopping': 3, 'batch_size': 1024, 'lr': 0.0003, 'beta1': 0.9, 'beta2': 0.99, 'eval_topk': 20, 'eval_topks': '10,20', 'seed': 42}
+Dataset info: users=30966, items=8328, interactions=2954801
+Train split info: users=24773, items=8328, interactions=2368369
+Val split info: users=6193, items=8328, interactions=586432
+Test split info: users=0, items=8328, interactions=0
+Loaded checkpoint from /mnt/batch/tasks/shared/LS_root/mounts/clusters/ab-finetuning/code/Users/Vaclav.Stibor/EasyStudy/train/recsys26/checkpoints/ml-32m-filtered/ELSA-512-23be8efd.ckpt (after 10 epochs)
+Checkpoint already trained for 10 of 10 epochs, training is complete.
+model = ELSA-512-23be8efd | split = val | recall @10 = 0.319773 +- 0.002742
+model = ELSA-512-23be8efd | split = val | ndcg @10 = 0.349357 +- 0.003000
+model = ELSA-512-23be8efd | split = val | recall @20 = 0.341664 +- 0.002502
+model = ELSA-512-23be8efd | split = val | ndcg @20 = 0.346332 +- 0.002591

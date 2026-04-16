@@ -1,23 +1,14 @@
 #!/usr/bin/env python3
 """
-Pre-generate semantic cluster profile for SAE neurons.
+DEPRECATED — use labeling/run_labeling_pipeline.sh instead.
 
-Strategy: cluster neurons by their FUNCTIONAL behavior (which movies
-they activate on), not by label text.  This guarantees maximally
-disjoint taste dimensions — each cluster covers a different region
-of movie space.
+The standalone labeling pipeline now produces cluster_profile_*.json
+with LLM-based semantic clustering. This script is kept for reference
+but the labeling pipeline should be used for all new runs.
 
-1. Load item_features matrix (neuron activations per movie).
-2. For each neuron, its "taste fingerprint" is its activation vector
-   across all movies, L2-normalized.
-3. Run Spectral Clustering (better than KMeans for high-dim correlated
-   data) on the neuron fingerprints.
-4. Name each cluster by aggregating MovieLens genres of its top-activated
-   movies, then let LLM pick a broad taste label.
-
-Usage:
-    python generate_cluster_profile.py --model www_TopKSAE_8192
-    python generate_cluster_profile.py --model www_TopKSAE_8192 --force
+Usage (legacy):
+    python generate_cluster_profile.py --model TopKSAE-1024
+    python generate_cluster_profile.py --model TopKSAE-1024 --force
 
 Output:
   data/cluster_profile_{model_id}.json
@@ -104,7 +95,7 @@ def load_llm_labels(model_id: str) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate semantic cluster profile")
-    parser.add_argument("--model", default="prediction_aware_sae")
+    parser.add_argument("--model", default="TopKSAE-1024")
     parser.add_argument("--clusters", type=int, default=N_CLUSTERS)
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()

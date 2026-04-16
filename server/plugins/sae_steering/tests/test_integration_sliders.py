@@ -17,7 +17,7 @@ from plugins.sae_steering import (
 from plugins.sae_steering.sae_recommender import get_sae_recommender
 
 SEED = [1006, 721, 1035, 969, 564, 921, 236]
-MODEL = "www_TopKSAE_8192"
+MODEL = "TopKSAE-1024"
 NUM_SLIDERS = 14
 
 

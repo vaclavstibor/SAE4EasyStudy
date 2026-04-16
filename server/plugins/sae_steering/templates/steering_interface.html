@@ -501,6 +501,14 @@
             flex-shrink: 0;
             align-self: stretch;
         }
+        .slider-local-impact {
+            margin-top: 4px;
+            font-size: 0.68em;
+            color: #6b7280;
+            text-align: center;
+            letter-spacing: 0.01em;
+            text-transform: uppercase;
+        }
         
         
         /* Cluster Profile */
@@ -508,17 +516,6 @@
             margin-top: 14px;
             padding-top: 4px;
         }
-        .cluster-header {
-            color: #495057;
-            border-bottom-color: #6c757d !important;
-        }
-        .cluster-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-            gap: 10px;
-            margin-top: 10px;
-        }
-
         /* Action Buttons */
         .action-buttons {
             display: flex;
@@ -666,6 +663,40 @@
             pointer-events: none;
             z-index: 9999;
             box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+        }
+        .resolution-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(33, 37, 41, 0.72);
+            backdrop-filter: blur(1px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        }
+        .resolution-overlay.show {
+            display: flex;
+        }
+        .resolution-dialog {
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            max-width: 720px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 20px 22px;
+        }
+        .resolution-dialog h3 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #343a40;
+        }
+        .resolution-dialog p {
+            margin: 0;
+            color: #4f5965;
+            line-height: 1.55;
         }
 
         @media (max-width: 1280px) {
@@ -1024,47 +1055,23 @@
             <!-- Feature Sliders -->
             {% if steering_mode != 'text' and steering_mode != 'none' %}
             <div class="sliders-section" id="sliders-section">
-                {% if show_general_features %}
-                <div class="cluster-profile-section" id="cluster-profile-section">
-                    <div class="slider-section-header cluster-header">
-                        General Features
-                        <span class="section-count">{{ cluster_profile|length }}</span>
-                        <span class="text-muted" style="font-size:0.7em; margin-left:6px;">macro-level control</span>
-                    </div>
-                    <div class="cluster-grid" id="cluster-grid">
-                        {% for cluster in cluster_profile %}
-                        <div class="slider-card" id="cluster-card-{{ cluster.id }}">
-                            <div class="slider-label">{{ cluster.label }}</div>
-                            <div class="slider-category">{{ cluster.neuron_ids|length }} neurons</div>
-                            <div class="slider-description-snippet">{{ cluster.description or '' }}</div>
-                            <input type="range" class="slider-control cluster-slider"
-                                   id="slider-{{ cluster.id }}"
-                                   data-cluster-id="{{ cluster.id }}"
-                                   min="0" max="400" step="10" value="200">
-                            <div class="slider-value" id="slider-value-{{ cluster.id }}">0.00</div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
                 <div class="sliders-grid" id="sliders-container">
-                    <!-- Dynamic Features (hidden in text-only mode) -->
                     {% for feature in features %}
-                    <div class="slider-card role-activated" id="slider-card-{{ feature.id }}" title="{{ feature.description }}">
+                    <div class="slider-card" id="slider-card-{{ feature.id }}" title="{{ feature.description }}">
                         <div class="slider-label" title="{{ feature.description }}">{{ feature.label }}</div>
                         <div class="slider-description-snippet">{{ feature.description }}</div>
-                        <input 
-                            type="range" 
-                            class="slider-control" 
+                        <input
+                            type="range"
+                            class="slider-control"
                             id="slider-{{ feature.id }}"
                             data-feature-id="{{ feature.id }}"
-                            min="0" 
-                            max="400" 
+                            min="0"
+                            max="400"
                             step="10"
                             value="200"
                         >
                         <div class="slider-value" id="slider-value-{{ feature.id }}">0</div>
+                        <div class="slider-local-impact" id="slider-impact-{{ feature.id }}">No impact</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -1074,7 +1081,10 @@
                     <div style="display:flex; align-items:center; gap:8px;">
                         <input type="text" id="feature-search-input" class="form-control form-control-sm"
                                placeholder="Search features by label..."
-                               style="max-width:300px; font-size:0.85em;">
+                               style="max-width:260px; font-size:0.85em;"
+                               onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('feature-search-btn').click();}">
+                        <button type="button" id="feature-search-btn" class="btn btn-sm btn-outline-primary"
+                                style="font-size:0.82em; white-space:nowrap;">Search</button>
                         <span class="text-muted" style="font-size:0.75em;" id="feature-search-status"></span>
                     </div>
                     <div id="feature-search-results" class="sliders-grid" style="margin-top:8px;"></div>
@@ -1114,6 +1124,14 @@
         </div>
     </div>
 
+    <div id="resolutionOverlay" class="resolution-overlay" aria-hidden="true">
+        <div class="resolution-dialog">
+            <h3>Minimum screen resolution required</h3>
+            <p>{{ min_resolution_error }}</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='resolution_handling.js') }}"></script>
     <script>
         const CONFIG = {
             enableComparison: {{ 'true' if enable_comparison else 'false' }},
@@ -1136,14 +1154,29 @@
         let lastSearchResultIds = [];
         let searchResultsData = [];
         let searchShowAll = false;
+        const ALL_CLUSTERS = {{ all_clusters_catalog | tojson }};
         const CSRF_TOKEN = '{{ csrf_token() }}';
         const JSON_CSRF_HEADERS = {
             'Content-Type': 'application/json',
             'X-CSRFToken': CSRF_TOKEN,
             'X-CSRF-Token': CSRF_TOKEN
         };
+        const MIN_WIDTH = {{ min_resolution_width|int }};
+        const MIN_HEIGHT = {{ min_resolution_height|int }};
+        let resolutionGateOk = true;
 
         const likedMovies = {};
+        const likedInIteration = {};
+        const searchQueryHistory = [];
+
+        function logUiEvent(eventType, payload = {}) {
+            fetch('{{ url_for("sae_steering.log_ui_event") }}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: JSON_CSRF_HEADERS,
+                body: JSON.stringify({ event_type: eventType, ...payload })
+            }).catch(() => {});
+        }
 
         // Seed values are baked into the model's cumulative weights.
         // Dynamic sliders always start at 0 (center) — they represent
@@ -1166,6 +1199,19 @@
         function setSteeringLocked(locked) {
             const panel = document.getElementById('steering-panel');
             if (panel) panel.classList.toggle('locked', locked);
+        }
+
+        function refreshResolutionGate(showToastOnFail = false) {
+            const isOk = validateScreenResolution(MIN_WIDTH, MIN_HEIGHT);
+            const overlay = document.getElementById('resolutionOverlay');
+            resolutionGateOk = isOk;
+
+            if (overlay) {
+                overlay.classList.toggle('show', !isOk);
+                overlay.setAttribute('aria-hidden', isOk ? 'true' : 'false');
+            }
+
+            return isOk;
         }
 
         function updateFinalLockMessage() {
@@ -1232,9 +1278,11 @@
             if (applyBtn) applyBtn.disabled = !preferencesApproved;
             setSteeringLocked(locked);
             updateFinalLockMessage();
+            refreshResolutionGate(false);
         }
 
         async function approvePreferences() {
+            if (!refreshResolutionGate(true)) return;
             if (isStudyLocked || preferencesApproved) return;
             try {
                 const response = await fetch('{{ url_for("sae_steering.approve_preferences") }}', {
@@ -1280,13 +1328,14 @@
             }
         }
 
-        document.querySelectorAll('.slider-control:not(.cluster-slider)').forEach(slider => {
+        document.querySelectorAll('.slider-control').forEach(slider => {
             const featureId = slider.dataset.featureId;
             featureAdjustments[featureId] = 0;
             sentAdjustments[featureId] = 0;
 
             slider.value = SLIDER_CENTER;
             document.getElementById(`slider-value-${featureId}`).textContent = '0.00';
+            setLocalImpactLabel(featureId, 0);
 
             slider.addEventListener('input', (e) => {
                 const rawValue = parseFloat(e.target.value);
@@ -1295,6 +1344,7 @@
                 featureAdjustments[featureId] = value;
 
                 document.getElementById(`slider-value-${featureId}`).textContent = formatAdjustmentValue(value);
+                setLocalImpactLabel(featureId, value);
 
                 const card = document.getElementById(`slider-card-${featureId}`);
                 card.classList.remove('active-boost', 'active-suppress');
@@ -1307,57 +1357,6 @@
                 syncSlider(featureId, 0);
                 featureAdjustments[featureId] = 0;
                 showToast('Slider was reset to zero.');
-            });
-        });
-
-        // ------------------------------------------------------------------
-        // Cluster Profile Sliders
-        // ------------------------------------------------------------------
-        const clusterProfile = {{ cluster_profile | tojson }};
-        const initialClusterValues = {{ initial_cluster_values | default({}) | tojson }};
-        const clusterAdjustments = {};
-        const clusterNeuronMap = {};
-        clusterProfile.forEach(c => {
-            clusterAdjustments[c.id] = 0;
-            clusterNeuronMap[c.id] = c.neuron_ids || [];
-        });
-
-        document.querySelectorAll('.cluster-slider').forEach(slider => {
-            const cid = slider.dataset.clusterId;
-            // Already normalized to [-1, +1] by the server
-            const initClusterVal = Math.max(-1, Math.min(1, initialClusterValues[cid] || 0));
-            clusterAdjustments[cid] = 0;
-            sentAdjustments[cid] = 0;
-
-            if (Math.abs(initClusterVal) > 0.01) {
-                const initPos = sliderRawFromAdjustment(initClusterVal);
-                slider.value = initPos;
-                const snappedInit = snapAdjustmentValue(initClusterVal);
-                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(snappedInit);
-                const card = document.getElementById(`cluster-card-${cid}`);
-                if (snappedInit > 0.05) card.classList.add('active-boost');
-                else if (snappedInit < -0.05) card.classList.add('active-suppress');
-            }
-
-            slider.addEventListener('input', (e) => {
-                const rawValue = parseFloat(e.target.value);
-                const value = adjustmentFromSliderRaw(rawValue);
-                e.target.value = sliderRawFromAdjustment(value);
-                clusterAdjustments[cid] = value;
-                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(value);
-                const card = document.getElementById(`cluster-card-${cid}`);
-                card.classList.remove('active-boost', 'active-suppress');
-                if (value > 0.05) card.classList.add('active-boost');
-                else if (value < -0.05) card.classList.add('active-suppress');
-            });
-
-            const card = document.getElementById(`cluster-card-${cid}`);
-            card.addEventListener('dblclick', () => {
-                slider.value = SLIDER_CENTER;
-                clusterAdjustments[cid] = 0;
-                document.getElementById(`slider-value-${cid}`).textContent = '0.00';
-                card.classList.remove('active-boost', 'active-suppress');
-                showToast('Cluster reset to zero');
             });
         });
 
@@ -1391,6 +1390,21 @@
             return (snapAdjustmentValue(value) * SLIDER_SCALE) + SLIDER_CENTER;
         }
 
+        function localImpactLabel(value) {
+            const numeric = Number(value) || 0;
+            if (Math.abs(numeric) < 1e-6) return 'No impact';
+            const mag = Math.abs(numeric);
+            if (mag >= 0.7) return 'High impact';
+            if (mag >= 0.35) return 'Medium impact';
+            return 'Low impact';
+        }
+
+        function setLocalImpactLabel(featureId, value) {
+            const el = document.getElementById(`slider-impact-${featureId}`);
+            if (!el) return;
+            el.textContent = localImpactLabel(value);
+        }
+
         function adjustmentFromSliderRaw(rawValue) {
             return snapAdjustmentValue((rawValue - SLIDER_CENTER) / SLIDER_SCALE);
         }
@@ -1413,15 +1427,6 @@
                 }
             }
 
-            // Include cluster adjustments (server expands them to neuron-level)
-            for (const [cid, value] of Object.entries(clusterAdjustments)) {
-                const prev = sentAdjustments[cid] || 0;
-                const delta = value - prev;
-                if (Math.abs(delta) > 0.001) {
-                    deltaAdjustments[cid] = delta;
-                }
-            }
-
             const allExcluded = [
                 ...(window.excludedMoviesFromText || []),
                 ...Object.keys(likedMovies).map(Number)
@@ -1436,12 +1441,14 @@
                 .map(([, info]) => ({
                     id: info.id,
                     label: info.label,
+                    value: featureAdjustments[info.id],
                     query: info.query
                 }));
             return {
                 query: lastSearchQuery,
                 result_ids: lastSearchResultIds,
-                adjusted_features: adjusted
+                adjusted_features: adjusted,
+                search_history: searchQueryHistory.slice(),
             };
         }
 
@@ -1449,6 +1456,7 @@
         // Fetch & render recommendations
         // ------------------------------------------------------------------
         async function fetchAndRender() {
+            if (!refreshResolutionGate(true)) return;
             const loadingOverlay = document.getElementById('loading-overlay');
             loadingOverlay.classList.remove('hidden');
 
@@ -1479,29 +1487,6 @@
                 if (data.status === 'success') {
                     for (const [k, v] of Object.entries(featureAdjustments)) {
                         sentAdjustments[k] = v;
-                    }
-                    for (const [k, v] of Object.entries(clusterAdjustments)) {
-                        sentAdjustments[k] = v;
-                    }
-
-                    // Update cluster slider positions from server response
-                    if (data.cluster_values) {
-                        for (const [cid, val] of Object.entries(data.cluster_values)) {
-                            const slider = document.getElementById(`slider-${cid}`);
-                            if (slider) {
-                                const clamped = snapAdjustmentValue(val);
-                                slider.value = sliderRawFromAdjustment(clamped);
-                                document.getElementById(`slider-value-${cid}`).textContent = formatAdjustmentValue(clamped);
-                                const card = document.getElementById(`cluster-card-${cid}`);
-                                if (card) {
-                                    card.classList.remove('active-boost', 'active-suppress');
-                                    if (clamped > 0.05) card.classList.add('active-boost');
-                                    else if (clamped < -0.05) card.classList.add('active-suppress');
-                                }
-                                clusterAdjustments[cid] = clamped;
-                                sentAdjustments[cid] = clamped;
-                            }
-                        }
                     }
 
                     recordActivity();
@@ -1543,6 +1528,7 @@
                     updateApprovalUI();
                     lastSearchQuery = '';
                     lastSearchResultIds = [];
+                    searchQueryHistory.length = 0;
                     Object.keys(searchInteractions).forEach(key => delete searchInteractions[key]);
                     const searchInput = document.getElementById('feature-search-input');
                     const searchResults = document.getElementById('feature-search-results');
@@ -1674,9 +1660,11 @@
             if (isStudyLocked) return;
             if (likedMovies[movieId]) {
                 delete likedMovies[movieId];
+                delete likedInIteration[movieId];
                 showToast(`Removed "${title}" from selection`);
             } else {
                 likedMovies[movieId] = { title, url, metadata };
+                likedInIteration[movieId] = currentIteration;
                 showToast(`Selected "${title}"`);
             }
             syncCardSelectionUI(movieId);
@@ -1747,6 +1735,7 @@
         const parseTextBtn = document.getElementById('parse-text-btn');
         if (parseTextBtn) {
             parseTextBtn.addEventListener('click', async () => {
+                if (!refreshResolutionGate(true)) return;
                 const textInput = document.getElementById('text-input');
                 const text = textInput.value.trim();
                 if (!text) { showToast('Please enter some text describing your preferences.'); return; }
@@ -1819,6 +1808,7 @@
             const display = document.getElementById(`slider-value-${neuronId}`);
             if (slider) slider.value = sliderRawFromAdjustment(clamped);
             if (display) display.textContent = formatAdjustmentValue(clamped);
+            setLocalImpactLabel(neuronId, clamped);
             const card = document.getElementById(`slider-card-${neuronId}`);
             if (card) {
                 card.classList.remove('active-boost', 'active-suppress');
@@ -1887,6 +1877,7 @@
                         <input type="range" class="slider-control" id="slider-${fid}"
                                data-feature-id="${fid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderVal}">
                         <div class="slider-value" id="slider-value-${fid}">${displayVal}</div>
+                        <div class="slider-local-impact" id="slider-impact-${fid}">${localImpactLabel(snappedVal)}</div>
                     </div>`;
             }
 
@@ -1911,6 +1902,7 @@
                     e.target.value = sliderRawFromAdjustment(value);
                     featureAdjustments[fid] = value;
                     document.getElementById(`slider-value-${fid}`).textContent = formatAdjustmentValue(value);
+                    setLocalImpactLabel(fid, value);
                     const card = document.getElementById(`slider-card-${fid}`);
                     card.classList.remove('active-boost', 'active-suppress');
                     if (value > 0.05) card.classList.add('active-boost');
@@ -1979,6 +1971,7 @@
                         <input type="range" class="slider-control" id="slider-${nid}"
                                data-feature-id="${nid}" min="0" max="${SLIDER_MAX}" step="10" value="${sliderVal}">
                         <div class="slider-value" id="slider-value-${nid}">${display}</div>
+                        <div class="slider-local-impact" id="slider-impact-${nid}">${localImpactLabel(clamped)}</div>
                     </div>`;
 
                 // Insert after the header
@@ -1991,16 +1984,28 @@
                 featureAdjustments[nid] = clamped;
 
                 const slider = document.getElementById(`slider-${nid}`);
+                let _sliderLogTimer = null;
                 slider.addEventListener('input', (e) => {
                     const rawValue = parseFloat(e.target.value);
                     const value = adjustmentFromSliderRaw(rawValue);
                     e.target.value = sliderRawFromAdjustment(value);
                     featureAdjustments[nid] = value;
                     document.getElementById(`slider-value-${nid}`).textContent = formatAdjustmentValue(value);
+                    setLocalImpactLabel(nid, value);
                     const card = document.getElementById(`slider-card-${nid}`);
                     card.classList.remove('active-boost', 'active-suppress');
                     if (value > 0.05) card.classList.add('active-boost');
                     else if (value < -0.05) card.classList.add('active-suppress');
+
+                    clearTimeout(_sliderLogTimer);
+                    _sliderLogTimer = setTimeout(() => {
+                        logUiEvent('slider-adjusted', {
+                            feature_id: nid,
+                            label: featureLabelMap[nid] || nid,
+                            value: value,
+                            source: 'main_panel',
+                        });
+                    }, 2000);
                 });
             });
         }
@@ -2028,10 +2033,12 @@
 
         function snapshotIterationFeedback(iteration = currentIteration) {
             const entry = ensureIterationEntry(iteration);
-            entry.liked = Object.entries(likedMovies).map(([mid, info]) => ({
-                mid: parseInt(mid),
-                title: info.title || `Movie ${mid}`
-            }));
+            entry.liked = Object.entries(likedMovies)
+                .filter(([mid]) => (likedInIteration[mid] || 1) === iteration)
+                .map(([mid, info]) => ({
+                    mid: parseInt(mid),
+                    title: info.title || `Movie ${mid}`
+                }));
         }
 
         function recordActivity() {
@@ -2197,6 +2204,9 @@
 
             setTimeout(() => document.getElementById(`slider-card-${fid}`)?.classList.remove('slider-new'), 2000);
             showToast(`Restored "${label}"`);
+            logUiEvent('slider-restored-from-history', {
+                feature_id: fid, label: label, value: snappedValue, source: 'history_panel',
+            });
             renderActivityHistory();
         }
 
@@ -2207,10 +2217,12 @@
         }
 
         function removeLikeFromHistory(mid) {
+            const origIter = likedInIteration[mid] || currentIteration;
             delete likedMovies[mid];
+            delete likedInIteration[mid];
             syncCardSelectionUI(mid);
             logFeedback(mid, 'neutral');
-            snapshotIterationFeedback();
+            snapshotIterationFeedback(origIter);
             renderActivityHistory();
             showToast('Like removed');
         }
@@ -2257,6 +2269,7 @@
                 });
             }
 
+            const _searchSliderDebounce = {};
             visibleResults.forEach(f => {
                 const fid = String(f.id);
                 featureLabelMap[fid] = f.label;
@@ -2272,50 +2285,106 @@
                     featureAdjustments[fid] = value;
                     searchInteractions[fid] = { id: fid, label: f.label, query: lastSearchQuery };
                     syncSlider(fid, value);
+
+                    clearTimeout(_searchSliderDebounce[fid]);
+                    _searchSliderDebounce[fid] = setTimeout(() => {
+                        logUiEvent('search-slider-adjusted', {
+                            feature_id: fid,
+                            label: f.label,
+                            value: value,
+                            found_via_query: lastSearchQuery,
+                            source: 'search_panel',
+                        });
+                    }, 2000);
                 });
             });
 
             if (searchResultsData.length) {
-                status.textContent += ' · sorted by label match, then by how many movies activate the feature';
+                const hasDescMatches = searchResultsData.some(f => f.match_rank >= 4);
+                status.textContent += hasDescMatches
+                    ? ' · label matches first, then description matches'
+                    : ' · sorted by relevance';
             }
+        }
+
+        function clientSideSearch(query) {
+            const q = query.toLowerCase();
+            const currentFeatureIds = new Set(
+                (window._currentFeatureIds || []).map(String)
+            );
+
+            function matchRank(text, field) {
+                const t = text.toLowerCase();
+                if (t === q) return field === 'label' ? 0 : 4;
+                if (t.startsWith(q)) return field === 'label' ? 1 : 5;
+                if (t.includes(' ' + q)) return field === 'label' ? 2 : 6;
+                if (t.includes(q)) return field === 'label' ? 3 : 7;
+                return -1;
+            }
+
+            const results = [];
+            for (const c of ALL_CLUSTERS) {
+                let rank = matchRank(c.label, 'label');
+                if (rank < 0) {
+                    rank = matchRank(c.description || '', 'desc');
+                }
+                if (rank < 0) continue;
+                results.push({
+                    id: c.id,
+                    label: c.label,
+                    description: c.description || '',
+                    member_ids: c.member_ids,
+                    movie_count: c.movie_count || 0,
+                    already_shown: currentFeatureIds.has(String(c.id)),
+                    match_rank: rank,
+                });
+            }
+            results.sort((a, b) =>
+                (a.already_shown - b.already_shown)
+                || (a.match_rank - b.match_rank)
+                || (b.movie_count - a.movie_count)
+                || (a.label.length - b.label.length)
+            );
+            return results.slice(0, 20);
         }
 
         (function setupFeatureSearch() {
             const input = document.getElementById('feature-search-input');
+            const btn = document.getElementById('feature-search-btn');
             const resultsContainer = document.getElementById('feature-search-results');
             const status = document.getElementById('feature-search-status');
-            if (!input || !resultsContainer || !status) return;
-            let searchTimeout = null;
+            if (!input || !btn || !resultsContainer || !status) return;
 
-            input.addEventListener('input', () => {
-                clearTimeout(searchTimeout);
+            window._currentFeatureIds = {{ features | map(attribute='id') | list | tojson }};
+
+            function executeSearch() {
                 const q = input.value.trim();
                 if (q.length < 2) {
                     resultsContainer.innerHTML = '';
-                    status.textContent = '';
+                    status.textContent = q.length ? 'Type at least 2 characters' : '';
                     lastSearchQuery = '';
                     lastSearchResultIds = [];
                     searchResultsData = [];
                     searchShowAll = false;
                     return;
                 }
-                status.textContent = 'Searching...';
-                searchTimeout = setTimeout(async () => {
-                    try {
-                        const resp = await fetch(`{{ url_for("sae_steering.search_features") }}?q=${encodeURIComponent(q)}`);
-                        const data = await resp.json();
-                        lastSearchQuery = q;
-                        lastSearchResultIds = data.map(f => f.id);
-                        status.textContent = data.length ? `${data.length} results` : 'No matches';
-                        searchResultsData = data;
-                        searchShowAll = false;
-                        renderSearchResults();
-                    } catch (e) {
-                        status.textContent = 'Search error';
-                        console.error(e);
-                    }
-                }, 300);
-            });
+                const data = clientSideSearch(q);
+                lastSearchQuery = q;
+                lastSearchResultIds = data.map(f => f.id);
+                status.textContent = data.length ? `${data.length} results` : 'No matches';
+                searchResultsData = data;
+                searchShowAll = false;
+                renderSearchResults();
+
+                searchQueryHistory.push({
+                    query: q,
+                    result_count: data.length,
+                    result_ids: data.slice(0, 5).map(f => f.id),
+                    time: new Date().toISOString(),
+                });
+            }
+
+            btn.addEventListener('click', executeSearch);
         })();
 
         // ------------------------------------------------------------------
@@ -2336,6 +2405,41 @@
         ensureIterationEntry(currentIteration);
         renderActivityHistory();
         updateApprovalUI();
+        window.addEventListener('resize', () => refreshResolutionGate(false));
+        document.querySelectorAll('.lock-msg-btn').forEach(link => {
+            link.addEventListener('click', function(event) {
+                if (!refreshResolutionGate(true)) {
+                    event.preventDefault();
+                }
+            });
+        });
+        refreshResolutionGate(false);
+
+        // ------------------------------------------------------------------
+        // Autosave – periodic snapshots for crash resilience
+        // ------------------------------------------------------------------
+        let _autosavePending = false;
+        function doAutosave(trigger = 'periodic') {
+            if (_autosavePending) return;
+            _autosavePending = true;
+            const payload = {
+                liked_movies: Object.keys(likedMovies).map(Number),
+                feature_adjustments: Object.fromEntries(
+                    Object.entries(featureAdjustments).filter(([, v]) => Math.abs(v) > 0.01)
+                ),
+                activity_snapshot: activityByIteration,
+                timestamp: new Date().toISOString(),
+                trigger,
+            };
+            fetch('{{ url_for("sae_steering.autosave") }}', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: JSON_CSRF_HEADERS,
+                body: JSON.stringify(payload)
+            }).catch(() => {}).finally(() => { _autosavePending = false; });
+        }
+        setInterval(() => doAutosave('periodic'), 180000);
+        window.addEventListener('beforeunload', () => doAutosave('beforeunload'));
     </script>
 </body>
 </html>

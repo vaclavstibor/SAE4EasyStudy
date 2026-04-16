@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-DEFAULT_TOPK_SAE_MODEL_ID = "www_TopKSAE_8192"
+DEFAULT_TOPK_SAE_MODEL_ID = "TopKSAE-1024"
 DEFAULT_LOCAL_MODEL_FILENAME = f"{DEFAULT_TOPK_SAE_MODEL_ID}.ckpt"
 DEFAULT_RUNTIME_FEATURES_FILENAME = f"item_sae_features_{DEFAULT_TOPK_SAE_MODEL_ID}.pt"
 DEFAULT_BOOTSTRAP_COMMAND = "cd server && python plugins/sae_steering/bootstrap_model.py"
@@ -15,7 +15,6 @@ REMOTE_MODEL_ASSET_CANDIDATES = (
     f"{DEFAULT_TOPK_SAE_MODEL_ID}.pt",
     "model.ckpt",
     "model.pt",
-    "model.pkl",
 )
 
 REMOTE_RUNTIME_ASSET_CANDIDATES = (
@@ -23,15 +22,12 @@ REMOTE_RUNTIME_ASSET_CANDIDATES = (
     f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.xz",
     f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.gz",
     f"{DEFAULT_RUNTIME_FEATURES_FILENAME}.zip",
-    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt",
-    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt.xz",
-    f"{DEFAULT_TOPK_SAE_MODEL_ID}_runtime.pt.gz",
+    "item_embeddings.pt",
+    "item_embeddings.pt.xz",
+    "item_embeddings.pt.gz",
     "item_sae_features.pt",
     "item_sae_features.pt.xz",
     "item_sae_features.pt.gz",
-    "runtime_features.pt",
-    "runtime_features.pt.xz",
-    "runtime_features.pt.gz",
 )
 
 

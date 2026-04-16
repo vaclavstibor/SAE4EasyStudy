@@ -51,6 +51,17 @@ notes/
 # Local-only datasets and browser assets
 /server/.playwright-browsers/
 /server/static/datasets/kaggle-tmdb/
-/server/static/datasets/ml-latest/img 2/
-/server/static/datasets/ml-latest/ml-latest.zip
-/server/static/datasets/ml-latest/tmdb_data.json
+/server/static/datasets/ml-latest/
+/server/static/datasets/ml-32m-filtered/
+
+# SAE runtime data (downloaded from release at startup)
+server/plugins/sae_steering/data/item_sae_features_*.pt
+server/plugins/sae_steering/data/item_embeddings.pt
+server/plugins/sae_steering/data/llm_labels_*.json
+server/plugins/sae_steering/data/semantic_merged_*.json
+server/plugins/sae_steering/data/cluster_profile_*.json
+
+scripts/
+labeling/
+data_preparation/
+.cache/
