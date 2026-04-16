@@ -21,9 +21,14 @@ def load_ml_dataset(ml_variant="ml-32m-filtered"):
     cache_path = os.path.join(cache_base_dir, "data_cache.pckl")
     if os.path.exists(cache_path):
         print(f"Trying to load data cache from: {cache_path}")
-        with open(cache_path, "rb") as f:
-            return pickle.load(f)
-    else:
+        try:
+            with open(cache_path, "rb") as f:
+                return pickle.load(f)
+        except Exception as exc:
+            print(f"Cache corrupt ({exc}), rebuilding...")
+            os.remove(cache_path)
+
+    if True:
         print("Cache not available, loading everything again")
         
         ratings_path = os.path.join(basedir, f"{ml_variant}/ratings.csv")
@@ -46,7 +51,9 @@ def load_ml_dataset(ml_variant="ml-32m-filtered"):
         print(f"## Loading took: {time.perf_counter() - start_time}")
 
         print(f"Caching the data to {cache_path}")
-        with open(cache_path, "wb") as f:
+        tmp_path = cache_path + ".tmp"
+        with open(tmp_path, "wb") as f:
             pickle.dump(loader, f)
+        os.replace(tmp_path, cache_path)
 
         return loader
