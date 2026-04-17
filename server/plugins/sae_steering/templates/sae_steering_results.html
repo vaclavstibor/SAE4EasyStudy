@@ -551,13 +551,37 @@
             <div class="section">
                 <div class="section-header">
                     <h2>Arm-Comparison Analytics</h2>
-                    <p>Per-arm Likert deltas, attention funnel, time-on-task, search usage, order effects.</p>
+                    <p>Within-subject Likert deltas (steered vs. baseline), attention funnel, time-on-task, search usage, order effects.</p>
                 </div>
+
+                <!-- Explanatory panel so anyone reading the dashboard understands
+                     what an "arm" is and what each delta chart actually tests. -->
+                <div class="chart-card" style="margin-bottom:16px;">
+                    <div class="chart-title">How to read the Likert delta charts</div>
+                    <div class="chart-sub" style="line-height:1.5;">
+                        <p style="margin:4px 0;"><strong>Study design.</strong> Every participant saw two phases of recommendations in random order:
+                        a <em>baseline</em> arm (recommender without steering controls) and a <em>steered</em> arm (our SAE sliders / natural-language steering).
+                        After each phase they answered the same shared Likert battery (<code>p1a_accuracy</code>, <code>p2a_control</code>, …, <code>p5c_recommend</code>).</p>
+                        <p style="margin:4px 0;"><strong>Primary chart — Steered − Baseline.</strong> For each item we compute
+                        <code>score<sub>steered</sub> − score<sub>baseline</sub></code> <em>inside</em> the same participant, then average.
+                        <span style="color:#2d7d46;">Positive (green)</span> = steering lifted that dimension; <span style="color:#c23c3c;">negative (red)</span> = it hurt.
+                        This is the direct hypothesis test for RQ1 (perceived control) and related questions about transparency, usability and satisfaction.</p>
+                        <p style="margin:4px 0;"><strong>Sanity chart — Order effect (Phase 2 − Phase 1).</strong> Same paired deltas, but ordered by <em>when</em> the phase happened rather than which arm it was.
+                        If randomisation balanced the arms, this should hover near zero. A large non-zero value warns that phase order (fatigue, practice, carry-over) is leaking into the scores
+                        and the primary chart should be interpreted with care.</p>
+                    </div>
+                </div>
+
                 <div class="chart-grid">
                     <div class="chart-card">
-                        <div class="chart-title">Per-arm Likert deltas (B - A)</div>
-                        <div class="chart-sub">Within-subject mean difference per shared questionnaire item.</div>
+                        <div class="chart-title">Steered − Baseline (within-subject)</div>
+                        <div class="chart-sub">Primary arm contrast: <code>steered − baseline</code> per participant, averaged. Positive = steering helped.</div>
                         <div class="chart-wrap"><canvas id="likertDeltaChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Order effect (Phase 2 − Phase 1)</div>
+                        <div class="chart-sub">Sanity check: should hover near zero if arms are balanced. Large values flag phase-order bias.</div>
+                        <div class="chart-wrap"><canvas id="likertOrderChart"></canvas></div>
                     </div>
                     <div class="chart-card">
                         <div class="chart-title">Attention-check funnel</div>
@@ -995,29 +1019,46 @@
 
         // ---------------- analytics+ ----------------
         function renderAnalyticsPlus(data) {
-            destroyChart("likertDeltaChart"); destroyChart("attentionFunnelChart");
+            destroyChart("likertDeltaChart"); destroyChart("likertOrderChart");
+            destroyChart("attentionFunnelChart");
             destroyChart("timeHistChart"); destroyChart("searchUsageChart");
             destroyChart("steeringEffortChart"); destroyChart("convergenceChart");
 
-            // Per-arm Likert deltas (B - A)
+            // Two Likert-delta charts built from the same shared items so reviewers
+            // can cross-check the primary arm contrast against an order-effect
+            // sanity check (see the explanatory card above).
             const items = data.questionnaire?.phase_shared?.items || {};
             const itemKeys = Object.keys(items);
-            const itemDeltas = itemKeys.map(k => items[k]?.delta_b_minus_a?.mean ?? 0);
-            chartInstances.likertDeltaChart = new Chart(document.getElementById("likertDeltaChart"), {
-                type: "bar",
-                data: {
-                    labels: itemKeys,
-                    datasets: [{
-                        data: itemDeltas,
-                        backgroundColor: itemDeltas.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"),
-                        borderRadius: 3,
-                    }],
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false, indexAxis: "y",
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Δ = ${fmt(ctx.raw, 3)}` } } },
-                }
-            });
+
+            const renderLikertDeltaChart = (canvasId, metricKey, tooltipLabel) => {
+                const deltas = itemKeys.map(k => items[k]?.[metricKey]?.mean ?? 0);
+                const counts = itemKeys.map(k => items[k]?.[metricKey]?.n ?? 0);
+                const chart = new Chart(document.getElementById(canvasId), {
+                    type: "bar",
+                    data: {
+                        labels: itemKeys,
+                        datasets: [{
+                            data: deltas,
+                            backgroundColor: deltas.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"),
+                            borderRadius: 3,
+                        }],
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, indexAxis: "y",
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${tooltipLabel} = ${fmt(ctx.raw, 3)} (n=${counts[ctx.dataIndex]})`,
+                                },
+                            },
+                        },
+                    },
+                });
+                chartInstances[canvasId] = chart;
+            };
+            renderLikertDeltaChart("likertDeltaChart", "delta_steered_minus_baseline", "steered − baseline");
+            renderLikertDeltaChart("likertOrderChart", "delta_b_minus_a", "phase2 − phase1");
 
             // Attention funnel
             const rows = data.participants_table || [];

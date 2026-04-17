@@ -3039,7 +3039,15 @@ def fetch_results(guid):
     final_distributions = {}
     final_score_values = {item: [] for item in final_score_maps}
     final_text_feedback = {"f24_liked_most": [], "f25_improvement": [], "f26_other": []}
+    # Two paired-difference buckets per shared item:
+    #   * phase_shared_diffs  — chronological (phase2 − phase1); detects
+    #     order/fatigue effects, arm-agnostic.
+    #   * phase_shared_arm_diffs — condition-based (steered − baseline);
+    #     the primary hypothesis test "did the steering arm score higher?".
+    #     Only populated when we can identify which phase carried the
+    #     steering UI (via `steered_markers` heuristic below).
     phase_shared_diffs = {item: [] for item in phase_shared_items}
+    phase_shared_arm_diffs = {item: [] for item in phase_shared_items}
     quality_diffs = []
     satisfaction_diffs = []
     control_diffs = []
@@ -3311,6 +3319,18 @@ def fetch_results(guid):
                 if left is not None and right is not None:
                     phase_shared_diffs[item_key].append(right - left)
 
+            # Condition-based (arm) delta: for each Likert item, compare the
+            # score in the steered phase to the score in the baseline phase
+            # within the same participant.  Positive ⇒ steering lifted that
+            # dimension relative to the vanilla recommender.  Skipped when
+            # we can't confidently classify the arms.
+            if with_control_answers is not None and without_control_answers is not None:
+                for item_key in phase_shared_items:
+                    steered_val = _to_float(with_control_answers.get(item_key))
+                    baseline_val = _to_float(without_control_answers.get(item_key))
+                    if steered_val is not None and baseline_val is not None:
+                        phase_shared_arm_diffs[item_key].append(steered_val - baseline_val)
+
             quality_with = [v for v in [_to_float((with_control_answers or {}).get(x)) for x in quality_items] if v is not None]
             quality_without = [v for v in [_to_float((without_control_answers or {}).get(x)) for x in quality_items] if v is not None]
             if quality_with and quality_without:
@@ -3524,7 +3544,11 @@ def fetch_results(guid):
             paired_count = max(paired_count, len(diffs))
         item_entry = phase_section["items"].get(item_key)
         if not item_entry:
-            item_entry = {"by_phase": {}, "delta_b_minus_a": {"n": 0, "mean": None}}
+            item_entry = {
+                "by_phase": {},
+                "delta_b_minus_a": {"n": 0, "mean": None},
+                "delta_steered_minus_baseline": {"n": 0, "mean": None},
+            }
             phase_section["items"][item_key] = item_entry
         for phase_idx, scores in list(item_entry["by_phase"].items()):
             item_entry["by_phase"][phase_idx] = {
@@ -3532,6 +3556,11 @@ def fetch_results(guid):
                 "mean": _round_or_none(_mean(scores), 3),
             }
         item_entry["delta_b_minus_a"] = {"n": len(diffs), "mean": _round_or_none(_mean(diffs), 3)}
+        arm_diffs = phase_shared_arm_diffs.get(item_key, [])
+        item_entry["delta_steered_minus_baseline"] = {
+            "n": len(arm_diffs),
+            "mean": _round_or_none(_mean(arm_diffs), 3),
+        }
     phase_section["participants_with_pairs"] = paired_count
     phase_section["composites"] = {
         "quality_diff_b_minus_a": {"n": len(quality_diffs), "mean": _round_or_none(_mean(quality_diffs), 3)},
