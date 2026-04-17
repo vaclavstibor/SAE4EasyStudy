@@ -61,7 +61,9 @@ server/plugins/sae_steering/data/llm_labels_*.json
 server/plugins/sae_steering/data/semantic_merged_*.json
 server/plugins/sae_steering/data/cluster_profile_*.json
 
-scripts/
+/scripts/*
+!/scripts/reconstruct_journey.py
 labeling/
 data_preparation/
 .cache/
+/overleaf/
