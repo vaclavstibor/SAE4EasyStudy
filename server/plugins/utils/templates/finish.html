@@ -181,8 +181,19 @@
 
                 {% if prolific_pid is defined and prolific_pid is not none %}
                 <div class="finish-actions">
+                    {% if prolific_url is defined and prolific_url is not none %}
                     <p>{{ auto_redirect }}.</p>
                     <b-btn @click="prolificRedirect" variant="success" type="submit">{{ finish_user_study }}</b-btn>
+                    {% else %}
+                    <p>
+                        Your participation is recorded under Prolific PID
+                        <code>{{ prolific_pid }}</code>.
+                        The study admin has not configured the Prolific
+                        completion code yet, so automatic redirect is
+                        disabled. Please contact the study admin with your
+                        PID to complete payment.
+                    </p>
+                    {% endif %}
                 </div>
                 {% endif %}
             </div>
@@ -201,7 +212,7 @@
 <script src="{{ url_for('static', filename='resolution_handling.js') }}"></script>
 <script src="{{ url_for('static', filename='interaction_reporting.js') }}"></script>
 
-{% if prolific_pid is defined and prolific_pid is not none %}
+{% if prolific_pid is defined and prolific_pid is not none and prolific_url is defined and prolific_url is not none %}
 <script>
     console.log("Redirecting in 15 seconds");
     window.setTimeout(function (){

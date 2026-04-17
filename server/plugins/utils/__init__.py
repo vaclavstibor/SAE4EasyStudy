@@ -263,66 +263,81 @@ def cluster_data_3():
     return jsonify(el_movies)
 
 
-@bp.route("/changed-viewport", methods=["POST"])
-def changed_viewport():
+# Hover/highlight events that are extremely high-frequency and carry no analytic
+# value beyond cluttering the raw export.  We drop them at the server boundary
+# so the database itself stays small.
+_NOISY_INPUT_TYPES = {"mouse-enter", "mouse-leave"}
+
+
+def _strip_viewport_items(payload):
+    """Strip the bulky `extra.items[]` array (image URLs + viewport rectangles)
+    from a ``changed-viewport`` payload while keeping enough metadata to
+    reconstruct chronology (page identifier, viewport size, item count)."""
+    if not isinstance(payload, dict):
+        return payload
+    ctx = payload.get("context")
+    if isinstance(ctx, dict):
+        extra = ctx.get("extra")
+        if isinstance(extra, dict) and "items" in extra:
+            items = extra.get("items")
+            if isinstance(items, list):
+                extra["items_count"] = len(items)
+            extra.pop("items", None)
+    return payload
+
+
+def _persist_interaction(interaction_type: str, data):
+    """Shared helper: insert one Interaction row for the current participant.
+
+    Centralised so all `/utils/*` logging routes share validation, scrubbing
+    and DB-write semantics.  Returns ("OK", 200) on success, no-op 204 on
+    rejected (filtered) events.
+    """
+    participation_id = flask.session.get("participation_id")
+    if participation_id is None:
+        return "no-participation", 204
+
     x = Interaction(
-        participation = Participation.query.filter(Participation.id == flask.session["participation_id"]).first().id,
-        interaction_type = "changed-viewport", #InteractionType.query.filter(InteractionType.name == "changed-viewport").first(),
-        time = datetime.datetime.utcnow(),
-        data = json.dumps(request.get_json(), ensure_ascii=False)
+        participation=participation_id,
+        interaction_type=interaction_type,
+        time=datetime.datetime.utcnow(),
+        data=json.dumps(data, ensure_ascii=False),
     )
     db.session.add(x)
     db.session.commit()
+    return "OK", 200
 
-    return "OK"
+
+@bp.route("/changed-viewport", methods=["POST"])
+def changed_viewport():
+    payload = _strip_viewport_items(request.get_json())
+    body, status = _persist_interaction("changed-viewport", payload)
+    return body, status
 
 @bp.route("/selected-item", methods=["POST"])
 def selected_item():
-    x = Interaction(
-        participation = Participation.query.filter(Participation.id == flask.session["participation_id"]).first().id,
-        interaction_type = "selected-item", #InteractionType.query.filter(InteractionType.name == "selected-item").first(),
-        time = datetime.datetime.utcnow(),
-        data = json.dumps(request.get_json(), ensure_ascii=False)
-    )
-    db.session.add(x)
-    db.session.commit()
-    return "OK"
+    body, status = _persist_interaction("selected-item", request.get_json())
+    return body, status
 
 @bp.route("/deselected-item", methods=["POST"])
 def deselected_item():
-    x = Interaction(
-        participation = Participation.query.filter(Participation.id == flask.session["participation_id"]).first().id,
-        interaction_type = "deselected-item", #InteractionType.query.filter(InteractionType.name == "deselected-item").first(),
-        time = datetime.datetime.utcnow(),
-        data = json.dumps(request.get_json(), ensure_ascii=False)
-    )
-    db.session.add(x)
-    db.session.commit()
-    return "OK"
+    body, status = _persist_interaction("deselected-item", request.get_json())
+    return body, status
 
 @bp.route("/loaded-page", methods=["POST"])
 def loaded_page():
-    x = Interaction(
-        participation = Participation.query.filter(Participation.id == flask.session["participation_id"]).first().id,
-        interaction_type = "loaded-page", #InteractionType.query.filter(InteractionType.name == "loaded-page").first(),
-        time = datetime.datetime.utcnow(),
-        data = json.dumps(request.get_json(), ensure_ascii=False)
-    )
-    db.session.add(x)
-    db.session.commit()
-    return "OK"
+    body, status = _persist_interaction("loaded-page", request.get_json())
+    return body, status
 
 @bp.route("/on-input", methods=["POST"])
 def on_input():
-    x = Interaction(
-        participation = Participation.query.filter(Participation.id == flask.session["participation_id"]).first().id,
-        interaction_type = "on-input",
-        time = datetime.datetime.utcnow(),
-        data = json.dumps(request.get_json(), ensure_ascii=False)
-    )
-    db.session.add(x)
-    db.session.commit()
-    return "OK"
+    payload = request.get_json() or {}
+    input_type = payload.get("input_type") if isinstance(payload, dict) else None
+    if input_type in _NOISY_INPUT_TYPES:
+        # Drop hover noise entirely — no DB write.
+        return "filtered", 204
+    body, status = _persist_interaction("on-input", payload)
+    return body, status
 
 @bp.route("/on-message", methods=["POST"])
 def on_message():
@@ -403,12 +418,27 @@ def finish():
     params["table_avg_rating"] = tr("finish_table_avg_rating")
     params["finish_user_study"] = tr("finish_finish_user_study")
 
-    # Prolific stuff
+    # Prolific stuff — guard against missing completion code so studies that
+    # were created without filling in `prolific_code` still finish gracefully
+    # instead of raising KeyError.  If the code is missing we surface the PID
+    # to the participant but skip the redirect (the admin will see the gap in
+    # the results dashboard and can configure it).
+    prolific_code = (conf or {}).get("prolific_code")
     if "PROLIFIC_PID" in flask.session:
         params["prolific_pid"] = flask.session["PROLIFIC_PID"]
-        params["prolific_url"] = f"https://app.prolific.com/submissions/complete?cc={conf['prolific_code']}"
+        if prolific_code:
+            params["prolific_url"] = (
+                f"https://app.prolific.com/submissions/complete?cc={prolific_code}"
+            )
+        else:
+            params["prolific_url"] = None
     else:
         params["prolific_pid"] = None
+        params["prolific_url"] = None
+    auto_redirect_text = tr("finish_auto_redirect")
+    if not auto_redirect_text or auto_redirect_text == "finish_auto_redirect":
+        auto_redirect_text = "Redirecting back to Prolific shortly"
+    params["auto_redirect"] = auto_redirect_text
 
     # Handle overrides
     params["finished_text_override"] = None
