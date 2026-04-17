@@ -118,7 +118,13 @@ def create_app():
         return "ok", 200
 
     app.config['SECRET_KEY'] = os.environ.get('APP_SECRET_KEY', '8bf29bd88d0bfb94509f5fb0')
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite')
+    # Railway / Heroku-style hosted Postgres add-ons hand back URLs prefixed
+    # with the legacy `postgres://` scheme.  SQLAlchemy 1.4+ requires
+    # `postgresql://`, so normalise here before it reaches the engine factory.
+    _db_url = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite')
+    if _db_url.startswith('postgres://'):
+        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
     app.config['SESSION_COOKIE_NAME'] = os.environ.get('SESSION_COOKIE_NAME', "something")
     app.config["SESSION_TYPE"] = "sqlalchemy"
     app.config["SESSION_SQLALCHEMY"] = db

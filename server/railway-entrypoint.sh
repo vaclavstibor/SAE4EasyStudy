@@ -1,6 +1,52 @@
 #!/bin/sh
 set -eu
 
+# ---------------------------------------------------------------------------
+# 0. Persistent storage bootstrap
+# ---------------------------------------------------------------------------
+# Railway allows only ONE volume mount per service, so everything that needs
+# to survive a redeploy lives under a single mount point (default: /data)
+# with well-known subdirs symlinked into the canonical application paths.
+# The script is idempotent: first boot creates the subdirs and migrates any
+# pre-existing content from the image layer into the volume; subsequent
+# boots just re-establish the symlinks.
+# ---------------------------------------------------------------------------
+PERSIST_ROOT="${PERSIST_ROOT:-/data}"
+
+link_persistent_dir() {
+  # $1 = subdir under $PERSIST_ROOT, $2 = canonical path inside the image
+  src="${PERSIST_ROOT}/$1"
+  dst="$2"
+  mkdir -p "$src"
+  if [ -L "$dst" ]; then
+    # already linked, nothing to do
+    return 0
+  fi
+  if [ -d "$dst" ]; then
+    # migrate pre-existing contents from the image into the volume on first boot
+    if [ -n "$(ls -A "$dst" 2>/dev/null || true)" ]; then
+      cp -a "$dst/." "$src/" 2>/dev/null || true
+    fi
+    rm -rf "$dst"
+  fi
+  mkdir -p "$(dirname "$dst")"
+  ln -s "$src" "$dst"
+}
+
+if [ -d "$PERSIST_ROOT" ] && [ -w "$PERSIST_ROOT" ]; then
+  echo "[startup] wiring persistent storage at $PERSIST_ROOT"
+  link_persistent_dir "instance"   "/app/server/instance"
+  link_persistent_dir "cache"      "/app/server/cache"
+  link_persistent_dir "sae_data"   "/app/server/plugins/sae_steering/data"
+  link_persistent_dir "sae_models" "/app/server/plugins/sae_steering/models"
+  link_persistent_dir "backups"    "/app/backups"
+else
+  echo "[startup] no persistent mount at $PERSIST_ROOT — using ephemeral container storage"
+  mkdir -p /app/backups /app/server/instance /app/server/cache \
+           /app/server/plugins/sae_steering/data \
+           /app/server/plugins/sae_steering/models
+fi
+
 cd /app/server
 
 # ---------------------------------------------------------------------------
@@ -67,7 +113,19 @@ if [ -f "$MODEL_PT_PATH" ] && [ ! -f "plugins/sae_steering/models/TopKSAE-1024.p
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Start gunicorn
+# 4. Apply pending Alembic migrations BEFORE the app starts taking traffic.
+#    Safe no-op when the schema is already current; required on every deploy
+#    where the DB lives on a Railway Postgres add-on so new tables appear
+#    automatically (otherwise the app boots against a stale schema).
+# ---------------------------------------------------------------------------
+if [ "${SKIP_DB_UPGRADE:-0}" != "1" ]; then
+  echo "[startup] running flask db upgrade"
+  FLASK_APP=app:create_app flask db upgrade || \
+    echo "[startup] flask db upgrade failed (continuing — review logs)"
+fi
+
+# ---------------------------------------------------------------------------
+# 5. Start gunicorn
 # ---------------------------------------------------------------------------
 exec python -m gunicorn \
   -w "${GUNICORN_WORKERS:-1}" \

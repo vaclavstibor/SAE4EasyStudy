@@ -95,55 +95,120 @@ SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy docker compose up --build
 DATASET_RELEASE_TAG=v1.0 docker compose up --build
 ```
 
-## Railway (No Docker)
+## Railway deployment (Docker + persistent Postgres)
 
-The repository now includes [railway.json](railway.json) for a no-Docker Railway deployment.
+Despite the repository's history, the current Railway deployment is **Docker-based**:
+[railway.json](railway.json) explicitly sets `"builder": "DOCKERFILE"` and points
+at the project's [Dockerfile](Dockerfile). The optional [nixpacks.toml](nixpacks.toml)
+is kept around for legacy nixpacks-based redeploys but is no longer used by the
+production service.
 
-The repository also includes [nixpacks.toml](nixpacks.toml), which explicitly installs Python 3.9 for Railway Nixpacks builds.
+On each push/deploy, the Docker image:
 
-On each push/deploy, Railway will:
+1. installs Python deps from `server/pip_requirements_railway.txt`
+   (lean runtime set + CPU-only PyTorch + `psycopg2-binary` for Postgres)
+2. installs `postgresql-client` (so the daily backup cron has `pg_dump`)
+3. runs `server/bootstrap_datasets.py` if dataset files are missing
+4. runs `server/plugins/sae_steering/bootstrap_model.py` if runtime features are missing
+5. runs `flask db upgrade` to apply pending Alembic migrations on the live DB
+6. starts Gunicorn with `app:create_app()`
 
-1. install Python dependencies from `server/pip_requirements_railway.txt` (lean runtime set for faster Railway builds) and install CPU-only PyTorch wheel
-2. run `server/bootstrap_datasets.py` only if dataset files are missing
-3. run `server/plugins/sae_steering/bootstrap_model.py` only if runtime features are missing
-4. remove `ml-latest.zip` after extraction to avoid wasting persistent disk space
-5. start Gunicorn with `app:create_app()`
-
-Default runtime SAE asset in Railway config is:
-
-- `item_sae_features_www_TopKSAE_8192.pt.xz`
-
-Required Railway setup:
+### Required Railway setup
 
 1. Create a Railway project from this GitHub repo.
-2. Add a Redis service in the same project.
-3. Set these variables on the web service:
+2. **Add a Postgres add-on in the same project** (right pane → New → Database → Postgres).
+   Railway auto-injects `DATABASE_URL` into the web service.
+3. Add a Redis service in the same project (auto-injects `REDIS_URL`).
+4. Set these variables on the web service:
    - `APP_SECRET_KEY` (strong random string)
    - `SESSION_COOKIE_NAME` (any non-empty value)
-   - `DATABASE_URL` (Railway Postgres URL or fallback SQLite path)
-   - `REDIS_URL` (from Railway Redis service)
-4. Optional overrides:
+5. **Mount a single Railway volume at `/data`** (Railway allows exactly one
+   volume mount per service). Recommended size: **5 GB** — enough for the
+   SAE model, dataset, runtime features, and ~14 rolling DB dumps. The
+   entrypoint script creates these subdirectories and symlinks them into
+   the canonical application paths:
+   - `/data/instance`   → `/app/server/instance` (fallback SQLite + Flask sessions)
+   - `/data/cache`      → `/app/server/cache` (per-study cache)
+   - `/data/sae_data`   → `/app/server/plugins/sae_steering/data` (runtime SAE features)
+   - `/data/sae_models` → `/app/server/plugins/sae_steering/models` (SAE checkpoints)
+   - `/data/backups`    → `/app/backups` (gzipped DB dumps)
+   > The symlink bootstrap lives in [`server/railway-entrypoint.sh`](server/railway-entrypoint.sh)
+   > and is idempotent. Override the mount root with `PERSIST_ROOT=/some/other`
+   > if you need a different path.
+6. Optional overrides:
+   - `PERSIST_ROOT` (default: `/data`) — where the entrypoint expects the single volume mount
    - `SAE_MODEL_RELEASE_TAG` (default: `latest`)
    - `DATASET_RELEASE_TAG` (default: `latest`)
-   - `SAE_RUNTIME_ASSET_NAME` (default: `item_sae_features_www_TopKSAE_8192.pt.xz`)
-   - `SAE_RUNTIME_OUTPUT_PATH` (default: `plugins/sae_steering/data/item_sae_features_www_TopKSAE_8192.pt`)
-   - `ML_DATASET_READY_FILE` (default: `static/datasets/ml-latest/ratings.csv`)
+   - `BACKUP_DIR` (default: `/app/backups`), `KEEP_LAST` (default: `14`)
+   - `SKIP_DB_UPGRADE=1` to skip migrations on a specific deploy
    - `GUNICORN_WORKERS`, `GUNICORN_TIMEOUT`, `GUNICORN_LOG_LEVEL`
 
-Notes:
+> SQLAlchemy 1.4+ requires `postgresql://`, but Railway hands out the legacy
+> `postgres://` URL prefix. `server/app.py` and `server/scripts/backup_db.py`
+> both rewrite the prefix automatically — no manual change needed.
 
-- If your release contains uncompressed runtime features, set `SAE_RUNTIME_ASSET_NAME=item_sae_features_www_TopKSAE_8192.pt`.
-- First deploy can take longer because it downloads and extracts dataset/model assets.
-- Railway runtime requirements intentionally skip TensorFlow-heavy dependencies to avoid build timeouts. If you need TF/TFRS-based fastcompare/vae features on Railway, install those packages in a separate deployment profile.
-- For faster redeploys, add a Railway volume mounted to `/app/server/plugins/sae_steering/data` so runtime features persist across deployments.
-- If you also want dataset persistence, mount a second Railway volume to `/app/server/static/datasets/ml-latest`.
+### Database backups
 
-In this repository, persistent paths are:
+Railway Postgres already has its own persistent volume, so data survives
+redeploys and restarts by itself. Dumps are there to protect against the
+things the Postgres volume can't: accidental deletes, schema migrations
+gone wrong, the whole Railway project being archived, or you simply wanting
+an offline copy for analysis.
 
-- SQLite data in `/app/server/instance`
-- runtime cache in `/app/server/cache`
-- downloaded SAE models in `/app/server/plugins/sae_steering/models`
-- runtime features in `/app/server/plugins/sae_steering/data`
+The repo ships [server/scripts/backup_db.py](server/scripts/backup_db.py),
+which runs `pg_dump | gzip` (or copies the SQLite file when there's no
+Postgres) into `BACKUP_DIR`, keeping the last 14 dumps.
+
+**On-demand (recommended):**
+
+- Admins click **Administration → Download DB backup**
+  (`GET /administration/db-backup`). The route streams the latest dump
+  from `/app/backups` and triggers a fresh `pg_dump` on the fly if no
+  recent dump is present.
+- From your laptop: `railway run python server/scripts/backup_db.py`
+  to force a dump inside the running web service, then download it.
+
+**Automated daily cron (optional, later):**
+Each Railway service has its own volume, so a separate cron service would
+not share `/app/backups` with the web service. If you want automation,
+the cleanest options are either (a) adding an in-process scheduler
+(`APScheduler`) inside the Flask app with `GUNICORN_WORKERS=1`, or
+(b) running a cron service that uploads dumps to an S3-compatible bucket.
+Neither is wired up yet — the on-demand path above is enough for a
+short-running Prolific study. The stub [railway-cron.json](railway-cron.json)
+is left as a reference.
+
+### Pulling production data into local for analysis
+
+```bash
+# Force a fresh dump inside the running web service and stream it to your laptop:
+railway run --service SAE4EasyStudy -- \
+  python /app/server/scripts/backup_db.py && \
+  railway run --service SAE4EasyStudy -- \
+  sh -c 'cat /app/backups/$(ls -1t /app/backups | head -1)' > local_dump.sql.gz
+
+# Then restore locally against a throwaway Postgres:
+gunzip -c local_dump.sql.gz | psql postgresql://postgres:pw@localhost:5432/easystudy
+```
+
+### Notes
+
+- First deploy can take longer because it downloads and extracts
+  dataset/model assets.
+- Railway runtime requirements intentionally skip TensorFlow-heavy
+  dependencies to avoid build timeouts. If you need TF/TFRS-based
+  fastcompare/vae features on Railway, install those packages in a
+  separate deployment profile.
+
+In this repository, all persistent paths live under the single `/data`
+volume mount on Railway, symlinked by
+[`server/railway-entrypoint.sh`](server/railway-entrypoint.sh):
+
+- `/data/instance`   → fallback SQLite + Flask session files
+- `/data/cache`      → per-study runtime cache
+- `/data/sae_models` → downloaded SAE checkpoints
+- `/data/sae_data`   → runtime SAE features / LLM labels
+- `/data/backups`    → gzipped DB dumps
 
 The `ml-latest.zip` asset should already contain:
 
@@ -198,3 +263,10 @@ Dobře. Teď zkontroluj, jestli se to správně zachytává do results, chceme t
 
 Udělej test na resultsdisplay, jestli ti tam něco chybí, tak to klidně doplň. Důležité je, abychom zachytávali rozumně uživatelské akce, výstupy atd. Hlavně i odpovědi na dotazníky.
 
+---
+
+Check the recommended movies and select those you would currently consider to watch by simply clicking on them. If you click on one accidentally, another click de-selects the movie. Kdykoliv v prubehu iterace, můžete své rozhodnutí změnit. Kliknutím na tlačítko především potvrzujete, že jste na tento krok nezapomněli.
+
+---
+
+Nenapadlo vas nějakou init otazku, abych dokazali změřit škálu, že třeba někdo dává hodně přehnany feedback, někdo ne? Jak moc je tohle červená atd

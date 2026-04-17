@@ -32,3 +32,4 @@ cinemagoer
 cachetools
 sentence-transformers
 gunicorn
+psycopg2-binary

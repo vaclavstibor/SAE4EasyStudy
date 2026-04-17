@@ -2,7 +2,10 @@ import flask
 
 from flask_login import current_user, login_required
 
+import os
 import secrets
+
+from pathlib import Path
 
 import sqlalchemy
 
@@ -23,6 +26,59 @@ def administration():
         return flask.render_template("administration.html", current_user=current_user.email)
     else:
         return flask.redirect(flask.url_for('auth.login'))
+
+
+@main.route("/administration/db-backup", methods=["GET"])
+def administration_db_backup():
+    """Stream the latest gzipped DB dump.  Admin-only.
+
+    Reads from BACKUP_DIR (defaults to /app/backups) which is populated by
+    the daily ``server/scripts/backup_db.py`` cron.  Falls back to running
+    the script on demand if no dump exists yet, so the first call still
+    returns a usable file."""
+    if not current_user.is_authenticated:
+        return flask.redirect(flask.url_for('auth.login'))
+
+    backup_dir = Path(os.environ.get("BACKUP_DIR", "/app/backups"))
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    candidates = sorted(
+        [p for p in backup_dir.glob("db_*.gz") if p.is_file()],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if not candidates:
+        # No backup yet — try to make one on the fly so the admin gets a
+        # download instead of an opaque 404.
+        import subprocess
+        import sys
+        script_path = Path(__file__).resolve().parent / "scripts" / "backup_db.py"
+        try:
+            subprocess.run(
+                [sys.executable, str(script_path)],
+                check=True,
+                capture_output=True,
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            return flask.jsonify({
+                "error": "No DB backup available and on-demand dump failed.",
+                "detail": str(exc),
+            }), 500
+        candidates = sorted(
+            [p for p in backup_dir.glob("db_*.gz") if p.is_file()],
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+        if not candidates:
+            return flask.jsonify({"error": "Backup script ran but produced no output."}), 500
+
+    latest = candidates[0]
+    return flask.send_file(
+        str(latest),
+        as_attachment=True,
+        download_name=latest.name,
+        mimetype="application/gzip",
+    )
 
 @main.route("/", methods=["GET"])
 def index():

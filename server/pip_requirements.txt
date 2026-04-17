@@ -20,3 +20,4 @@ tf-keras
 torch
 sentence-transformers
 gunicorn # Railway
+psycopg2-binary # Postgres driver for Railway / hosted DBs

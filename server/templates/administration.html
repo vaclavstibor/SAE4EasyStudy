@@ -417,6 +417,10 @@
                   <b-icon icon="github" class="mr-1"></b-icon>
                   Repository
                 </b-btn>
+                <b-btn class="hero-btn-secondary" href="{{ url_for('main.administration_db_backup') }}">
+                  <b-icon icon="cloud-download" class="mr-1"></b-icon>
+                  Download DB backup
+                </b-btn>
                 <b-form action="/logout">
                   <b-button class="hero-btn-secondary" type="submit">
                     <b-icon icon="box-arrow-right" class="mr-1"></b-icon>
@@ -620,8 +624,9 @@
                   style="background:#e7f1ff;color:#0b57d0;"
                   target="_blank"
                   :href="'/sae_steering/export-raw/' + data.item.guid"
+                  title="Per-participant event log (every interaction row + Prolific IDs from the DB). Noisy mouse/viewport events are filtered out by default."
                 >
-                  Export JSON
+                  Download raw events (JSON)
                 </a>
                 <span v-if="!data.item.initialized" class="empty-copy">Unavailable</span>
               </div>
