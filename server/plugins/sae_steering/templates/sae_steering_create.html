@@ -263,6 +263,19 @@
                         </div>
                     </div>
 
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="prolific-code" class="form-label">Prolific Completion Code</label>
+                            <input type="text" class="form-control" id="prolific-code"
+                                placeholder="e.g. C123ABCD">
+                            <div class="form-text">
+                                The completion code from your Prolific study. Required if you want
+                                participants to be redirected back to Prolific (so you can pay them).
+                                Leave empty for a non-Prolific study.
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mt-3">
                         <label class="form-label">Approach Questionnaires (HTML files)</label>
                         <div class="form-text">Optional. These stack automatically based on the selected number of approaches and each one is shown after its specific approach.</div>
@@ -739,6 +752,7 @@
                 : (approachCount === 2 ? document.getElementById('comparison-mode').value : 'sequential');
             const studyIntroText = document.getElementById('study-intro-text').value.trim();
             const timeEstimate = document.getElementById('time-estimate').value.trim();
+            const prolificCode = document.getElementById('prolific-code').value.trim();
 
             const models = approaches.map((approach, index) => ({
                 id: approach.id,
@@ -775,6 +789,9 @@
                 configData.questionnaire_file = uploadedQuestionnaire;
             } else if (useDefaultFinalQuestionnaire) {
                 configData.questionnaire_file = DEFAULT_QUESTIONNAIRES.final;
+            }
+            if (prolificCode) {
+                configData.prolific_code = prolificCode;
             }
 
             try {
