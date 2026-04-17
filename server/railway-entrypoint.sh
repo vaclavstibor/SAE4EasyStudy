@@ -113,15 +113,17 @@ if [ -f "$MODEL_PT_PATH" ] && [ ! -f "plugins/sae_steering/models/TopKSAE-1024.p
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Apply pending Alembic migrations BEFORE the app starts taking traffic.
-#    Safe no-op when the schema is already current; required on every deploy
-#    where the DB lives on a Railway Postgres add-on so new tables appear
-#    automatically (otherwise the app boots against a stale schema).
+# 4. Initialise the DB schema BEFORE the app starts taking traffic.
+#    * Fresh Postgres / SQLite: creates tables via db.create_all() and
+#      stamps Alembic head (legacy migrations carry SQLite-only syntax
+#      that Postgres rejects, so we skip them on empty databases).
+#    * Existing schema: defers to `flask db upgrade` for pending
+#      migrations.  Override with SKIP_DB_UPGRADE=1 in an emergency.
 # ---------------------------------------------------------------------------
 if [ "${SKIP_DB_UPGRADE:-0}" != "1" ]; then
-  echo "[startup] running flask db upgrade"
-  FLASK_APP=app:create_app flask db upgrade || \
-    echo "[startup] flask db upgrade failed (continuing — review logs)"
+  echo "[startup] initialising database schema"
+  python scripts/init_db.py || \
+    echo "[startup] init_db.py failed (continuing — review logs)"
 fi
 
 # ---------------------------------------------------------------------------
