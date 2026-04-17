@@ -133,6 +133,15 @@ def create_app():
     if _db_url.startswith('postgres://'):
         _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+    # Harden the connection pool for long-running Prolific studies: Railway
+    # Postgres silently drops idle TCP connections after ~30 min and without
+    # these options the first request afterwards throws
+    # ``OperationalError: server closed the connection unexpectedly`` and
+    # returns 500 to the participant.
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+    }
     app.config['SESSION_COOKIE_NAME'] = os.environ.get('SESSION_COOKIE_NAME', "something")
     app.config["SESSION_TYPE"] = "sqlalchemy"
     app.config["SESSION_SQLALCHEMY"] = db
