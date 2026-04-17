@@ -16,6 +16,7 @@
             --accent-positive: #2d7d46;
             --accent-negative: #c23c3c;
             --accent-neutral: #4a6fa5;
+            --accent-warning: #b9770e;
         }
         * { box-sizing: border-box; }
         body {
@@ -27,17 +28,17 @@
             -webkit-font-smoothing: antialiased;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
-            padding: 48px 24px;
+            padding: 32px 24px 64px;
         }
         .page-header {
-            margin-bottom: 42px;
+            margin-bottom: 24px;
             padding-bottom: 24px;
             border-bottom: 1px solid var(--border-color);
         }
         .page-header h1 {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 600;
             letter-spacing: -0.5px;
             margin: 0 0 8px;
@@ -53,13 +54,13 @@
             margin-left: 12px;
         }
         .header-actions {
-            margin-top: 20px;
+            margin-top: 18px;
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
         }
         .btn {
-            padding: 10px 20px;
+            padding: 8px 16px;
             font-size: 13px;
             font-weight: 500;
             border-radius: 6px;
@@ -68,6 +69,9 @@
             color: var(--text-primary);
             cursor: pointer;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .btn:hover { background: var(--bg-subtle); }
         .btn-primary {
@@ -75,27 +79,63 @@
             border-color: var(--text-primary);
             color: #fff;
         }
-        .section { margin-bottom: 40px; }
+        .btn-link {
+            background: transparent;
+            border: none;
+            color: var(--accent-neutral);
+            padding: 0;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .btn-link:hover { text-decoration: underline; }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 32px;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 18px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            white-space: nowrap;
+        }
+        .tab:hover { color: var(--text-primary); }
+        .tab.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--text-primary);
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .section { margin-bottom: 36px; }
         .section-header h2 {
-            font-size: 19px;
+            font-size: 18px;
             margin: 0 0 4px;
             font-weight: 600;
         }
-        .section-header p { margin: 0; color: var(--text-secondary); }
+        .section-header p { margin: 0 0 16px; color: var(--text-secondary); }
         .stats-row {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 1px;
             background: var(--border-color);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             overflow: hidden;
+            margin-bottom: 32px;
         }
-        .stat-item { background: #fff; padding: 20px; text-align: center; }
-        .stat-value { font-size: 28px; font-weight: 600; line-height: 1.2; }
+        .stat-item { background: #fff; padding: 18px 12px; text-align: center; }
+        .stat-value { font-size: 26px; font-weight: 600; line-height: 1.2; }
         .stat-label {
             margin-top: 6px;
-            font-size: 11px;
+            font-size: 10px;
             text-transform: uppercase;
             color: var(--text-muted);
             letter-spacing: .5px;
@@ -114,7 +154,7 @@
         .insight-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
         .insight-meta { color: var(--text-muted); font-size: 12px; margin-top: 8px; }
         .mono { font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
-        .table-wrap { border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .table-wrap { border: 1px solid var(--border-color); border-radius: 8px; overflow: auto; }
         .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .data-table th {
             text-align: left;
@@ -122,15 +162,18 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: .5px;
-            padding: 11px 14px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--border-color);
             background: var(--bg-subtle);
+            position: sticky;
+            top: 0;
         }
-        .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border-color); }
+        .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: var(--bg-subtle); }
         .chart-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 18px;
         }
         .chart-card {
@@ -138,8 +181,9 @@
             border-radius: 8px;
             padding: 16px;
         }
-        .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
-        .chart-wrap { position: relative; height: 240px; }
+        .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .chart-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+        .chart-wrap { position: relative; height: 260px; }
         .empty-state {
             border: 1px dashed var(--border-color);
             border-radius: 8px;
@@ -154,12 +198,114 @@
             color: var(--text-muted);
             text-align: center;
         }
-        @media (max-width: 992px) {
-            .stats-row { grid-template-columns: repeat(3, 1fr); }
-            .card-grid, .chart-grid { grid-template-columns: 1fr; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: .3px;
         }
-        @media (max-width: 576px) {
+        .badge-success { background: #e0f3e6; color: var(--accent-positive); }
+        .badge-danger { background: #fde6e6; color: var(--accent-negative); }
+        .badge-neutral { background: var(--bg-subtle); color: var(--text-secondary); }
+        .badge-warning { background: #fff3e0; color: var(--accent-warning); }
+        .copy-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 1px 6px;
+            cursor: pointer;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .copy-btn:hover { background: var(--bg-subtle); }
+        .pid-cell {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: "IBM Plex Mono", "SF Mono", monospace;
+            font-size: 12px;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-bar label { font-size: 12px; color: var(--text-secondary); margin: 0; }
+        .filter-bar input,
+        .filter-bar select {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+        /* Journey timeline */
+        .journey-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .journey-stat {
+            background: var(--bg-subtle);
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+        .journey-stat .v { font-size: 20px; font-weight: 600; }
+        .journey-stat .l { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: .4px; }
+        .timeline {
+            border-left: 2px solid var(--border-color);
+            margin-left: 12px;
+            padding: 0;
+        }
+        .timeline-section {
+            margin-top: 18px;
+            padding-left: 16px;
+            position: relative;
+        }
+        .timeline-section::before {
+            content: "";
+            position: absolute;
+            left: -7px;
+            top: 6px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            border: 2px solid #fff;
+        }
+        .timeline-section-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        .timeline-row {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 10px;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        .timeline-row .ts {
+            color: var(--text-muted);
+            font-family: "IBM Plex Mono", "SF Mono", monospace;
+            font-size: 12px;
+        }
+        @media (max-width: 1100px) {
+            .stats-row { grid-template-columns: repeat(3, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+            .journey-summary-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
             .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .card-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -170,172 +316,286 @@
                 Study Results
                 <span class="guid">{{ guid }}</span>
             </h1>
-            <p class="subtitle">Hybrid report focused on preference, quality, control, and moderator effects.</p>
+            <p class="subtitle">Per-participant payment table, individual journeys, and arm-comparison analytics for the SAE study.</p>
             <div class="header-actions">
                 <a href="{{ url_for('main.administration') }}" class="btn">Back to Administration</a>
-                <button id="export-btn" class="btn btn-primary">Export Data (JSON)</button>
+                <button id="export-btn" class="btn btn-primary" title="Aggregated per-participant analytics: Likert means, attention pass rates, moderator effects, and arm comparisons computed by fetch_results.">Download analytics (JSON)</button>
+                <a href="{{ export_raw_url }}" class="btn" title="Per-participant event log pulled straight from the DB, with mouse/viewport noise filtered. Use this for payment reconciliation and journey reconstruction.">Download raw events (JSON)</a>
+                <a href="{{ export_raw_url }}?include_noise=1" class="btn" title="Same raw event log but including mouse-enter/mouse-leave events and full viewport item arrays. Debug only — file is much larger.">Download raw events + noise (JSON)</a>
             </div>
         </div>
 
-        <div class="section">
-            <div class="stats-row">
-                <div class="stat-item">
-                    <div class="stat-value" id="stat-completed">-</div>
-                    <div class="stat-label">Completed Participants</div>
+        <div class="stats-row">
+            <div class="stat-item"><div class="stat-value" id="stat-total">-</div><div class="stat-label">Joined</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-completed">-</div><div class="stat-label">Completed</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-inprogress">-</div><div class="stat-label">In Progress</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-attention">-</div><div class="stat-label">Attention Pass</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-paired">-</div><div class="stat-label">Paired Answers</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-with-prolific">-</div><div class="stat-label">With Prolific PID</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="overview">Overview</button>
+            <button class="tab" data-tab="participants">Participants</button>
+            <button class="tab" data-tab="journey">Journey</button>
+            <button class="tab" data-tab="analytics">Analytics+</button>
+        </div>
+
+        <!-- ========================= OVERVIEW TAB ========================= -->
+        <div class="tab-panel active" id="tab-overview">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Executive Insights</h2>
+                    <p>Top conclusions directly tied to the study questions.</p>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="stat-phaseq">-</div>
-                    <div class="stat-label">With Phase Questionnaire</div>
+                <div class="card-grid" id="insights-grid"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Approach Overview</h2>
+                    <p>Behavioral metrics per approach phase and B-A deltas.</p>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="stat-finalq">-</div>
-                    <div class="stat-label">With Final Questionnaire</div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Approach</th>
+                                <th>Participants</th>
+                                <th>Mean iterations</th>
+                                <th>Mean abs adjustment</th>
+                                <th>Mean non-zero adjustments</th>
+                                <th>Mean adjustment events</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approach-table"></tbody>
+                    </table>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="stat-attention">-</div>
-                    <div class="stat-label">Overall Attention Pass</div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Questionnaire Insights</h2>
+                    <p>Final comparison, paired phase differences, and steering-specific diagnostics.</p>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value" id="stat-paired">-</div>
-                    <div class="stat-label">Paired Approach Answers</div>
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="insight-title">Final comparison items</div>
+                        <div id="final-summary"></div>
+                    </div>
+                    <div class="card">
+                        <div class="insight-title">Phase composites (B-A)</div>
+                        <div id="phase-composite-summary"></div>
+                    </div>
+                </div>
+                <div class="table-wrap" style="margin-top:16px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Phase A mean</th>
+                                <th>Phase B mean</th>
+                                <th>Delta B-A</th>
+                                <th>n</th>
+                            </tr>
+                        </thead>
+                        <tbody id="phase-items-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Moderator Effects</h2>
+                    <p>Preference differences by familiarity and usage segments.</p>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Moderator</th>
+                                <th>Segment</th>
+                                <th>n</th>
+                                <th>Mean preference score</th>
+                            </tr>
+                        </thead>
+                        <tbody id="moderator-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Selection Dynamics by Approach</h2>
+                    <p>How many movies were selected per iteration and where they appeared in the ranking.</p>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Approach</th>
+                                <th>Participants with feedback</th>
+                                <th>Total likes</th>
+                                <th>Total removals</th>
+                                <th>Mean likes / participant</th>
+                            </tr>
+                        </thead>
+                        <tbody id="selection-dynamics-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Support Charts</h2>
+                    <p>Compact visual checks under the narrative insights.</p>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Preference distribution (f1)</div>
+                        <div class="chart-wrap"><canvas id="prefChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Composite deltas (B-A)</div>
+                        <div class="chart-wrap"><canvas id="deltaChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">ML familiarity moderator</div>
+                        <div class="chart-wrap"><canvas id="modChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Likes per iteration by approach</div>
+                        <div class="chart-wrap"><canvas id="selectionIterationChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Selected position distribution</div>
+                        <div class="chart-wrap"><canvas id="selectionPositionChart"></canvas></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-header">
-                <h2>Executive Insights</h2>
-                <p>Top conclusions directly tied to the study questions.</p>
-            </div>
-            <div class="card-grid" id="insights-grid"></div>
-        </div>
-
-        <div class="section">
-            <div class="section-header">
-                <h2>Approach Overview</h2>
-                <p>Behavioral metrics per approach phase and B-A deltas.</p>
-            </div>
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Approach</th>
-                            <th>Participants</th>
-                            <th>Mean iterations</th>
-                            <th>Mean abs adjustment</th>
-                            <th>Mean non-zero adjustments</th>
-                            <th>Mean adjustment events</th>
-                        </tr>
-                    </thead>
-                    <tbody id="approach-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-header">
-                <h2>Questionnaire Insights</h2>
-                <p>Final comparison, paired phase differences, and steering-specific diagnostics.</p>
-            </div>
-            <div class="card-grid">
-                <div class="card">
-                    <div class="insight-title">Final comparison items</div>
-                    <div id="final-summary"></div>
+        <!-- ========================= PARTICIPANTS TAB ========================= -->
+        <div class="tab-panel" id="tab-participants">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Participants &amp; Prolific Identity</h2>
+                    <p>One row per participation. Use the completion URL to pay your participants on Prolific.</p>
                 </div>
-                <div class="card">
-                    <div class="insight-title">Phase composites (B-A)</div>
-                    <div id="phase-composite-summary"></div>
+                <div class="filter-bar">
+                    <label>Status:
+                        <select id="filter-status">
+                            <option value="">All</option>
+                            <option value="completed">Completed</option>
+                            <option value="in_progress">In progress</option>
+                        </select>
+                    </label>
+                    <label>Attention:
+                        <select id="filter-attention">
+                            <option value="">All</option>
+                            <option value="pass">Passed</option>
+                            <option value="fail">Failed</option>
+                            <option value="unknown">Unknown</option>
+                        </select>
+                    </label>
+                    <label>Search:
+                        <input type="search" id="filter-search" placeholder="PID, UUID, language...">
+                    </label>
                 </div>
-            </div>
-            <div class="table-wrap" style="margin-top:16px;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Phase A mean</th>
-                            <th>Phase B mean</th>
-                            <th>Delta B-A</th>
-                            <th>n</th>
-                        </tr>
-                    </thead>
-                    <tbody id="phase-items-table"></tbody>
-                </table>
+                <div class="table-wrap">
+                    <table class="data-table" id="participants-table">
+                        <thead>
+                            <tr>
+                                <th>Prolific PID</th>
+                                <th>Study / Session</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Duration</th>
+                                <th>Approach order</th>
+                                <th>Phase attn</th>
+                                <th>Final attn</th>
+                                <th>Overall</th>
+                                <th>Completion URL</th>
+                                <th>Journey</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participants-tbody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-header">
-                <h2>Moderator Effects</h2>
-                <p>Preference differences by familiarity and usage segments.</p>
-            </div>
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Moderator</th>
-                            <th>Segment</th>
-                            <th>n</th>
-                            <th>Mean preference score</th>
-                        </tr>
-                    </thead>
-                    <tbody id="moderator-table"></tbody>
-                </table>
+        <!-- ========================= JOURNEY TAB ========================= -->
+        <div class="tab-panel" id="tab-journey">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Per-Participant Journey Reconstruction</h2>
+                    <p>Pick a participant from the dropdown (or click "Journey" in the participants table). Hover noise is hidden.</p>
+                </div>
+                <div class="filter-bar">
+                    <label>Participant:
+                        <select id="journey-picker">
+                            <option value="">— select —</option>
+                        </select>
+                    </label>
+                    <label><input type="checkbox" id="journey-include-noise"> Show hover noise</label>
+                </div>
+                <div id="journey-content">
+                    <div class="empty-state">Select a participant to view their reconstructed journey.</div>
+                </div>
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-header">
-                <h2>Selection Dynamics by Approach</h2>
-                <p>How many movies were selected per iteration and where they appeared in the ranking.</p>
-            </div>
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Approach</th>
-                            <th>Participants with feedback</th>
-                            <th>Total likes</th>
-                            <th>Total removals</th>
-                            <th>Mean likes / participant</th>
-                        </tr>
-                    </thead>
-                    <tbody id="selection-dynamics-table"></tbody>
-                </table>
+        <!-- ========================= ANALYTICS+ TAB ========================= -->
+        <div class="tab-panel" id="tab-analytics">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Arm-Comparison Analytics</h2>
+                    <p>Per-arm Likert deltas, attention funnel, time-on-task, search usage, order effects.</p>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Per-arm Likert deltas (B - A)</div>
+                        <div class="chart-sub">Within-subject mean difference per shared questionnaire item.</div>
+                        <div class="chart-wrap"><canvas id="likertDeltaChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Attention-check funnel</div>
+                        <div class="chart-sub">How many participants passed both attention checks.</div>
+                        <div class="chart-wrap"><canvas id="attentionFunnelChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Time-on-task histogram</div>
+                        <div class="chart-sub">Total session duration in minutes (completed only).</div>
+                        <div class="chart-wrap"><canvas id="timeHistChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Search usage per participant</div>
+                        <div class="chart-sub">Number of search events (proxy for transparency / interpretability use).</div>
+                        <div class="chart-wrap"><canvas id="searchUsageChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Steering effort by approach</div>
+                        <div class="chart-sub">Mean non-zero slider adjustments per phase.</div>
+                        <div class="chart-wrap"><canvas id="steeringEffortChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Convergence — likes per iteration</div>
+                        <div class="chart-sub">Total likes by iteration index, per approach.</div>
+                        <div class="chart-wrap"><canvas id="convergenceChart"></canvas></div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-header">
-                <h2>Support Charts</h2>
-                <p>Compact visual checks under the narrative insights.</p>
-            </div>
-            <div class="chart-grid">
-                <div class="chart-card">
-                    <div class="chart-title">Preference distribution (f1)</div>
-                    <div class="chart-wrap"><canvas id="prefChart"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Composite deltas (B-A)</div>
-                    <div class="chart-wrap"><canvas id="deltaChart"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">ML familiarity moderator</div>
-                    <div class="chart-wrap"><canvas id="modChart"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Likes per iteration by approach</div>
-                    <div class="chart-wrap"><canvas id="selectionIterationChart"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-title">Selected position distribution</div>
-                    <div class="chart-wrap"><canvas id="selectionPositionChart"></canvas></div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
+        const FETCH_URL = "{{ fetch_results_url }}";
+        const JOURNEY_URL_BASE = "{{ journey_url_base }}";
         let resultsData = null;
+        let chartInstances = {};
+
         Chart.defaults.font.family = "'IBM Plex Sans', -apple-system, sans-serif";
         Chart.defaults.color = "#8a8a8a";
 
@@ -343,42 +603,82 @@
             if (value === null || value === undefined || Number.isNaN(value)) return "-";
             return Number(value).toFixed(digits);
         }
-
         function pct(value) {
             if (value === null || value === undefined || Number.isNaN(value)) return "-";
             return `${Math.round(value * 100)}%`;
         }
+        function fmtDuration(sec) {
+            if (sec === null || sec === undefined) return "-";
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+        function fmtDate(iso) {
+            if (!iso) return "-";
+            return new Date(iso).toLocaleString();
+        }
+        function passBadge(value) {
+            if (value === true) return '<span class="badge badge-success">pass</span>';
+            if (value === false) return '<span class="badge badge-danger">fail</span>';
+            return '<span class="badge badge-neutral">-</span>';
+        }
+        function statusBadge(s) {
+            if (s === "completed") return '<span class="badge badge-success">completed</span>';
+            if (s === "in_progress") return '<span class="badge badge-warning">in progress</span>';
+            return `<span class="badge badge-neutral">${s || "-"}</span>`;
+        }
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text || "").then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = "✓";
+                    setTimeout(() => { btn.textContent = orig; }, 900);
+                }
+            });
+        }
+        function destroyChart(id) {
+            if (chartInstances[id]) {
+                chartInstances[id].destroy();
+                delete chartInstances[id];
+            }
+        }
 
+        // ---------------- main load ----------------
         async function loadResults() {
-            const insightsGrid = document.getElementById("insights-grid");
-            insightsGrid.innerHTML = '<div class="loading">Loading analytics...</div>';
+            document.getElementById("insights-grid").innerHTML = '<div class="loading">Loading analytics...</div>';
             try {
-                const response = await fetch("{{ fetch_results_url }}");
+                const response = await fetch(FETCH_URL);
                 const data = await response.json();
                 resultsData = data;
-                renderStats(data);
+                renderTopStats(data);
                 renderInsights(data);
                 renderApproaches(data);
                 renderQuestionnaires(data);
                 renderModerators(data);
                 renderSelectionDynamics(data);
-                renderCharts(data);
+                renderOverviewCharts(data);
+                renderParticipantsTable(data);
+                renderJourneyPicker(data);
+                renderAnalyticsPlus(data);
             } catch (err) {
-                insightsGrid.innerHTML = '<div class="empty-state">Could not load results.</div>';
+                document.getElementById("insights-grid").innerHTML = '<div class="empty-state">Could not load results.</div>';
                 console.error(err);
             }
         }
 
-        function renderStats(data) {
-            const sample = data.sample || {};
-            const attention = sample.attention_checks || {};
-            document.getElementById("stat-completed").textContent = sample.participants_completed ?? "-";
-            document.getElementById("stat-phaseq").textContent = sample.participants_with_phase_questionnaires ?? "-";
-            document.getElementById("stat-finalq").textContent = sample.participants_with_final_questionnaire ?? "-";
-            document.getElementById("stat-attention").textContent = pct(attention.overall_pass_rate);
+        function renderTopStats(data) {
+            const s = data.sample || {};
+            const att = s.attention_checks || {};
+            document.getElementById("stat-total").textContent = s.participants_total ?? s.participants_completed ?? "-";
+            document.getElementById("stat-completed").textContent = s.participants_completed ?? "-";
+            document.getElementById("stat-inprogress").textContent = s.participants_in_progress ?? 0;
+            document.getElementById("stat-attention").textContent = pct(att.overall_pass_rate);
             document.getElementById("stat-paired").textContent = data.questionnaire?.phase_shared?.participants_with_pairs ?? "-";
+            const withPid = (data.participants_table || []).filter(p => p.prolific && p.prolific.pid).length;
+            document.getElementById("stat-with-prolific").textContent = withPid;
         }
 
+        // ---------------- overview ----------------
         function renderInsights(data) {
             const container = document.getElementById("insights-grid");
             const insights = data.insights || [];
@@ -397,7 +697,6 @@
                 </div>
             `).join("");
         }
-
         function renderApproaches(data) {
             const body = document.getElementById("approach-table");
             const overview = data.approaches?.overview || {};
@@ -417,7 +716,6 @@
                 </tr>
             `).join("");
         }
-
         function renderQuestionnaires(data) {
             const finalSummary = document.getElementById("final-summary");
             const phaseSummary = document.getElementById("phase-composite-summary");
@@ -429,14 +727,12 @@
                 const item = finalItems[key] || {};
                 return `<div><strong>${key}</strong>: n=${item.distribution?.n ?? 0}, mean=${fmt(item.mean_score, 3)}</div>`;
             }).join("");
-
             const composites = data.questionnaire?.phase_shared?.composites || {};
             phaseSummary.innerHTML = `
                 <div><strong>Quality diff</strong>: ${fmt(composites.quality_diff_b_minus_a?.mean, 3)} (n=${composites.quality_diff_b_minus_a?.n ?? 0})</div>
                 <div><strong>Satisfaction diff</strong>: ${fmt(composites.satisfaction_diff_b_minus_a?.mean, 3)} (n=${composites.satisfaction_diff_b_minus_a?.n ?? 0})</div>
                 <div><strong>Control diff</strong>: ${fmt(composites.control_diff_b_minus_a?.mean, 3)} (n=${composites.control_diff_b_minus_a?.n ?? 0})</div>
             `;
-
             const items = data.questionnaire?.phase_shared?.items || {};
             const itemEntries = Object.entries(items);
             if (!itemEntries.length) {
@@ -453,43 +749,23 @@
                 </tr>
             `).join("");
         }
-
         function renderModerators(data) {
             const body = document.getElementById("moderator-table");
             const mods = data.moderators || {};
             const rows = [];
             Object.entries(mods).forEach(([modName, groups]) => {
                 Object.entries(groups || {}).forEach(([segment, vals]) => {
-                    rows.push({
-                        moderator: modName,
-                        segment,
-                        n: vals?.n ?? 0,
-                        mean: vals?.mean_preference_score,
-                    });
+                    rows.push({ moderator: modName, segment, n: vals?.n ?? 0, mean: vals?.mean_preference_score });
                 });
             });
-            if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="4">No moderator data available.</td></tr>';
-                return;
-            }
-            body.innerHTML = rows.map(r => `
-                <tr>
-                    <td>${r.moderator}</td>
-                    <td>${r.segment}</td>
-                    <td>${r.n}</td>
-                    <td>${fmt(r.mean, 3)}</td>
-                </tr>
-            `).join("");
+            if (!rows.length) { body.innerHTML = '<tr><td colspan="4">No moderator data available.</td></tr>'; return; }
+            body.innerHTML = rows.map(r => `<tr><td>${r.moderator}</td><td>${r.segment}</td><td>${r.n}</td><td>${fmt(r.mean, 3)}</td></tr>`).join("");
         }
-
         function renderSelectionDynamics(data) {
             const body = document.getElementById("selection-dynamics-table");
             const dynamics = data.approaches?.selection_dynamics || {};
             const rows = Object.values(dynamics);
-            if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="5">No movie-selection feedback data available.</td></tr>';
-                return;
-            }
+            if (!rows.length) { body.innerHTML = '<tr><td colspan="5">No movie-selection feedback data available.</td></tr>'; return; }
             body.innerHTML = rows.map(row => `
                 <tr>
                     <td>${row.label || "-"}</td>
@@ -500,121 +776,354 @@
                 </tr>
             `).join("");
         }
+        function renderOverviewCharts(data) {
+            destroyChart("prefChart"); destroyChart("deltaChart"); destroyChart("modChart");
+            destroyChart("selectionIterationChart"); destroyChart("selectionPositionChart");
 
-        function renderCharts(data) {
             const finalPref = data.questionnaire?.final?.items?.f1_preference?.distribution?.counts || {};
             const prefLabels = Object.keys(finalPref);
             const prefValues = Object.values(finalPref);
             if (prefLabels.length) {
-                new Chart(document.getElementById("prefChart"), {
+                chartInstances.prefChart = new Chart(document.getElementById("prefChart"), {
                     type: "bar",
-                    data: {
-                        labels: prefLabels,
-                        datasets: [{
-                            data: prefValues,
-                            backgroundColor: "#4a6fa5",
-                            borderRadius: 3
-                        }]
-                    },
+                    data: { labels: prefLabels, datasets: [{ data: prefValues, backgroundColor: "#4a6fa5", borderRadius: 3 }] },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
                 });
             }
-
             const comps = data.questionnaire?.phase_shared?.composites || {};
             const deltaData = [
                 comps.quality_diff_b_minus_a?.mean ?? 0,
                 comps.satisfaction_diff_b_minus_a?.mean ?? 0,
-                comps.control_diff_b_minus_a?.mean ?? 0
+                comps.control_diff_b_minus_a?.mean ?? 0,
             ];
-            new Chart(document.getElementById("deltaChart"), {
+            chartInstances.deltaChart = new Chart(document.getElementById("deltaChart"), {
                 type: "bar",
                 data: {
                     labels: ["Quality", "Satisfaction", "Control"],
-                    datasets: [{
-                        data: deltaData,
-                        backgroundColor: deltaData.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"),
-                        borderRadius: 3
-                    }]
+                    datasets: [{ data: deltaData, backgroundColor: deltaData.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"), borderRadius: 3 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
-
             const mlMod = data.moderators?.ml_familiarity || {};
             const mlLabels = Object.keys(mlMod);
             const mlValues = mlLabels.map(k => mlMod[k]?.mean_preference_score ?? 0);
-            new Chart(document.getElementById("modChart"), {
+            chartInstances.modChart = new Chart(document.getElementById("modChart"), {
                 type: "line",
-                data: {
-                    labels: mlLabels,
-                    datasets: [{
-                        data: mlValues,
-                        borderColor: "#4a6fa5",
-                        backgroundColor: "rgba(74,111,165,0.1)",
-                        fill: true,
-                        tension: 0.25
-                    }]
-                },
+                data: { labels: mlLabels, datasets: [{ data: mlValues, borderColor: "#4a6fa5", backgroundColor: "rgba(74,111,165,0.1)", fill: true, tension: 0.25 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
-
             const dynamics = data.approaches?.selection_dynamics || {};
             const phaseRows = Object.values(dynamics);
             if (phaseRows.length) {
-                const iterationKeys = Array.from(new Set(
-                    phaseRows.flatMap(row => Object.keys(row.iteration_like_counts || {}))
-                )).sort((a, b) => Number(a) - Number(b));
-
-                const iterationDatasets = phaseRows.map((row, idx) => {
-                    const palette = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
-                    return {
-                        label: row.label || `Approach ${idx + 1}`,
-                        data: iterationKeys.map(key => (row.iteration_like_counts || {})[key] || 0),
-                        borderColor: palette[idx % palette.length],
-                        backgroundColor: "transparent",
-                        tension: 0.2
-                    };
-                });
-
-                new Chart(document.getElementById("selectionIterationChart"), {
+                const iterationKeys = Array.from(new Set(phaseRows.flatMap(row => Object.keys(row.iteration_like_counts || {})))).sort((a, b) => Number(a) - Number(b));
+                const palette = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
+                chartInstances.selectionIterationChart = new Chart(document.getElementById("selectionIterationChart"), {
                     type: "line",
                     data: {
                         labels: iterationKeys.map(x => `Iter ${x}`),
-                        datasets: iterationDatasets
+                        datasets: phaseRows.map((row, idx) => ({
+                            label: row.label || `Approach ${idx + 1}`,
+                            data: iterationKeys.map(k => (row.iteration_like_counts || {})[k] || 0),
+                            borderColor: palette[idx % palette.length],
+                            backgroundColor: "transparent",
+                            tension: 0.2,
+                        }))
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: true } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
                 });
-
-                const positionKeys = Array.from(new Set(
-                    phaseRows.flatMap(row => Object.keys(row.position_counts || {}))
-                )).sort((a, b) => Number(a) - Number(b)).slice(0, 20);
-                const positionDatasets = phaseRows.map((row, idx) => {
-                    const palette = ["rgba(74,111,165,0.75)", "rgba(45,125,70,0.75)", "rgba(194,60,60,0.75)", "rgba(127,90,162,0.75)"];
-                    return {
-                        label: row.label || `Approach ${idx + 1}`,
-                        data: positionKeys.map(key => (row.position_counts || {})[key] || 0),
-                        backgroundColor: palette[idx % palette.length]
-                    };
-                });
-
-                new Chart(document.getElementById("selectionPositionChart"), {
+                const positionKeys = Array.from(new Set(phaseRows.flatMap(row => Object.keys(row.position_counts || {})))).sort((a, b) => Number(a) - Number(b)).slice(0, 20);
+                const paletteFill = ["rgba(74,111,165,0.75)", "rgba(45,125,70,0.75)", "rgba(194,60,60,0.75)", "rgba(127,90,162,0.75)"];
+                chartInstances.selectionPositionChart = new Chart(document.getElementById("selectionPositionChart"), {
                     type: "bar",
                     data: {
                         labels: positionKeys.map(x => `#${x}`),
-                        datasets: positionDatasets
+                        datasets: phaseRows.map((row, idx) => ({
+                            label: row.label || `Approach ${idx + 1}`,
+                            data: positionKeys.map(k => (row.position_counts || {})[k] || 0),
+                            backgroundColor: paletteFill[idx % paletteFill.length],
+                        }))
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: { legend: { display: true } }
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
                 });
             }
         }
 
+        // ---------------- participants ----------------
+        function renderParticipantsTable(data) {
+            const tbody = document.getElementById("participants-tbody");
+            const rows = data.participants_table || [];
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No participations yet.</td></tr>';
+                return;
+            }
+            const statusFilter = document.getElementById("filter-status").value;
+            const attentionFilter = document.getElementById("filter-attention").value;
+            const searchFilter = (document.getElementById("filter-search").value || "").toLowerCase();
+            tbody.innerHTML = rows.filter(r => {
+                if (statusFilter && r.status !== statusFilter) return false;
+                if (attentionFilter) {
+                    const op = r.attention_checks?.overall_pass;
+                    if (attentionFilter === "pass" && op !== true) return false;
+                    if (attentionFilter === "fail" && op !== false) return false;
+                    if (attentionFilter === "unknown" && (op === true || op === false)) return false;
+                }
+                if (searchFilter) {
+                    const hay = [r.prolific?.pid, r.prolific?.study_id, r.prolific?.session_id, r.uuid, r.language].filter(Boolean).join(" ").toLowerCase();
+                    if (!hay.includes(searchFilter)) return false;
+                }
+                return true;
+            }).map(r => {
+                const att = r.attention_checks || {};
+                const phasePart = att.phase_total_count
+                    ? `${att.phase_passed_count}/${att.phase_total_count}`
+                    : "-";
+                const completionUrl = r.prolific?.completion_url || "";
+                const completionCell = completionUrl
+                    ? `<button class="copy-btn" onclick="copyToClipboard('${completionUrl}', this)">copy</button>
+                       <a class="btn-link mono" href="${completionUrl}" target="_blank" rel="noopener">open</a>`
+                    : '<span class="text-muted mono">no code</span>';
+                const pidValue = r.prolific?.pid || `(${r.uuid?.slice(0, 8) || "?"})`;
+                const pidCell = r.prolific?.pid
+                    ? `<span class="pid-cell">${pidValue}<button class="copy-btn" onclick="copyToClipboard('${r.prolific.pid}', this)">copy</button></span>`
+                    : `<span class="pid-cell mono">${pidValue}</span>`;
+                const study = r.prolific?.study_id || "-";
+                const session = r.prolific?.session_id || "-";
+                return `
+                    <tr>
+                        <td>${pidCell}</td>
+                        <td><div class="mono" style="font-size:11px">study: ${study}<br>sess: ${session}</div></td>
+                        <td>${statusBadge(r.status)}</td>
+                        <td>${fmtDate(r.time_joined)}</td>
+                        <td>${fmtDuration(r.duration_sec)}</td>
+                        <td class="mono">${(r.approach_order || []).join(", ") || "-"}</td>
+                        <td>${phasePart}</td>
+                        <td>${passBadge(att.final_pass)}</td>
+                        <td>${passBadge(att.overall_pass)}</td>
+                        <td>${completionCell}</td>
+                        <td><button class="btn-link" onclick="openJourney(${r.participation_id})">View →</button></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+        document.getElementById("filter-status").addEventListener("change", () => renderParticipantsTable(resultsData));
+        document.getElementById("filter-attention").addEventListener("change", () => renderParticipantsTable(resultsData));
+        document.getElementById("filter-search").addEventListener("input", () => renderParticipantsTable(resultsData));
+
+        // ---------------- journey ----------------
+        function renderJourneyPicker(data) {
+            const sel = document.getElementById("journey-picker");
+            const rows = data.participants_table || [];
+            sel.innerHTML = '<option value="">— select —</option>' + rows.map(r => {
+                const label = r.prolific?.pid
+                    ? `${r.prolific.pid}${r.status === "completed" ? "" : " (in progress)"}`
+                    : `${r.uuid?.slice(0, 10) || "?"} (no PID)`;
+                return `<option value="${r.participation_id}">${label}</option>`;
+            }).join("");
+        }
+        function openJourney(participationId) {
+            document.querySelector('[data-tab="journey"]').click();
+            document.getElementById("journey-picker").value = String(participationId);
+            loadJourney(participationId);
+        }
+        async function loadJourney(participationId) {
+            if (!participationId) return;
+            const includeNoise = document.getElementById("journey-include-noise").checked ? "?include_noise=1" : "";
+            const container = document.getElementById("journey-content");
+            container.innerHTML = '<div class="loading">Loading journey...</div>';
+            try {
+                const resp = await fetch(`${JOURNEY_URL_BASE}${participationId}${includeNoise}`);
+                const j = await resp.json();
+                renderJourney(j);
+            } catch (err) {
+                container.innerHTML = '<div class="empty-state">Failed to load journey.</div>';
+                console.error(err);
+            }
+        }
+        function renderJourney(j) {
+            const container = document.getElementById("journey-content");
+            if (j.error) { container.innerHTML = `<div class="empty-state">${j.error}</div>`; return; }
+            const summary = j.summary || {};
+            const phases = summary.phases || [];
+            const att = j.attention_checks || {};
+            const prolific = j.participant?.prolific || {};
+            const phasesText = phases.map(p => `Phase ${p.phase} (${p.models.join(", ") || "?"}): ${p.likes} likes, ${p.slider_adjustments} slider changes, ${p.iterations.length} iterations`).join("; ");
+            const conclusion = phases.length
+                ? `Participant ran ${phases.length} phase(s) over ${fmtDuration(summary.duration_sec)}. ${phasesText}. Attention overall: ${att.overall_pass === true ? "passed" : att.overall_pass === false ? "failed" : "unknown"}.`
+                : `Participant performed ${summary.total_interactions} interaction(s) but no phase data was recorded.`;
+
+            const sections = [];
+            let current = null;
+            (j.timeline || []).forEach(entry => {
+                if (!current || current.section !== entry.section) {
+                    current = { section: entry.section, rows: [] };
+                    sections.push(current);
+                }
+                current.rows.push(entry);
+            });
+
+            container.innerHTML = `
+                <div class="card" style="margin-bottom:18px;">
+                    <div class="insight-title">Participant ${prolific.pid || j.participant?.uuid || "?"}</div>
+                    <div class="mono" style="margin-bottom:10px;">
+                        ${prolific.pid ? `PID: ${prolific.pid} · STUDY: ${prolific.study_id} · SESSION: ${prolific.session_id}<br>` : ""}
+                        Joined: ${fmtDate(j.participant?.time_joined)} · Finished: ${fmtDate(j.participant?.time_finished)}
+                    </div>
+                    <div class="journey-summary-grid">
+                        <div class="journey-stat"><div class="v">${fmtDuration(summary.duration_sec)}</div><div class="l">Duration</div></div>
+                        <div class="journey-stat"><div class="v">${summary.total_interactions ?? "-"}</div><div class="l">Interactions</div></div>
+                        <div class="journey-stat"><div class="v">${summary.total_clicks ?? "-"}</div><div class="l">Meaningful clicks</div></div>
+                        <div class="journey-stat"><div class="v">${att.phase_total_count ? `${att.phase_passed_count}/${att.phase_total_count}` : "-"}</div><div class="l">Phase attention</div></div>
+                    </div>
+                    <p>${conclusion}</p>
+                </div>
+                ${sections.length ? `
+                <div class="timeline">
+                    ${sections.map(s => `
+                        <div class="timeline-section">
+                            <div class="timeline-section-label">${s.section}</div>
+                            ${s.rows.map(r => `<div class="timeline-row"><span class="ts">${r.ts_short}</span><span>${r.summary}</span></div>`).join("")}
+                        </div>
+                    `).join("")}
+                </div>` : '<div class="empty-state">No timeline events.</div>'}
+            `;
+        }
+        document.getElementById("journey-picker").addEventListener("change", e => loadJourney(Number(e.target.value)));
+        document.getElementById("journey-include-noise").addEventListener("change", () => {
+            const id = Number(document.getElementById("journey-picker").value);
+            if (id) loadJourney(id);
+        });
+
+        // ---------------- analytics+ ----------------
+        function renderAnalyticsPlus(data) {
+            destroyChart("likertDeltaChart"); destroyChart("attentionFunnelChart");
+            destroyChart("timeHistChart"); destroyChart("searchUsageChart");
+            destroyChart("steeringEffortChart"); destroyChart("convergenceChart");
+
+            // Per-arm Likert deltas (B - A)
+            const items = data.questionnaire?.phase_shared?.items || {};
+            const itemKeys = Object.keys(items);
+            const itemDeltas = itemKeys.map(k => items[k]?.delta_b_minus_a?.mean ?? 0);
+            chartInstances.likertDeltaChart = new Chart(document.getElementById("likertDeltaChart"), {
+                type: "bar",
+                data: {
+                    labels: itemKeys,
+                    datasets: [{
+                        data: itemDeltas,
+                        backgroundColor: itemDeltas.map(v => v >= 0 ? "#2d7d46" : "#c23c3c"),
+                        borderRadius: 3,
+                    }],
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: "y",
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `Δ = ${fmt(ctx.raw, 3)}` } } },
+                }
+            });
+
+            // Attention funnel
+            const rows = data.participants_table || [];
+            const completed = rows.filter(r => r.status === "completed");
+            const phasePassed = completed.filter(r => r.attention_checks?.phase_pass === true).length;
+            const phaseFailed = completed.filter(r => r.attention_checks?.phase_pass === false).length;
+            const finalPassed = completed.filter(r => r.attention_checks?.final_pass === true).length;
+            const finalFailed = completed.filter(r => r.attention_checks?.final_pass === false).length;
+            const overallPassed = completed.filter(r => r.attention_checks?.overall_pass === true).length;
+            const overallFailed = completed.filter(r => r.attention_checks?.overall_pass === false).length;
+            chartInstances.attentionFunnelChart = new Chart(document.getElementById("attentionFunnelChart"), {
+                type: "bar",
+                data: {
+                    labels: ["Phase", "Final", "Overall"],
+                    datasets: [
+                        { label: "Passed", data: [phasePassed, finalPassed, overallPassed], backgroundColor: "#2d7d46", borderRadius: 3 },
+                        { label: "Failed", data: [phaseFailed, finalFailed, overallFailed], backgroundColor: "#c23c3c", borderRadius: 3 },
+                    ],
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+            });
+
+            // Time histogram
+            const durations = completed
+                .map(r => r.duration_sec)
+                .filter(s => s !== null && s !== undefined)
+                .map(s => Math.round(s / 60));
+            const maxDur = durations.length ? Math.max(...durations) : 30;
+            const bucketSize = Math.max(2, Math.ceil(maxDur / 12));
+            const buckets = {};
+            durations.forEach(m => {
+                const lo = Math.floor(m / bucketSize) * bucketSize;
+                const key = `${lo}-${lo + bucketSize}m`;
+                buckets[key] = (buckets[key] || 0) + 1;
+            });
+            const histLabels = Object.keys(buckets);
+            const histValues = Object.values(buckets);
+            chartInstances.timeHistChart = new Chart(document.getElementById("timeHistChart"), {
+                type: "bar",
+                data: {
+                    labels: histLabels,
+                    datasets: [{ data: histValues, backgroundColor: "#4a6fa5", borderRadius: 3 }],
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Search usage histogram
+            const searchCounts = completed.map(r => r.search_events_count || 0);
+            const searchBuckets = {};
+            searchCounts.forEach(c => { const key = String(c); searchBuckets[key] = (searchBuckets[key] || 0) + 1; });
+            const sLabels = Object.keys(searchBuckets).sort((a, b) => Number(a) - Number(b));
+            const sValues = sLabels.map(k => searchBuckets[k]);
+            chartInstances.searchUsageChart = new Chart(document.getElementById("searchUsageChart"), {
+                type: "bar",
+                data: {
+                    labels: sLabels.map(c => `${c} searches`),
+                    datasets: [{ data: sValues, backgroundColor: "#7f5aa2", borderRadius: 3 }],
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Steering effort by approach
+            const overview = data.approaches?.overview || {};
+            const approachLabels = Object.values(overview).map(o => o.label || "?");
+            const effortVals = Object.values(overview).map(o => o.mean_nonzero_adjustments ?? 0);
+            chartInstances.steeringEffortChart = new Chart(document.getElementById("steeringEffortChart"), {
+                type: "bar",
+                data: {
+                    labels: approachLabels,
+                    datasets: [{ data: effortVals, backgroundColor: "#b9770e", borderRadius: 3 }],
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Convergence (likes per iteration) - reuse from overview
+            const dyn = data.approaches?.selection_dynamics || {};
+            const dynRows = Object.values(dyn);
+            if (dynRows.length) {
+                const iterKeys = Array.from(new Set(dynRows.flatMap(r => Object.keys(r.iteration_like_counts || {})))).sort((a, b) => Number(a) - Number(b));
+                const palette = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
+                chartInstances.convergenceChart = new Chart(document.getElementById("convergenceChart"), {
+                    type: "line",
+                    data: {
+                        labels: iterKeys.map(k => `Iter ${k}`),
+                        datasets: dynRows.map((row, idx) => ({
+                            label: row.label || `Approach ${idx + 1}`,
+                            data: iterKeys.map(k => (row.iteration_like_counts || {})[k] || 0),
+                            borderColor: palette[idx % palette.length],
+                            backgroundColor: "transparent",
+                            tension: 0.25,
+                        }))
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+                });
+            }
+        }
+
+        // ---------------- tabs + export ----------------
+        document.querySelectorAll(".tab").forEach(t => {
+            t.addEventListener("click", () => {
+                document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+                document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
+                t.classList.add("active");
+                document.getElementById(`tab-${t.dataset.tab}`).classList.add("active");
+            });
+        });
         document.getElementById("export-btn").addEventListener("click", () => {
             if (!resultsData) return;
             const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: "application/json" });
@@ -622,6 +1131,7 @@
             a.href = URL.createObjectURL(blob);
             a.download = `results_${resultsData.study_guid || "export"}.json`;
             a.click();
+            URL.revokeObjectURL(a.href);
         });
 
         loadResults();
