@@ -40,7 +40,13 @@ from pathlib import Path
 def _run_flask(cmd: list[str]) -> int:
     env = os.environ.copy()
     env.setdefault("FLASK_APP", "app:create_app")
-    return subprocess.run(["flask", *cmd], env=env, check=False).returncode
+    # Merge stderr into stdout so Alembic's default INFO logging ("Context
+    # impl PostgresqlImpl.", "Running stamp_revision -> …") shows up as
+    # info in Railway instead of being painted red. A real failure still
+    # surfaces via the non-zero return code we return below.
+    return subprocess.run(
+        ["flask", *cmd], env=env, check=False, stderr=subprocess.STDOUT
+    ).returncode
 
 
 def main() -> int:
