@@ -65,12 +65,20 @@ rds = _create_redis_client()
 from models import *
 
 # This is needed to ensure foreign keys and corresponding cascade deletion work as
-# expected when SQLite is used as backend for SQLAlchemy
+# expected when SQLite is used as backend for SQLAlchemy.  Postgres enforces FKs
+# natively and does not understand PRAGMA, so guard on driver type — otherwise
+# every new Postgres connection throws `syntax error at or near "PRAGMA"` and
+# app boot fails before Gunicorn comes up.
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
+    driver = type(dbapi_connection).__module__ or ""
+    if "sqlite" not in driver.lower():
+        return
     cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    try:
+        cursor.execute("PRAGMA foreign_keys=ON")
+    finally:
+        cursor.close()
 
 # Insert/set all values that have to be set once (e.g. insert interaction types into DB)
 def initialize_db_tables():
