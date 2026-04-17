@@ -220,6 +220,160 @@ The `ml-latest.zip` asset should already contain:
 
 It is extracted into `/app/server/static/datasets/ml-latest`, so the resulting structure contains the dataset, metadata, and poster images expected by the app.
 
+## Prolific integration
+
+This section walks through the **end-to-end flow** of collecting paid
+participants on [Prolific](https://app.prolific.com/) and paying them out.
+Everything below assumes the app is already running (locally via Docker or
+deployed on Railway).
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant Admin
+  participant Prolific
+  participant P as Participant
+  participant App as EasyStudy
+  participant DB as Postgres
+
+  Admin->>Prolific: Create study draft → get Completion Code
+  Admin->>App: Create SAE study, paste Completion Code
+  App-->>Admin: Join URL /sae_steering/join/<guid>
+  Admin->>Prolific: Submit study with the Join URL + {{%PROLIFIC_PID%}} tokens
+  Prolific->>P: Participant opens study link
+  P->>App: GET /sae_steering/join/<guid>?PROLIFIC_PID=..&STUDY_ID=..&SESSION_ID=..
+  App->>DB: Persist PID / STUDY_ID / SESSION_ID in Participation.extra_data
+  P->>App: Completes study
+  App->>P: /utils/finish page (15 s auto-redirect + manual button)
+  P->>Prolific: https://app.prolific.com/submissions/complete?cc=<code>
+  Prolific-->>Admin: Submission marked complete → payment approval
+```
+
+### 1. Create the study on Prolific (in *Draft* state)
+
+1. [Prolific dashboard](https://app.prolific.com/) → **New Study**.
+2. Fill in title, description, eligibility filters, reward, and number of places.
+3. In **Study URL** leave the default for now — we'll fill it in step 3.
+4. Under **How will you record Prolific IDs?** choose
+   **"I'll use URL parameters"** and make sure the three default tokens are
+   present in the URL placeholder:
+   - `{{%PROLIFIC_PID%}}`
+   - `{{%STUDY_ID%}}`
+   - `{{%SESSION_ID%}}`
+5. Under **Completion codes** → **Add** → generate a code (e.g. `C1A2B3C4`)
+   and pick **"Completed study"** as the action. This is the string
+   participants will send back to Prolific when they finish. Save the code —
+   you will paste it into EasyStudy in step 2.
+
+> Leave the study in *Draft* until EasyStudy is fully configured.
+> You cannot change the completion code once the study is published.
+
+### 2. Create the matching study in EasyStudy
+
+1. Open `https://<your-app>/administration` and click **Create new study**.
+2. Pick **SAE Steering** as the plugin.
+3. Fill in the usual study metadata (language, models, item counts,
+   questionnaire variants, etc.).
+4. **Paste the Prolific completion code** from step 1 into the
+   *Prolific Completion Code* field (added in
+   [`sae_steering_create.html`](server/plugins/sae_steering/templates/sae_steering_create.html)).
+5. Submit. After initialization finishes, the admin page shows the study
+   **Join URL** (`/sae_steering/join/<guid>`). Copy it.
+
+### 3. Point Prolific at the EasyStudy join URL
+
+Back in Prolific:
+
+```
+https://<your-app>/sae_steering/join/<guid>?PROLIFIC_PID={{%PROLIFIC_PID%}}&STUDY_ID={{%STUDY_ID%}}&SESSION_ID={{%SESSION_ID%}}
+```
+
+- Replace `<your-app>` and `<guid>` with the real values.
+- Prolific expands the `{{%…%}}` tokens per participant at click time.
+- Paste this URL into Prolific's **Study URL** field.
+- **Publish** the study.
+
+### 4. What participants see
+
+1. Click the Prolific link → `GET /sae_steering/join/<guid>?PROLIFIC_PID=…`.
+   The three IDs are placed into the Flask session and mirrored into
+   `Participation.extra_data` on the first click, so they survive even if
+   the participant abandons the study mid-way.
+2. Participant goes through the study (consent, demographics,
+   elicitation, arm A, questionnaire, arm B, questionnaire, final
+   questionnaire, attention checks).
+3. On the last page, `utils/finish` renders the completion screen:
+   - **Both** a manual **"Finish"** button that redirects immediately, and
+   - a **15-second auto-redirect** to
+     `https://app.prolific.com/submissions/complete?cc=<your_code>`
+     (see [`finish.html`](server/plugins/utils/templates/finish.html) lines
+     215–222).
+4. Prolific receives the completion ping and the submission moves to
+   *Awaiting review* in your dashboard.
+
+### 5. Approve submissions and pay
+
+1. Prolific dashboard → **Submissions** tab → review each one.
+2. Cross-reference against **EasyStudy Admin → Results → Participants tab**
+   (the new dashboard introduced in this fork). For every row you can read:
+   - `PROLIFIC_PID`, `STUDY_ID`, `SESSION_ID`
+   - Join / finish timestamps, duration
+   - Attention-check pass counts (phase + final + overall)
+   - Status: `completed`, `in-progress`, `abandoned`
+   - A one-click-copy completion URL
+3. Approve / reject in Prolific. Prolific charges your balance on approval.
+
+### 6. Where the Prolific data lives
+
+| Artifact | Location | Button |
+|----------|----------|--------|
+| Raw per-interaction log incl. `prolific` block | `GET /sae_steering/export-raw/<guid>` | Admin list → **Download raw events (JSON)** |
+| Raw + noisy mouse/viewport events | `GET /sae_steering/export-raw/<guid>?include_noise=1` | Results → **Download raw events + noise (JSON)** |
+| Aggregated analytics + `participants_table` | `GET /sae_steering/fetch-results/<guid>` | Results → **Download analytics (JSON)** |
+| Per-participant reconstructed journey | `GET /sae_steering/journey/<participation_id>` | Results → **Journey tab** picker |
+| Latest DB dump | `GET /administration/db-backup` | Administration → **Download DB backup** |
+
+All five sources include the Prolific identity block so payments can be
+reconciled regardless of which export you grab.
+
+### 7. Troubleshooting
+
+- **"Please contact the study admin" screen at finish** — you forgot to
+  paste the completion code in step 2. The participant *did* complete
+  the study (data is saved), but cannot auto-return. Email them the
+  code or approve manually in Prolific using their PID.
+- **No `prolific` block in exports** — the participant opened the study
+  URL **without** the Prolific query params (e.g. followed a raw
+  administrator link). Data is still recorded, but identity linking is
+  lost. Always distribute the URL *through* Prolific.
+- **Attention-check failure handling** — attention results are captured
+  per-phase and show up in the Participants tab.
+  EasyStudy does not auto-reject; use your judgement in Prolific.
+- **Participant abandoned mid-study** — `Participation.time_finished`
+  stays `NULL`. The Participants tab shows them as *in-progress* /
+  *abandoned*, with whatever interactions they left behind.
+
+### 8. Testing the flow locally
+
+```bash
+# from the EasyStudy root:
+open "http://localhost:5000/sae_steering/join/<your-guid>?PROLIFIC_PID=pid_test_abc&STUDY_ID=study_test&SESSION_ID=session_test"
+```
+
+Walk through the study once. Confirm `Download raw events (JSON)` contains:
+
+```json
+"prolific": {
+  "pid": "pid_test_abc",
+  "study_id": "study_test",
+  "session_id": "session_test",
+  "completion_code": "C1A2B3C4",
+  "completion_url": "https://app.prolific.com/submissions/complete?cc=C1A2B3C4"
+}
+```
+
+If yes, wire the real study URL into Prolific and publish.
+
 ## Release Checklist
 
 Upload these GitHub Release assets for a fresh machine to behave the same way as the development machine:
