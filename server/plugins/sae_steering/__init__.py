@@ -668,12 +668,25 @@ def available_neurons():
 # Study Initialization
 # ============================================================================
 
+def _resolve_db_url():
+    """Resolve the SQLAlchemy DB URL the way `server/app.py` does, but without
+    needing a Flask app context (this function runs in a fresh subprocess).
+
+    Mirrors the postgres:// -> postgresql:// rewrite for Railway/Heroku-style
+    add-ons so a child process never accidentally writes to a different
+    database than the main app."""
+    db_url = os.environ.get('DATABASE_URL', 'sqlite:///instance/db.sqlite')
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    return db_url
+
+
 def long_initialization(guid):
     """
     Long-running initialization process for SAE steering study.
     Runs in separate process to avoid blocking.
     """
-    engine = create_engine('sqlite:///instance/db.sqlite')
+    engine = create_engine(_resolve_db_url())
     db_session = Session(engine)
     
     try:
@@ -2828,7 +2841,9 @@ def results():
     return render_template(
         "sae_steering_results.html",
         guid=guid,
-        fetch_results_url=url_for(f"{__plugin_name__}.fetch_results", guid=guid)
+        fetch_results_url=url_for(f"{__plugin_name__}.fetch_results", guid=guid),
+        journey_url_base=url_for(f"{__plugin_name__}.participant_journey", participation_id=0).rstrip("0"),
+        export_raw_url=url_for(f"{__plugin_name__}.export_raw_data", guid=guid),
     )
 
 
@@ -2841,6 +2856,33 @@ def _safe_parse_json(raw):
         return json.loads(raw)
     except Exception:
         return {}
+
+
+_PROLIFIC_BASE_URL = "https://app.prolific.com/submissions/complete"
+
+
+def _build_prolific_block(extra_data, study_config=None):
+    """Return a normalised Prolific identity block.
+
+    Pulls Prolific IDs from the participant's ``extra_data`` JSON and stitches
+    in the study-level completion code so admins can copy a working completion
+    URL straight from the participants table for payment reconciliation.
+    """
+    extra = _safe_parse_json(extra_data) if not isinstance(extra_data, dict) else extra_data
+    pid = (extra or {}).get("PROLIFIC_PID")
+    study_id = (extra or {}).get("PROLIFIC_STUDY_ID")
+    session_id = (extra or {}).get("PROLIFIC_SESSION_ID")
+    completion_code = (study_config or {}).get("prolific_code") if isinstance(study_config, dict) else None
+    completion_url = None
+    if completion_code:
+        completion_url = f"{_PROLIFIC_BASE_URL}?cc={completion_code}"
+    return {
+        "pid": pid,
+        "study_id": study_id,
+        "session_id": session_id,
+        "completion_code": completion_code,
+        "completion_url": completion_url,
+    }
 
 
 def _to_float(value):
@@ -2875,7 +2917,24 @@ def _round_or_none(value, digits=3):
 
 @bp.route("/fetch-results/<guid>")
 def fetch_results(guid):
-    """Fetch analytics-first results for SAE steering study."""
+    """Aggregated analytics for the SAE steering results dashboard.
+
+    This is the *second* of the two export endpoints backing the admin UI
+    (see :func:`export_raw_data` for the first).  Both read from the same
+    SQLAlchemy tables (``UserStudy`` / ``Participation`` / ``Interaction``);
+    they just differ in what they compute on the way out:
+
+    - :func:`export_raw_data` dumps every ``Interaction`` row verbatim —
+      the event log used for payment reconciliation and journey replay.
+    - :func:`fetch_results` (this function) produces the precomputed
+      per-arm / per-participant analytics consumed by
+      ``sae_steering_results.html``: Likert means, attention pass rates,
+      moderator effects, order/satisfaction splits, plus a
+      ``participants_table`` with Prolific IDs, status, and duration.
+
+    Downloading the returned JSON as-is (``Download analytics (JSON)``
+    button) is the fastest way to reproduce dashboard figures offline.
+    """
     user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
     if not user_study:
         return jsonify({"error": "Study not found"}), 404
@@ -3004,10 +3063,19 @@ def fetch_results(guid):
             Interaction.participation == p.id
         ).order_by(Interaction.time.asc()).all()
 
+        prolific_block = _build_prolific_block(p.extra_data, study_config)
+        duration_sec = None
+        if p.time_joined and p.time_finished:
+            duration_sec = int((p.time_finished - p.time_joined).total_seconds())
+
         participant_data = {
             "participant_id": p.id,
+            "uuid": p.uuid,
+            "email": p.participant_email,
+            "prolific": prolific_block,
             "time_joined": p.time_joined.isoformat() if p.time_joined else None,
             "time_finished": p.time_finished.isoformat() if p.time_finished else None,
+            "duration_sec": duration_sec,
             "language": p.language,
             "approach_order": None,
             "elicitation_selected_movies": None,
@@ -3017,7 +3085,13 @@ def fetch_results(guid):
             "phase_movie_feedback": {},
             "phase_questionnaires": {},
             "final_questionnaire": {},
-            "attention_checks": {"phase_pass": None, "final_pass": None, "overall_pass": None},
+            "attention_checks": {
+                "phase_pass": None,
+                "phase_passed_count": 0,
+                "phase_total_count": 0,
+                "final_pass": None,
+                "overall_pass": None,
+            },
         }
 
         phase_behavior = {}
@@ -3156,6 +3230,10 @@ def fetch_results(guid):
         if participant_data["attention_checks"]["overall_pass"] is True:
             results["sample"]["attention_checks"]["overall_passed"] += 1
         participant_data["attention_checks"]["phase_pass"] = phase_pass_all
+        participant_data["attention_checks"]["phase_passed_count"] = sum(
+            1 for v in phase_attention_passes if v
+        )
+        participant_data["attention_checks"]["phase_total_count"] = len(phase_attention_passes)
         participant_data["attention_checks"]["final_pass"] = final_attention_pass
 
         normalized_phase_behavior = {}
@@ -3604,6 +3682,60 @@ def fetch_results(guid):
                 }
             )
 
+    # ----------------------------------------------------------------
+    # Participants table — all participations (including in-progress /
+    # abandoned) with Prolific identity + completion status so the
+    # admin can reconcile payments without leaving the dashboard.
+    # ----------------------------------------------------------------
+    completed_by_id = {entry["participant_id"]: entry for entry in results["participants"]}
+    all_participations = Participation.query.filter(
+        Participation.user_study_id == user_study.id
+    ).order_by(Participation.time_joined.asc()).all()
+
+    table_rows = []
+    for p in all_participations:
+        prolific_block = _build_prolific_block(p.extra_data, study_config)
+        completed_entry = completed_by_id.get(p.id)
+        if p.time_finished is not None:
+            status = "completed"
+        elif p.time_joined is not None:
+            status = "in_progress"
+        else:
+            status = "joined"
+        duration_sec = None
+        if p.time_joined and p.time_finished:
+            duration_sec = int((p.time_finished - p.time_joined).total_seconds())
+        attention = (completed_entry or {}).get("attention_checks") or {}
+        approach_order = (completed_entry or {}).get("approach_order")
+        search_count = len((completed_entry or {}).get("search_events", []) or [])
+        table_rows.append(
+            {
+                "participation_id": p.id,
+                "uuid": p.uuid,
+                "prolific": prolific_block,
+                "language": p.language,
+                "status": status,
+                "time_joined": p.time_joined.isoformat() if p.time_joined else None,
+                "time_finished": p.time_finished.isoformat() if p.time_finished else None,
+                "duration_sec": duration_sec,
+                "approach_order": approach_order,
+                "search_events_count": search_count,
+                "attention_checks": {
+                    "phase_pass": attention.get("phase_pass"),
+                    "phase_passed_count": attention.get("phase_passed_count", 0),
+                    "phase_total_count": attention.get("phase_total_count", 0),
+                    "final_pass": attention.get("final_pass"),
+                    "overall_pass": attention.get("overall_pass"),
+                },
+            }
+        )
+
+    results["participants_table"] = table_rows
+    results["sample"]["participants_total"] = len(all_participations)
+    results["sample"]["participants_in_progress"] = sum(
+        1 for r in table_rows if r["status"] == "in_progress"
+    )
+
     return jsonify(results)
 
 
@@ -3617,7 +3749,17 @@ def export_raw_data(guid):
 
     Each participation includes every ``Interaction`` row in chronological order
     so that the full user journey can be reconstructed.
+
+    By default the export is scrubbed of high-frequency hover noise (hover
+    events and the bulky ``context.extra.items[]`` arrays inside
+    ``changed-viewport`` rows).  Pass ``?include_noise=1`` to opt back into the
+    raw stream — useful for debugging client-side instrumentation, but the file
+    becomes orders of magnitude larger.
     """
+    from .journey import is_noise, scrub_interaction
+
+    include_noise = (request.args.get("include_noise") or "").strip().lower() in {"1", "true", "yes"}
+
     user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
     if not user_study:
         return jsonify({"error": "Study not found"}), 404
@@ -3636,13 +3778,19 @@ def export_raw_data(guid):
 
         interaction_rows = []
         for ix in interactions:
-            interaction_rows.append({
+            row = {
                 "id": ix.id,
                 "type": ix.interaction_type,
                 "time": ix.time.isoformat() if ix.time else None,
                 "data": _safe_parse_json(ix.data),
-            })
+            }
+            if not include_noise and is_noise(row):
+                continue
+            if not include_noise:
+                scrub_interaction(row)
+            interaction_rows.append(row)
 
+        prolific_block = _build_prolific_block(p.extra_data, study_config)
         participants_data.append({
             "participation_id": p.id,
             "uuid": p.uuid,
@@ -3650,6 +3798,7 @@ def export_raw_data(guid):
             "language": p.language,
             "time_joined": p.time_joined.isoformat() if p.time_joined else None,
             "time_finished": p.time_finished.isoformat() if p.time_finished else None,
+            "prolific": prolific_block,
             "extra_data": _safe_parse_json(p.extra_data),
             "interactions": interaction_rows,
         })
@@ -3659,6 +3808,7 @@ def export_raw_data(guid):
         "study_id": user_study.id,
         "study_config": study_config,
         "exported_at": datetime.datetime.utcnow().isoformat(),
+        "include_noise": include_noise,
         "participants_total": len(participants_data),
         "participants_completed": sum(1 for p in participants_data if p["time_finished"]),
         "participants": participants_data,
@@ -3667,6 +3817,100 @@ def export_raw_data(guid):
     response = jsonify(export)
     response.headers["Content-Disposition"] = f"attachment; filename=study_{guid}_export.json"
     return response
+
+
+# ============================================================================
+# Journey Reconstruction (per participant)
+# ============================================================================
+
+@bp.route("/journey/<int:participation_id>")
+def participant_journey(participation_id):
+    """Return a structured timeline + per-phase summary for one participation.
+
+    Powers the Journey tab on the admin results page.  Uses the shared
+    ``journey`` helpers so the on-screen reconstruction matches the offline
+    CLI script byte-for-byte.
+    """
+    from .journey import build_journey
+
+    participation = Participation.query.filter(Participation.id == participation_id).first()
+    if not participation:
+        return jsonify({"error": "Participation not found"}), 404
+
+    user_study = UserStudy.query.filter(UserStudy.id == participation.user_study_id).first()
+    study_config = _safe_parse_json(user_study.settings) if user_study else {}
+
+    interactions = Interaction.query.filter(
+        Interaction.participation == participation.id
+    ).order_by(Interaction.time.asc()).all()
+
+    rows = [
+        {
+            "id": ix.id,
+            "type": ix.interaction_type,
+            "time": ix.time.isoformat() if ix.time else None,
+            "data": _safe_parse_json(ix.data),
+        }
+        for ix in interactions
+    ]
+
+    include_noise = (request.args.get("include_noise") or "").strip().lower() in {"1", "true", "yes"}
+    journey = build_journey(rows, include_noise=include_noise)
+
+    # Replay just the attention-check logic so the journey card can show the
+    # same pass/fail badges as the participants table.
+    phase_passes = []
+    final_pass = None
+    for ix in rows:
+        if ix["type"] == "phase-questionnaire":
+            d = ix.get("data") or {}
+            raw_attention = d.get("p_attention_check")
+            if raw_attention is None:
+                continue
+            is_steered = any(
+                k in d for k in ("p2e_responsiveness", "p3a_label_clarity", "p4a_ease")
+            )
+            attention_value = str(raw_attention).strip()
+            phase_passes.append(
+                attention_value in {"1", "2", "3"} if is_steered else attention_value == "7"
+            )
+        elif ix["type"] == "final-questionnaire":
+            d = ix.get("data") or {}
+            v = d.get("f_attention_check")
+            if v is not None:
+                final_pass = str(v).strip() == "same"
+
+    phase_pass_all = all(phase_passes) if phase_passes else None
+    if phase_pass_all is True and (final_pass in (True, None)):
+        overall_pass = True
+    elif phase_pass_all is False or final_pass is False:
+        overall_pass = False
+    else:
+        overall_pass = None
+
+    return jsonify(
+        {
+            "participation_id": participation.id,
+            "study_guid": user_study.guid if user_study else None,
+            "participant": {
+                "uuid": participation.uuid,
+                "email": participation.participant_email,
+                "language": participation.language,
+                "prolific": _build_prolific_block(participation.extra_data, study_config),
+                "time_joined": participation.time_joined.isoformat() if participation.time_joined else None,
+                "time_finished": participation.time_finished.isoformat() if participation.time_finished else None,
+            },
+            "attention_checks": {
+                "phase_pass": phase_pass_all,
+                "phase_passed_count": sum(1 for v in phase_passes if v),
+                "phase_total_count": len(phase_passes),
+                "final_pass": final_pass,
+                "overall_pass": overall_pass,
+            },
+            "timeline": journey["timeline"],
+            "summary": journey["summary"],
+        }
+    )
 
 
 # ============================================================================
