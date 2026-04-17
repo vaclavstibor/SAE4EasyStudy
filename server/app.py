@@ -133,6 +133,12 @@ def create_app():
     if _db_url.startswith('postgres://'):
         _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = _db_url
+    # Make the backend obvious at boot so it's unambiguous which store the
+    # study is actually writing to (Postgres in production, SQLite locally).
+    _backend = "postgres" if _db_url.startswith("postgresql") else (
+        "sqlite" if _db_url.startswith("sqlite") else _db_url.split(":", 1)[0]
+    )
+    print(f"[startup] SQLAlchemy backend: {_backend}", file=sys.stderr)
     # Harden the connection pool for long-running Prolific studies: Railway
     # Postgres silently drops idle TCP connections after ~30 min and without
     # these options the first request afterwards throws
