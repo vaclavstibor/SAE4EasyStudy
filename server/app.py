@@ -138,7 +138,9 @@ def create_app():
     _backend = "postgres" if _db_url.startswith("postgresql") else (
         "sqlite" if _db_url.startswith("sqlite") else _db_url.split(":", 1)[0]
     )
-    print(f"[startup] SQLAlchemy backend: {_backend}", file=sys.stderr)
+    # Emit startup diagnostics on stdout so Railway classifies them as info
+    # (stderr would be painted red regardless of content).
+    print(f"[startup] SQLAlchemy backend: {_backend}", flush=True)
     # Harden the connection pool for long-running Prolific studies: Railway
     # Postgres silently drops idle TCP connections after ~30 min and without
     # these options the first request afterwards throws
@@ -192,6 +194,6 @@ def create_app():
     np.random.seed(seed)
     if tf is not None:
         tf.random.set_seed(seed)
-    print(f"Seeding with: {seed} ({time_int}, {os.getpid()})", file=sys.stderr)
+    print(f"Seeding with: {seed} ({time_int}, {os.getpid()})", flush=True)
 
     return app
