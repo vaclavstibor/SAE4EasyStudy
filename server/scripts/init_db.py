@@ -1,21 +1,32 @@
 """Idempotent database bootstrap for any SQLAlchemy backend.
 
-Running ``flask db upgrade`` on a fresh Postgres database is a dead-end
-on this project because the existing Alembic revisions carry SQLite-only
-idioms (``CREATE TABLE … INTEGER PRIMARY KEY AUTOINCREMENT`` + ``DROP``/
-``RENAME`` trick) that Postgres rejects with ``syntax error at or near
-'AUTOINCREMENT'``.
+Why this exists
+---------------
+``server/app.py::create_app`` already runs ``db.create_all()`` on every
+boot, so the application schema always matches ``models.py`` after the
+app is imported.  The legacy Alembic revisions in ``migrations/versions``
+were authored for an old SQLite file and use SQLite-only DDL
+(``CREATE TABLE … INTEGER PRIMARY KEY AUTOINCREMENT`` plus a
+drop/rename dance).  On Postgres they fail with
+``syntax error at or near "AUTOINCREMENT"`` which previously blocked the
+deploy and left the ``alembic_version`` table empty.
 
-The models themselves define everything the production schema needs —
-``ondelete='CASCADE'`` included — so we let SQLAlchemy build the schema
-natively on first boot and then stamp Alembic at ``head`` so future
-``flask db upgrade`` calls stay fast no-ops. If the application schema
-already exists (either because a prior deploy bootstrapped it or because
-we're running against the legacy SQLite file), we defer to
-``flask db upgrade`` for any pending migrations.
+What this script does
+---------------------
+1. Imports ``create_app`` (which runs ``db.create_all()`` internally and
+   therefore leaves the schema in sync with ``models.py``).
+2. Looks at the ``alembic_version`` table:
+   * missing or empty → stamps head so the historical SQLite migrations
+     are recorded as "already applied" and never execute against a
+     fresh Postgres database,
+   * already populated → defers to ``flask db upgrade``, which is a
+     safe no-op when the DB is on the current head and applies any
+     real pending migrations otherwise (the existing revisions are
+     SQLite-batch-friendly, so upgrades on legacy SQLite files keep
+     working).
 
-The script prints one line to stdout per decision so the deploy log
-stays scrutable.
+The script is idempotent – repeating it after a successful boot logs
+"alembic head present" and exits 0.
 """
 
 from __future__ import annotations
@@ -26,59 +37,60 @@ import sys
 from pathlib import Path
 
 
-APPLICATION_TABLES = ("userstudy", "participation", "interaction", "message", "user")
-
-
 def _run_flask(cmd: list[str]) -> int:
     env = os.environ.copy()
     env.setdefault("FLASK_APP", "app:create_app")
-    proc = subprocess.run(["flask", *cmd], env=env, check=False)
-    return proc.returncode
+    return subprocess.run(["flask", *cmd], env=env, check=False).returncode
 
 
 def main() -> int:
-    # Import after logging env so we get consistent output even when the
-    # import itself prints diagnostics (SAE bootstrap, redis probing, ...).
     here = Path(__file__).resolve().parent.parent
     sys.path.insert(0, str(here))
+
+    # Import create_app first; it runs db.create_all() internally and
+    # initialises Flask-Migrate, giving us a fully configured engine.
     from app import create_app  # noqa: E402
     from models import db  # noqa: E402
-    from sqlalchemy import inspect  # noqa: E402
+    from sqlalchemy import inspect, text  # noqa: E402
 
     app = create_app()
+
     with app.app_context():
         insp = inspect(db.engine)
-        existing = set(insp.get_table_names())
-        has_app_schema = any(t in existing for t in APPLICATION_TABLES)
-
-        if has_app_schema:
+        app_tables = {"userstudy", "participation", "interaction", "message", "user"}
+        missing = sorted(app_tables - set(insp.get_table_names()))
+        if missing:
+            # create_app() should have produced these; shout loudly if not.
             print(
-                "[init-db] application tables already present "
-                f"({sorted(t for t in APPLICATION_TABLES if t in existing)}); "
-                "running flask db upgrade for any pending migrations"
+                "[init-db] WARNING: application tables missing after "
+                f"db.create_all(): {missing}"
             )
-            rc = _run_flask(["db", "upgrade"])
-            if rc != 0:
-                print(
-                    "[init-db] flask db upgrade returned non-zero "
-                    f"({rc}); check logs — app will still boot"
+
+        has_version_row = False
+        if insp.has_table("alembic_version"):
+            with db.engine.connect() as conn:
+                has_version_row = (
+                    conn.execute(
+                        text("SELECT version_num FROM alembic_version LIMIT 1")
+                    ).fetchone()
+                    is not None
                 )
-            return rc
 
+    if not has_version_row:
         print(
-            f"[init-db] empty database detected at {db.engine.url!r}; "
-            "creating schema via db.create_all()"
+            "[init-db] alembic_version empty — schema owned by db.create_all(); "
+            "stamping head so legacy SQLite migrations stay skipped"
         )
-        db.create_all()
-        print("[init-db] schema created; stamping Alembic head to keep future upgrades no-op")
+        return _run_flask(["db", "stamp", "head"])
 
-    rc = _run_flask(["db", "stamp", "head"])
+    print("[init-db] alembic_version populated; running flask db upgrade (no-op if already at head)")
+    rc = _run_flask(["db", "upgrade"])
     if rc != 0:
         print(
-            f"[init-db] flask db stamp head returned non-zero ({rc}); "
-            "migrations will run on next boot — usually harmless"
+            f"[init-db] flask db upgrade returned non-zero ({rc}); "
+            "app will still boot — inspect migrations and DB manually"
         )
-    return 0
+    return rc
 
 
 if __name__ == "__main__":
