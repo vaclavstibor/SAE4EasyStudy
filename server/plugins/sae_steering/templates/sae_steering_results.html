@@ -585,7 +585,7 @@
                     </div>
                     <div class="chart-card">
                         <div class="chart-title">Attention-check funnel</div>
-                        <div class="chart-sub">How many participants passed both attention checks.</div>
+                        <div class="chart-sub">Each participant answers one attention check per phase (after arm A and arm B) plus one in the final questionnaire — <strong>three checks total</strong>. <em>Overall</em> passes only when all of them do.</div>
                         <div class="chart-wrap"><canvas id="attentionFunnelChart"></canvas></div>
                     </div>
                     <div class="chart-card">
@@ -1096,25 +1096,47 @@
             renderLikertDeltaChart("likertDeltaChart", "delta_steered_minus_baseline", "steered − baseline");
             renderLikertDeltaChart("likertOrderChart", "delta_b_minus_a", "phase2 − phase1");
 
-            // Attention funnel
+            // Attention funnel – one bar per individual attention check
+            // (phase-level checks come from participants_table[*].attention_checks.phase_passes,
+            //  final check from .final_pass, overall from .overall_pass).
             const rows = data.participants_table || [];
             const completed = rows.filter(r => r.status === "completed");
-            const phasePassed = completed.filter(r => r.attention_checks?.phase_pass === true).length;
-            const phaseFailed = completed.filter(r => r.attention_checks?.phase_pass === false).length;
+
+            const phaseIdxSet = new Set();
+            completed.forEach(r => {
+                (r.attention_checks?.phase_passes || []).forEach(pp => {
+                    if (pp && Number.isInteger(pp.phase)) phaseIdxSet.add(pp.phase);
+                });
+            });
+            const phaseIndices = Array.from(phaseIdxSet).sort((a, b) => a - b);
+
+            const phaseLabels = phaseIndices.map(i => `Phase ${i + 1}`);
+            const phasePassed = phaseIndices.map(i =>
+                completed.filter(r => (r.attention_checks?.phase_passes || []).some(pp => pp.phase === i && pp.passed === true)).length
+            );
+            const phaseFailed = phaseIndices.map(i =>
+                completed.filter(r => (r.attention_checks?.phase_passes || []).some(pp => pp.phase === i && pp.passed === false)).length
+            );
+
             const finalPassed = completed.filter(r => r.attention_checks?.final_pass === true).length;
             const finalFailed = completed.filter(r => r.attention_checks?.final_pass === false).length;
             const overallPassed = completed.filter(r => r.attention_checks?.overall_pass === true).length;
             const overallFailed = completed.filter(r => r.attention_checks?.overall_pass === false).length;
+
+            const attnLabels = [...phaseLabels, "Final", "Overall"];
+            const attnPassed = [...phasePassed, finalPassed, overallPassed];
+            const attnFailed = [...phaseFailed, finalFailed, overallFailed];
+
             chartInstances.attentionFunnelChart = new Chart(document.getElementById("attentionFunnelChart"), {
                 type: "bar",
                 data: {
-                    labels: ["Phase", "Final", "Overall"],
+                    labels: attnLabels,
                     datasets: [
-                        { label: "Passed", data: [phasePassed, finalPassed, overallPassed], backgroundColor: "#2d7d46", borderRadius: 3 },
-                        { label: "Failed", data: [phaseFailed, finalFailed, overallFailed], backgroundColor: "#c23c3c", borderRadius: 3 },
+                        { label: "Passed", data: attnPassed, backgroundColor: "#2d7d46", borderRadius: 3 },
+                        { label: "Failed", data: attnFailed, backgroundColor: "#c23c3c", borderRadius: 3 },
                     ],
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } } }
             });
 
             // Time histogram

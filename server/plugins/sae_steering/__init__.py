@@ -3218,6 +3218,7 @@ def fetch_results(guid):
                 "phase_pass": None,
                 "phase_passed_count": 0,
                 "phase_total_count": 0,
+                "phase_passes": [],
                 "final_pass": None,
                 "overall_pass": None,
             },
@@ -3328,7 +3329,8 @@ def fetch_results(guid):
             results["sample"]["participants_with_both"] += 1
 
         phase_attention_passes = []
-        for phase_idx, answers in phase_questionnaires.items():
+        phase_attention_details = []
+        for phase_idx, answers in sorted(phase_questionnaires.items()):
             raw_attention = answers.get("p_attention_check")
             if raw_attention is None:
                 continue
@@ -3341,6 +3343,7 @@ def fetch_results(guid):
             else:
                 passed = attention_value == "7"
             phase_attention_passes.append(passed)
+            phase_attention_details.append({"phase": int(phase_idx), "passed": passed})
             results["sample"]["attention_checks"]["phase_total"] += 1
             if passed:
                 results["sample"]["attention_checks"]["phase_passed"] += 1
@@ -3366,6 +3369,7 @@ def fetch_results(guid):
             1 for v in phase_attention_passes if v
         )
         participant_data["attention_checks"]["phase_total_count"] = len(phase_attention_passes)
+        participant_data["attention_checks"]["phase_passes"] = phase_attention_details
         participant_data["attention_checks"]["final_pass"] = final_attention_pass
 
         normalized_phase_behavior = {}
@@ -3891,6 +3895,7 @@ def fetch_results(guid):
                     "phase_pass": attention.get("phase_pass"),
                     "phase_passed_count": attention.get("phase_passed_count", 0),
                     "phase_total_count": attention.get("phase_total_count", 0),
+                    "phase_passes": attention.get("phase_passes", []),
                     "final_pass": attention.get("final_pass"),
                     "overall_pass": attention.get("overall_pass"),
                 },
