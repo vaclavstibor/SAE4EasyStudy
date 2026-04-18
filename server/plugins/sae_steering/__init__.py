@@ -155,6 +155,18 @@ def _log_approach_order_once(raw_order, models):
     participation_id = session.get("participation_id")
     if not participation_id:
         return
+    # Guard against a stale session pointing at a deleted Participation.
+    # If the row no longer exists, clear the stale keys so the next
+    # request through `_ensure_participation_for_guid` creates a fresh
+    # participation instead of repeatedly retrying this dead id.
+    if Participation.query.filter(Participation.id == participation_id).first() is None:
+        print(
+            f"[_log_approach_order_once] participation_id={participation_id} gone; "
+            f"clearing stale session state."
+        )
+        for key in ("participation_id", "approach_order", "approach_order_logged"):
+            session.pop(key, None)
+        return
     model_names = [m.get("name", f"Model {i}") for i, m in enumerate(models)]
     effective_names = [models[idx].get("name", f"Model {idx}") for idx in raw_order]
     log_interaction(
@@ -325,8 +337,29 @@ def _sync_prolific_session_from_request():
 
 
 def _ensure_participation_for_guid(guid: str):
-    if session.get("participation_id") and session.get("user_study_guid") == guid:
-        return
+    existing_id = session.get("participation_id")
+    if existing_id and session.get("user_study_guid") == guid:
+        # Verify the row still exists — admins occasionally delete test
+        # participations while the participant's browser still holds a
+        # session cookie pointing at the old primary key.  If the row is
+        # gone we wipe the stale session keys and fall through to create
+        # a fresh Participation; otherwise the very next `log_interaction`
+        # call would 500 the whole request.
+        if Participation.query.filter(Participation.id == existing_id).first():
+            return
+        print(
+            f"[_ensure_participation_for_guid] Stale participation_id={existing_id} "
+            f"in session (row missing in DB); regenerating."
+        )
+        for key in (
+            "participation_id",
+            "uuid",
+            "approach_order",
+            "approach_order_logged",
+            "user_study_id",
+            "user_study_guid",
+        ):
+            session.pop(key, None)
 
     user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
     if not user_study:
