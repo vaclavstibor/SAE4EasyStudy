@@ -113,6 +113,61 @@ def _get_study_dataset_variant(conf: dict) -> str:
     return _normalize_dataset_variant((conf or {}).get("dataset"))
 
 
+def _persist_approach_order_on_participation(raw_order, effective_names, model_names):
+    """Copy the approach order into ``Participation.extra_data`` as a belt-and-suspenders
+    backup so it survives even if the ``approach-order-assigned`` interaction log
+    row is lost, not written (dev reloads / session-reuse races), or pruned."""
+    from app import db
+
+    participation_id = session.get("participation_id")
+    if not participation_id:
+        return
+    try:
+        participation = Participation.query.filter(Participation.id == participation_id).first()
+        if participation is None:
+            return
+        try:
+            extra = json.loads(participation.extra_data) if participation.extra_data else {}
+            if not isinstance(extra, dict):
+                extra = {}
+        except Exception:
+            extra = {}
+        extra["approach_order"] = list(raw_order)
+        extra["effective_order"] = list(effective_names)
+        extra["model_names"] = list(model_names)
+        participation.extra_data = json.dumps(extra)
+        db.session.commit()
+    except Exception as exc:  # pragma: no cover — pure defensive logging
+        print(f"[_persist_approach_order_on_participation] Failed to persist order: {exc}")
+
+
+def _log_approach_order_once(raw_order, models):
+    """Emit the ``approach-order-assigned`` interaction if (a) we have a
+    participation id and (b) we haven't already logged it for this session.
+
+    Historically we only logged this when the order was *first chosen*; if the
+    session already had ``approach_order`` set from an earlier request (e.g. the
+    developer landed on ``/join`` twice), the log row was skipped and the
+    Participants table ended up showing ``-``.  We now also mirror the order
+    into ``Participation.extra_data`` so results are self-healing."""
+    if session.get("approach_order_logged"):
+        return
+    participation_id = session.get("participation_id")
+    if not participation_id:
+        return
+    model_names = [m.get("name", f"Model {i}") for i, m in enumerate(models)]
+    effective_names = [models[idx].get("name", f"Model {idx}") for idx in raw_order]
+    log_interaction(
+        participation_id,
+        "approach-order-assigned",
+        approach_order=list(raw_order),
+        model_names=model_names,
+        effective_order=effective_names,
+    )
+    session["approach_order_logged"] = True
+    _persist_approach_order_on_participation(raw_order, effective_names, model_names)
+
+
 def _get_effective_models(conf):
     conf = _normalize_study_config(conf)
     models = list(conf.get("models", []))
@@ -121,6 +176,7 @@ def _get_effective_models(conf):
 
     if not conf.get("randomize_approach_order", True):
         session["approach_order"] = [0, 1]
+        _log_approach_order_once([0, 1], models)
         return models
 
     raw_order = session.get("approach_order")
@@ -131,18 +187,10 @@ def _get_effective_models(conf):
     ):
         raw_order = [0, 1] if secrets.randbelow(2) == 0 else [1, 0]
         session["approach_order"] = raw_order
+        session.pop("approach_order_logged", None)
         print(f"[_get_effective_models] Assigned per-participant approach order: {raw_order}")
 
-        participation_id = session.get("participation_id")
-        if participation_id:
-            log_interaction(
-                participation_id,
-                "approach-order-assigned",
-                approach_order=raw_order,
-                model_names=[m.get("name", f"Model {i}") for i, m in enumerate(models)],
-                effective_order=[models[idx].get("name", f"Model {idx}") for idx in raw_order],
-            )
-
+    _log_approach_order_once(raw_order, models)
     return [models[idx] for idx in raw_order]
 
 
@@ -315,6 +363,9 @@ def _ensure_participation_for_guid(guid: str):
     session["participation_id"] = participation.id
     session["user_study_id"] = user_study.id
     session["user_study_guid"] = guid
+    # Reset so _log_approach_order_once fires once for the new participation even
+    # if the session already carried an approach_order from a prior run.
+    session.pop("approach_order_logged", None)
 
 
 def _load_tmdb_overviews():
@@ -1244,11 +1295,63 @@ def next_phase():
 
     participation_id = session.get("participation_id")
     if participation_id:
+        approach_name = (
+            models[current_phase].get("name", f"Model {current_phase}")
+            if current_phase < len(models)
+            else "unknown"
+        )
+        active_model = _get_active_model_config(conf, current_phase)
+        # Roll up likes / iterations / slider changes for the closing phase so
+        # the journey card can say "Phase 0 complete: model=…, 14 liked, 4
+        # iterations, 7 slider changes" instead of the previous "? iterations,
+        # ? liked" placeholders.  We read from the canonical Interaction log
+        # because session-level counters aren't comprehensive across refreshes.
+        total_liked = None
+        iterations_used = None
+        total_slider_changes = None
+        try:
+            phase_rows = Interaction.query.filter(
+                Interaction.participation == participation_id
+            ).all()
+            likes_set = set()
+            iters_seen = set()
+            sliders = 0
+            for row in phase_rows:
+                try:
+                    d = json.loads(row.data) if row.data else {}
+                except Exception:
+                    continue
+                if not isinstance(d, dict):
+                    continue
+                if d.get("phase") != current_phase and str(d.get("phase")) != str(current_phase):
+                    continue
+                if row.interaction_type == "movie-feedback" and d.get("action") == "like":
+                    mid = d.get("movie_id")
+                    if mid is not None:
+                        likes_set.add(str(mid))
+                if d.get("iteration") is not None:
+                    try:
+                        iters_seen.add(int(d["iteration"]))
+                    except (TypeError, ValueError):
+                        pass
+                if row.interaction_type == "feature-adjustment":
+                    sliders += len(d.get("adjustments", {}) or {})
+            total_liked = len(likes_set)
+            iterations_used = max(iters_seen) if iters_seen else None
+            total_slider_changes = sliders
+        except Exception as exc:  # pragma: no cover — defensive
+            print(f"[next_phase] phase-complete rollup failed: {exc}")
+
         log_interaction(
             participation_id,
             "phase-complete",
             phase=current_phase,
-            model=models[current_phase].get("name", f"Model {current_phase}") if current_phase < len(models) else "unknown",
+            model=approach_name,
+            approach_name=approach_name,
+            model_id=active_model.get("sae", DEFAULT_TOPK_SAE_MODEL_ID),
+            iterations_used=iterations_used,
+            total_liked=total_liked,
+            total_slider_changes=total_slider_changes,
         )
 
     if next_phase_idx >= len(models):
@@ -1743,12 +1846,17 @@ def adjust_features():
         current_iteration = session.get("iteration", 1)
         participation_id = session.get("participation_id")
         if participation_id:
+            active_phase = session.get("current_phase", 0)
+            approach_name = _get_active_model_config(conf, active_phase).get(
+                "name", f"Model {active_phase}"
+            )
             log_interaction(
                 participation_id,
                 "feature-adjustment",
                 iteration=current_iteration,
-                phase=session.get("current_phase", 0),
+                phase=active_phase,
                 model_id=active_sae_id,
+                approach_name=approach_name,
                 steering_mode=steering_mode_for_iteration,
                 adjustments=feature_adjustments,
                 interaction_mode=interaction_mode,
@@ -3076,6 +3184,18 @@ def fetch_results(guid):
         if p.time_joined and p.time_finished:
             duration_sec = int((p.time_finished - p.time_joined).total_seconds())
 
+        # Seed approach_order / effective_order from extra_data as a defensive
+        # fallback.  `_get_effective_models` now mirrors the chosen order onto
+        # the Participation row so results never show "-" just because the
+        # interaction log row was missed (e.g. session was pre-seeded).
+        extra_seed = {}
+        try:
+            extra_seed = json.loads(p.extra_data) if p.extra_data else {}
+            if not isinstance(extra_seed, dict):
+                extra_seed = {}
+        except Exception:
+            extra_seed = {}
+
         participant_data = {
             "participant_id": p.id,
             "uuid": p.uuid,
@@ -3085,7 +3205,8 @@ def fetch_results(guid):
             "time_finished": p.time_finished.isoformat() if p.time_finished else None,
             "duration_sec": duration_sec,
             "language": p.language,
-            "approach_order": None,
+            "approach_order": extra_seed.get("approach_order"),
+            "effective_order": extra_seed.get("effective_order"),
             "elicitation_selected_movies": None,
             "search_events": [],
             "phase_models": {},
@@ -3112,7 +3233,10 @@ def fetch_results(guid):
             data = _safe_parse_json(interaction.data)
 
             if interaction.interaction_type == "approach-order-assigned":
-                participant_data["approach_order"] = data.get("approach_order")
+                if data.get("approach_order") is not None:
+                    participant_data["approach_order"] = data.get("approach_order")
+                if data.get("effective_order") is not None:
+                    participant_data["effective_order"] = data.get("effective_order")
 
             elif interaction.interaction_type == "elicitation-completed":
                 participant_data["elicitation_selected_movies"] = data.get("selected_movies")
@@ -3736,6 +3860,19 @@ def fetch_results(guid):
             duration_sec = int((p.time_finished - p.time_joined).total_seconds())
         attention = (completed_entry or {}).get("attention_checks") or {}
         approach_order = (completed_entry or {}).get("approach_order")
+        effective_order = (completed_entry or {}).get("effective_order")
+        # Defensive fallback: in-progress participants have no completed_entry
+        # but we still stamp approach_order into extra_data up-front.
+        if approach_order is None or effective_order is None:
+            try:
+                extra = json.loads(p.extra_data) if p.extra_data else {}
+                if isinstance(extra, dict):
+                    if approach_order is None:
+                        approach_order = extra.get("approach_order")
+                    if effective_order is None:
+                        effective_order = extra.get("effective_order")
+            except Exception:
+                pass
         search_count = len((completed_entry or {}).get("search_events", []) or [])
         table_rows.append(
             {
@@ -3748,6 +3885,7 @@ def fetch_results(guid):
                 "time_finished": p.time_finished.isoformat() if p.time_finished else None,
                 "duration_sec": duration_sec,
                 "approach_order": approach_order,
+                "effective_order": effective_order,
                 "search_events_count": search_count,
                 "attention_checks": {
                     "phase_pass": attention.get("phase_pass"),
@@ -3917,6 +4055,27 @@ def participant_journey(participation_id):
     else:
         overall_pass = None
 
+    # Look up the approach order from the interaction log first, with a
+    # defensive fallback to `Participation.extra_data` (written by
+    # `_get_effective_models`).  This way the journey card always knows which
+    # phase was the baseline vs. the steered arm, even if the log row is
+    # missing.
+    approach_order = None
+    effective_order = None
+    for row in rows:
+        if row["type"] == "approach-order-assigned":
+            d = row.get("data") or {}
+            approach_order = d.get("approach_order") or approach_order
+            effective_order = d.get("effective_order") or effective_order
+    if approach_order is None or effective_order is None:
+        try:
+            extra = json.loads(participation.extra_data) if participation.extra_data else {}
+            if isinstance(extra, dict):
+                approach_order = approach_order or extra.get("approach_order")
+                effective_order = effective_order or extra.get("effective_order")
+        except Exception:
+            pass
+
     return jsonify(
         {
             "participation_id": participation.id,
@@ -3928,6 +4087,8 @@ def participant_journey(participation_id):
                 "prolific": _build_prolific_block(participation.extra_data, study_config),
                 "time_joined": participation.time_joined.isoformat() if participation.time_joined else None,
                 "time_finished": participation.time_finished.isoformat() if participation.time_finished else None,
+                "approach_order": approach_order,
+                "effective_order": effective_order,
             },
             "attention_checks": {
                 "phase_pass": phase_pass_all,

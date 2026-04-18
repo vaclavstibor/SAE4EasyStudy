@@ -651,6 +651,28 @@
             if (s === "in_progress") return '<span class="badge badge-warning">in progress</span>';
             return `<span class="badge badge-neutral">${s || "-"}</span>`;
         }
+        function shortApproach(name) {
+            // Trim long approach labels for the participants table so the row
+            // stays readable on typical admin screens.
+            if (!name) return "";
+            return String(name)
+                .replace(/^Approach\s+/i, "")
+                .replace(/Explicit Feedback/i, "Feedback");
+        }
+        function formatApproachOrder(row) {
+            // Prefer the named order the server now stores (e.g. ["Baseline",
+            // "Steered"]) over the raw [0, 1] indices.  Falls back gracefully
+            // for participations that predate the richer logging.
+            const effective = Array.isArray(row.effective_order) ? row.effective_order : null;
+            if (effective && effective.length) {
+                return effective.map((n, i) => `P${i + 1}: ${shortApproach(n)}`).join(" → ");
+            }
+            const order = Array.isArray(row.approach_order) ? row.approach_order : null;
+            if (order && order.length) {
+                return order.map((n, i) => `P${i + 1}: #${n}`).join(" → ");
+            }
+            return "-";
+        }
         function copyToClipboard(text, btn) {
             navigator.clipboard.writeText(text || "").then(() => {
                 if (btn) {
@@ -919,7 +941,7 @@
                         <td>${statusBadge(r.status)}</td>
                         <td>${fmtDate(r.time_joined)}</td>
                         <td>${fmtDuration(r.duration_sec)}</td>
-                        <td class="mono">${(r.approach_order || []).join(", ") || "-"}</td>
+                        <td class="mono">${formatApproachOrder(r)}</td>
                         <td>${phasePart}</td>
                         <td>${passBadge(att.final_pass)}</td>
                         <td>${passBadge(att.overall_pass)}</td>
@@ -970,9 +992,23 @@
             const phases = summary.phases || [];
             const att = j.attention_checks || {};
             const prolific = j.participant?.prolific || {};
-            const phasesText = phases.map(p => `Phase ${p.phase} (${p.models.join(", ") || "?"}): ${p.likes} likes, ${p.slider_adjustments} slider changes, ${p.iterations.length} iterations`).join("; ");
+            const effective = Array.isArray(j.participant?.effective_order) ? j.participant.effective_order : [];
+            // Prefer the explicit effective_order (names) from the server so
+            // the per-phase label matches what the participant actually saw,
+            // even if the in-phase logs only carried the shared SAE checkpoint
+            // name.
+            const phaseLabel = (p) => {
+                const idx = typeof p.phase === "number" ? p.phase : parseInt(p.phase, 10);
+                const fromEffective = effective[idx];
+                const fromSummary = (p.approach_names || []).join(" / ") || (p.models || []).join(", ");
+                return fromEffective || fromSummary || "?";
+            };
+            const phasesText = phases.map(p => `Phase ${Number(p.phase) + 1} (${phaseLabel(p)}): ${p.likes} likes, ${p.slider_adjustments} slider changes, ${p.iterations.length} iterations`).join("; ");
+            const orderLine = effective.length
+                ? `Approach order: ${effective.map((n, i) => `P${i + 1}: ${shortApproach(n)}`).join(" → ")}.`
+                : "";
             const conclusion = phases.length
-                ? `Participant ran ${phases.length} phase(s) over ${fmtDuration(summary.duration_sec)}. ${phasesText}. Attention overall: ${att.overall_pass === true ? "passed" : att.overall_pass === false ? "failed" : "unknown"}.`
+                ? `Participant ran ${phases.length} phase(s) over ${fmtDuration(summary.duration_sec)}. ${orderLine} ${phasesText}. Attention overall: ${att.overall_pass === true ? "passed" : att.overall_pass === false ? "failed" : "unknown"}.`
                 : `Participant performed ${summary.total_interactions} interaction(s) but no phase data was recorded.`;
 
             const sections = [];

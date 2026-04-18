@@ -108,6 +108,43 @@ def is_timeline_noise(ix: Dict[str, Any]) -> bool:
     return is_noise(ix)
 
 
+def _extract_item_title(obj: Any) -> Optional[str]:
+    """Pick a display label from the various item-shaped payloads the client sends.
+
+    The elicitation page ships ``{movie: {idx, url, ...}, movieName: "…"}`` while
+    other flows ship a flatter ``{title: …}`` — we tolerate both plus a few
+    near-synonyms so the journey timeline never falls back to ``"?"`` when
+    metadata is actually present.
+    """
+    if not isinstance(obj, dict):
+        return None
+    for key in ("movieName", "movie_name", "title", "name", "label"):
+        v = obj.get(key)
+        if isinstance(v, str) and v.strip():
+            return v
+    movie = obj.get("movie")
+    if isinstance(movie, dict):
+        for key in ("title", "name", "movieName", "idx", "id"):
+            v = movie.get(key)
+            if v not in (None, ""):
+                return str(v)
+    return None
+
+
+def _fmt_value(v: Any, digits: int = 2) -> str:
+    """Format a numeric slider value compactly, falling back to str()."""
+    if isinstance(v, bool):
+        return str(v)
+    if isinstance(v, (int, float)):
+        try:
+            return f"{float(v):.{digits}f}"
+        except Exception:
+            return str(v)
+    if v in (None, ""):
+        return "?"
+    return str(v)
+
+
 def describe_interaction(ix: Dict[str, Any]) -> str:
     """Return a human-readable one-liner for an interaction row."""
     t = ix.get("type", "?")
@@ -118,16 +155,17 @@ def describe_interaction(ix: Dict[str, Any]) -> str:
     if t == "loaded-page":
         return f"Opened page: {d.get('page', '?')}"
 
-    if t == "selected-item":
-        title = d.get("item", {}).get("title") if isinstance(d.get("item"), dict) else None
-        title = title or d.get("title", "?")
-        action = d.get("action", "select")
-        return f"Elicitation: {action} \"{title}\""
-
-    if t == "deselected-item":
-        title = d.get("item", {}).get("title") if isinstance(d.get("item"), dict) else None
-        title = title or d.get("title", "?")
-        return f"Elicitation: deselect \"{title}\""
+    if t in ("selected-item", "deselected-item"):
+        # Client sends either {selected_item: {...}} or {item: {...}}; handle both.
+        src = (
+            d.get("selected_item")
+            or d.get("deselected_item")
+            or d.get("item")
+            or d
+        )
+        title = _extract_item_title(src) or "?"
+        verb = "select" if t == "selected-item" else "deselect"
+        return f"Elicitation: {verb} \"{title}\""
 
     if t == "elicitation-search":
         return f"Elicitation search: \"{d.get('query', '?')}\" -> {d.get('result_count', '?')} results"
@@ -143,19 +181,33 @@ def describe_interaction(ix: Dict[str, Any]) -> str:
         if search_hist:
             queries = [s.get("query", "") for s in search_hist if isinstance(s, dict)]
             searches = f" (searched: {queries})"
+        model = d.get("approach_name") or d.get("model") or d.get("model_id") or "?"
         return (
             f"Feature adjustment: phase={d.get('phase', '?')} "
             f"iter={d.get('iteration', '?')} "
-            f"model={d.get('model_id', '?')}, "
+            f"model={model}, "
             f"{adj_count} sliders changed{searches}"
         )
 
     if t == "recommendations-shown":
-        cnt = len(d.get("movie_ids", []) or [])
+        # Server uses `movies`/`model` (current) or `movie_ids`/`model_id` (legacy);
+        # also handle the A/B comparison variant (`model_a`/`model_b`).
+        movies = d.get("movies")
+        if movies is None:
+            movies = d.get("movie_ids")
+        if movies is None and (d.get("model_a") is not None or d.get("model_b") is not None):
+            a = d.get("model_a") or []
+            b = d.get("model_b") or []
+            return (
+                f"Recommendations shown (A/B): iter={d.get('iteration', '?')}, "
+                f"A={len(a)} movies, B={len(b)} movies"
+            )
+        cnt = len(movies or [])
+        model = d.get("approach_name") or d.get("model") or d.get("model_id") or "?"
         return (
             f"Recommendations shown: phase={d.get('phase', '?')} "
             f"iter={d.get('iteration', '?')}, {cnt} movies, "
-            f"model={d.get('model_id', '?')}"
+            f"model={model}"
         )
 
     if t == "movie-feedback":
@@ -174,12 +226,15 @@ def describe_interaction(ix: Dict[str, Any]) -> str:
         )
 
     if t == "phase-complete":
-        return (
-            f"Phase {d.get('phase', '?')} complete: "
-            f"model={d.get('model', '?')}, "
-            f"{d.get('iterations_used', '?')} iterations, "
-            f"{d.get('total_liked', '?')} liked"
-        )
+        model = d.get("approach_name") or d.get("model") or d.get("model_id") or "?"
+        parts = [f"Phase {d.get('phase', '?')} complete", f"model={model}"]
+        if d.get("iterations_used") is not None:
+            parts.append(f"{d.get('iterations_used')} iterations")
+        if d.get("total_liked") is not None:
+            parts.append(f"{d.get('total_liked')} liked")
+        if d.get("total_slider_changes") is not None:
+            parts.append(f"{d.get('total_slider_changes')} slider changes")
+        return ": ".join([parts[0], ", ".join(parts[1:])]) if len(parts) > 1 else parts[0]
 
     if t == "phase-questionnaire":
         keys = [k for k in d.keys() if k != "phase"]
@@ -189,23 +244,34 @@ def describe_interaction(ix: Dict[str, Any]) -> str:
         return f"Final questionnaire submitted ({len(d)} answers)"
 
     if t == "search-slider-adjusted":
-        return (
-            f"Search slider adjusted: \"{d.get('feature_label', '?')}\" "
-            f"-> {d.get('new_value', '?')} (query: \"{d.get('search_query', '')}\")"
-        )
+        # Client ships `label`/`value`/`found_via_query`; older rows used
+        # `feature_label`/`new_value`/`search_query`.
+        label = d.get("label") or d.get("feature_label") or d.get("feature_id") or "?"
+        value = _fmt_value(d.get("value", d.get("new_value")))
+        query = d.get("found_via_query") or d.get("search_query") or ""
+        return f"Search slider adjusted: \"{label}\" -> {value} (query: \"{query}\")"
 
     if t == "slider-adjusted":
-        return f"Slider adjusted: \"{d.get('feature_label', '?')}\" -> {d.get('new_value', '?')}"
+        label = d.get("label") or d.get("feature_label") or d.get("feature_id") or "?"
+        value = _fmt_value(d.get("value", d.get("new_value")))
+        return f"Slider adjusted: \"{label}\" -> {value}"
 
     if t == "slider-restored-from-history":
-        return f"Slider restored from history: \"{d.get('feature_label', '?')}\""
+        label = d.get("label") or d.get("feature_label") or d.get("feature_id") or "?"
+        return f"Slider restored from history: \"{label}\""
 
     if t == "study-ended":
         return "Study ended"
 
     if t == "approach-order-assigned":
-        order = d.get("effective_order", d.get("approach_order", "?"))
-        return f"Approach order assigned: {order}"
+        # Prefer the human-readable names we now store alongside the numeric indices.
+        names = d.get("effective_order")
+        if isinstance(names, list) and names:
+            return "Approach order assigned: " + " → ".join(f"Phase {i + 1}: {n}" for i, n in enumerate(names))
+        order = d.get("approach_order")
+        if isinstance(order, list):
+            return f"Approach order assigned (indices): {order}"
+        return "Approach order assigned: ?"
 
     if t == "autosave":
         return f"Autosave ({d.get('trigger', '?')})"
@@ -272,7 +338,8 @@ def build_journey(
     phases = []
     for phase_idx in sorted(phase_events.keys()):
         evts = phase_events[phase_idx]
-        model_ids = set()
+        sae_model_ids: set = set()
+        approach_names: set = set()
         iterations_seen = set()
         likes = 0
         dislikes = 0
@@ -282,8 +349,15 @@ def build_journey(
             d = e.get("data") or {}
             if not isinstance(d, dict):
                 continue
+            # The SAE checkpoint (e.g. "TopKSAE-1024") is the same across arms in
+            # most studies, so we also track the human-readable approach name
+            # coming from recommendations-shown / feature-adjustment / phase-complete.
             if d.get("model_id"):
-                model_ids.add(str(d["model_id"]))
+                sae_model_ids.add(str(d["model_id"]))
+            for key in ("approach_name", "model"):
+                v = d.get(key)
+                if isinstance(v, str) and v.strip():
+                    approach_names.add(v.strip())
             if d.get("iteration") is not None:
                 try:
                     iterations_seen.add(int(d["iteration"]))
@@ -299,10 +373,17 @@ def build_journey(
                 for s in (d.get("search_context", {}) or {}).get("search_history", []) or []:
                     if isinstance(s, dict):
                         searches.append(s.get("query", ""))
+        # `models` stays for backward compatibility (used by older UI code); it now
+        # prefers the approach name over the raw SAE checkpoint so the journey
+        # summary reads "Approach without Explicit Feedback" instead of
+        # "TopKSAE-1024" for both phases.
+        models_display = sorted(approach_names) if approach_names else sorted(sae_model_ids)
         phases.append(
             {
                 "phase": phase_idx,
-                "models": sorted(model_ids),
+                "models": models_display,
+                "approach_names": sorted(approach_names),
+                "sae_model_ids": sorted(sae_model_ids),
                 "iterations": sorted(iterations_seen),
                 "likes": likes,
                 "dislikes": dislikes,
