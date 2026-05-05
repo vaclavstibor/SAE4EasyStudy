@@ -186,6 +186,16 @@
                             </select>
                             <div class="form-text" id="comparison-mode-help">Side-by-side is only available for exactly 2 approaches.</div>
                         </div>
+                        <div class="col-md-4" id="randomize-order-wrapper" style="display:none;">
+                            <label class="form-label">Approach order</label>
+                            <div class="form-check mt-1">
+                                <input class="form-check-input" type="checkbox" id="randomize-approach-order" checked>
+                                <label class="form-check-label small" for="randomize-approach-order">
+                                    Randomize per participant
+                                </label>
+                            </div>
+                            <div class="form-text">Unchecked = fixed order A → B → C... as listed above.</div>
+                        </div>
                     </div>
                     <div class="hint-box mb-3">
                         An approach represents one experimental condition. You can vary steering mode, base recommender, SAE model, or use a no-steering baseline.
@@ -409,6 +419,12 @@
             help.textContent = count === 2
                 ? 'Sequential or side-by-side are both available for exactly 2 approaches.'
                 : 'Only sequential is available for the current number of approaches.';
+
+            const randWrap = document.getElementById('randomize-order-wrapper');
+            if (randWrap) {
+                const show = count >= 2 && select.value === 'sequential';
+                randWrap.style.display = show ? '' : 'none';
+            }
         }
 
         function getNeuronSourceApproachIndex() {
@@ -680,6 +696,7 @@
         }
 
         document.getElementById('approach-count').addEventListener('input', ensureApproachCount);
+        document.getElementById('comparison-mode').addEventListener('change', updateComparisonModeVisibility);
         document.getElementById('neuron-search').addEventListener('input', event => {
             renderNeuronPicker(event.target.value);
         });
@@ -769,6 +786,7 @@
                 enable_comparison: approachCount > 1,
                 comparison_mode: comparisonMode,
                 approach_count: approachCount,
+                randomize_approach_order: document.getElementById('randomize-approach-order')?.checked ?? true,
                 models,
                 steering_mode: models[0]?.steering_mode || 'sliders',
                 feature_selection_algorithm: models[0]?.feature_selection_algorithm || 'personalized_grouped_topk',
