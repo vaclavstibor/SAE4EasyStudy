@@ -67,3 +67,16 @@ labeling/
 data_preparation/
 .cache/
 /overleaf/
+# study_framework paths
+study_framework/server/.venv39/
+study_framework/.pytest_cache/
+study_framework/server/.pytest_cache/
+study_framework/.ruff_cache/
+study_framework/server/.ruff_cache/
+study_framework/**/__pycache__/
+study_framework/server/instance/
+study_framework/instance/
+study_framework/cache/
+study_framework/server/cache/
+study_framework/server/static/datasets/ml-32m-filtered/
+!study_framework/server/static/datasets/ml-32m-filtered/.gitkeep
