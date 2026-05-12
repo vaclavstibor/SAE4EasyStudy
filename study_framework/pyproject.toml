@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "study-framework"
+version = "0.1.0"
+description = "Plugin-first study framework kernel and study plugins."
+requires-python = ">=3.9,<3.11"
+dependencies = [
+    "beautifulsoup4",
+    "cachelib",
+    "cachetools",
+    "cinemagoer",
+    "Flask",
+    "Flask-Login",
+    "Flask-Session",
+    "Flask-SQLAlchemy",
+    "Flask-WTF",
+    "gunicorn",
+    "is-safe-url",
+    "jmetalpy",
+    "numpy",
+    "polars",
+    "psycopg2-binary",
+    "python3-discogs-client",
+    "recommenders",
+    "sentence-transformers",
+    "SQLAlchemy",
+    "tensorflow",
+    "tensorflow-recommenders",
+    "tf-keras",
+    "torch",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+]
+
+[tool.setuptools.packages.find]
+include = ["server*", "tests*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+extend-exclude = [".venv", "server/.venv39"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
