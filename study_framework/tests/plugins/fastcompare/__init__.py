@@ -1,0 +1,1 @@
+"""FastCompare plugin tests."""
