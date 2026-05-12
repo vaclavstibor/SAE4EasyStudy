@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ payload.title }}</title>
+</head>
+<body>
+    <main>
+        <h1>{{ payload.title }}</h1>
+        <p>{{ payload.summary }}</p>
+        <p>Status: {{ payload.status }}</p>
+        <p>Modes: {{ payload.supported_modes | join(", ") }}</p>
+    </main>
+</body>
+</html>
