@@ -1,0 +1,103 @@
+<!--
+  Sample questionnaire template for the SAE steering plugin.
+  =========================================================
+  Copy this file, rename it, and edit the questions / option lists. The
+  questionnaire monitor on the results dashboard auto-discovers every field
+  inside the answers JSON, so you don't have to register the new file in
+  code — uploading it through the study creation UI is enough.
+
+  Conventions:
+    - Use `name="..."` attributes to set the answer field name. They are
+      stored as keys inside the SaeQuestionnaireResponse.answers JSON.
+    - Use unique names (e.g. `s_age`, `s_role`, `s_freeform`).
+    - Likert items are integers 1..7 — the monitor renders them as Likert.
+    - Categorical inputs use short string values — the monitor counts them.
+    - Free-text inputs become text samples (first 10 are shown on the page).
+-->
+
+<div class="q-wrap">
+
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+     style="display:none"
+     onload="
+(function(){
+  if(document.getElementById('pnsa-injected-css')) return;
+  var s=document.createElement('style');
+  s.id='pnsa-injected-css';
+  s.textContent=`
+  .q-wrap{max-width:720px;margin:0 auto 32px;text-align:left}
+  .q-wrap .form-group{margin-bottom:1.3rem}
+  .q-wrap .likert-row{display:flex;flex-wrap:nowrap;gap:0;border:1px solid #dee2e6;border-radius:.25rem;overflow:hidden;background:#f8f9fa}
+  .q-wrap .likert-row label{flex:1 1 0;text-align:center;padding:10px 4px;cursor:pointer;font-size:.85em;font-weight:500;color:#495057;border-right:1px solid #dee2e6;user-select:none;margin:0;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+  .q-wrap .likert-row label:last-child{border-right:none}
+  .q-wrap .likert-row label:hover{background:#e2e6ea;color:#212529}
+  .q-wrap .likert-row input[type=radio]{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+  .q-wrap .likert-row label.lk-sel{background:#cce5ff;color:#004085}
+  .q-wrap .likert-anchors{display:flex;justify-content:space-between;font-size:.72em;color:#6c757d;margin-top:4px;padding:0 2px}
+  `;
+  document.head.appendChild(s);
+  document.addEventListener('change',function(e){
+    if(e.target.type==='radio'&&e.target.closest('.likert-row')){
+      var ls=e.target.closest('.likert-row').querySelectorAll('label');
+      for(var i=0;i<ls.length;i++) ls[i].classList.remove('lk-sel');
+      e.target.closest('label').classList.add('lk-sel');
+    }
+  });
+})();
+">
+
+<div class="text-center mb-4">
+  <h4 class="font-weight-bold">Sample Questionnaire</h4>
+  <p class="text-muted small">Copy this template, rename it (e.g. <code>my_questionnaire.html</code>), and adjust the items.</p>
+</div>
+
+<!-- ===== Likert item (1..7) ===== -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">S1. Likert sample</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">S1a. I found the system easy to use.</label>
+      <div class="likert-row">
+        <label><input type="radio" name="s1a_ease" value="1" required><span>1</span></label>
+        <label><input type="radio" name="s1a_ease" value="2"><span>2</span></label>
+        <label><input type="radio" name="s1a_ease" value="3"><span>3</span></label>
+        <label><input type="radio" name="s1a_ease" value="4"><span>4</span></label>
+        <label><input type="radio" name="s1a_ease" value="5"><span>5</span></label>
+        <label><input type="radio" name="s1a_ease" value="6"><span>6</span></label>
+        <label><input type="radio" name="s1a_ease" value="7"><span>7</span></label>
+      </div>
+      <div class="likert-anchors"><span>Strongly disagree</span><span>Neutral</span><span>Strongly agree</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Categorical item (single choice) ===== -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">S2. Categorical sample</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">S2a. How often do you use movie recommenders?</label>
+      <div>
+        <label class="me-3"><input type="radio" name="s2a_frequency" value="never" required> Never</label>
+        <label class="me-3"><input type="radio" name="s2a_frequency" value="rarely"> Rarely</label>
+        <label class="me-3"><input type="radio" name="s2a_frequency" value="sometimes"> Sometimes</label>
+        <label class="me-3"><input type="radio" name="s2a_frequency" value="often"> Often</label>
+        <label class="me-3"><input type="radio" name="s2a_frequency" value="daily"> Daily</label>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Free-text item ===== -->
+<div class="card mb-3">
+  <div class="card-header font-weight-bold text-primary">S3. Open-ended sample</div>
+  <div class="card-body">
+    <div class="form-group mb-0">
+      <label class="font-weight-bold">S3a. Anything else you want to share? (optional)</label>
+      <textarea class="form-control" name="s3a_freeform" rows="3" maxlength="500"
+                placeholder="Free text up to 500 characters"></textarea>
+    </div>
+  </div>
+</div>
+
+</div>
