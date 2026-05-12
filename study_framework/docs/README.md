@@ -1,0 +1,20 @@
+# Documentation
+
+Top-level documentation for the SAE Steering study framework, an EasyStudy derivative.
+
+## What to read
+
+| File | When to read it |
+| --- | --- |
+| [`tech-docs.md`](tech-docs.md) | The canonical technical reference. Read this first. Covers architecture, plugin contract, database schema, audit pipeline, analytics, runtime, deployment, and testing strategy. |
+| [`design-decisions.md`](design-decisions.md) | The *why* document. Records the binding architectural decisions (plugin-first extension of EasyStudy, typed audit tables, no migration framework, single-writer audit service, dedicated reset endpoint, NFR-12 graceful degradation, etc.). |
+| [`formative-examples.md`](formative-examples.md) | Worked recipes with code snippets — how to add a new plugin, a new steering modality, a new dataset, a new typed audit table, a new reranking strategy, a new dashboard metric, a new participant endpoint, a new CSV file. |
+| [`equations.md`](equations.md) | Math reference: text-steering scoring (FR-09), SAE feature shift, ELSA seed update, reranking strategies (FR-10), example-based steering (FR-08). |
+| [`admin-manual.md`](admin-manual.md) | Researcher manual: how to create a study, run it, monitor it, inspect the dashboard, export CSVs. |
+| [`user-manual.md`](user-manual.md) | Participant walkthrough from join to finish. |
+
+## Conventions
+
+- Code paths are relative to `study_framework/`.
+- The proposal (`../proposal.tex`) is the source of truth for FR / NFR ids referenced in the docs.
+- "Research TODO" features (latent-perturbation reranking, constrained-optimization reranking, sentence-transformer text steering, Redis-backed sessions for >100 concurrent users) are **documented** but **not enabled** in this build. See [`tech-docs.md`](tech-docs.md) §11 for the limitations table.
