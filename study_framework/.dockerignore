@@ -1,0 +1,27 @@
+.git
+.pytest_cache
+.ruff_cache
+.venv
+.venv39
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+*.db
+instance/
+cache/
+# Python caches
+**/__pycache__/
+**/*.pyc
+
+# Local environments
+.venv/
+server/.venv/
+server/.venv39/
+server/.venv39_tmp/
+
+# Local runtime data
+server/cache/
+server/instance/
+server/flask_session/
