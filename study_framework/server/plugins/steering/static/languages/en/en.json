@@ -1,0 +1,14 @@
+{
+  "sae_create_title": "Create SAE Steering Study",
+  "sae_create_select_dataset": "Select Dataset",
+  "sae_create_select_base_model": "Base Recommender Model",
+  "sae_create_select_sae_model": "SAE Model",
+  "sae_create_select_steering_mode": "Steering Mode",
+  "sae_create_num_features_display": "Number of Features to Display",
+  "sae_create_num_recommendations": "Recommendations per Iteration",
+  "sae_create_num_iterations": "Number of Iterations",
+  "sae_steering_title": "Steer Your Recommendations",
+  "get_recommendations": "Get Recommendations",
+  "create": "Create Study",
+  "cancel": "Cancel"
+}

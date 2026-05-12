@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create SAE Steering Study</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .config-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .config-card .card-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 600;
+        }
+        .form-section-title {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .approach-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+        .approach-card {
+            border: 2px solid #e1e5ea;
+            border-radius: 12px;
+            padding: 16px;
+            background: #fafafa;
+        }
+        .approach-card h6 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .approach-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            color: #fff;
+            font-size: 0.85em;
+            font-weight: 700;
+            background: #0d6efd;
+        }
+        .hint-box {
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #555;
+            font-size: 0.9em;
+        }
+        .questionnaire-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .questionnaire-item {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 12px 14px;
+            background: #fff;
+        }
+        .questionnaire-item-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .approach-controls-panel {
+            border: 1px solid #dbe3ec;
+            border-radius: 10px;
+            padding: 12px;
+            background: #fff;
+        }
+        .approach-controls-title {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .approach-controls-title .form-label {
+            margin-bottom: 0;
+        }
+        .modality-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .modality-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 38px;
+            padding: 8px 10px;
+            border: 1px solid #cfd7e3;
+            border-radius: 8px;
+            background: #f8fafc;
+            cursor: pointer;
+            margin: 0;
+            font-size: 0.88em;
+        }
+        .modality-chip input {
+            margin: 0;
+            flex: 0 0 auto;
+        }
+        .modality-chip:has(input:checked) {
+            border-color: #0d6efd;
+            background: #eaf2ff;
+            color: #0b4eb3;
+            font-weight: 600;
+        }
+        .backend-behavior-panel {
+            border-top: 1px solid #e5e9ef;
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+        .control-settings-panel {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e5e9ef;
+        }
+        .nested-config-row {
+            margin-left: 38px;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e5e9ef;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>{{ title }}</h1>
+        <p class="lead">Create a new SAE-based steering study</p>
+
+        <form id="create-study-form">
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Dataset</h5>
+                </div>
+                <div class="card-body">
+                    <label for="dataset-select" class="form-label">{{ select_dataset }}</label>
+                    <select class="form-select" id="dataset-select" required>
+                        <option value="">Choose a dataset...</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Approaches</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="approach-count" class="form-label">Number of approaches</label>
+                            <input type="number" class="form-control" id="approach-count" min="1" max="5" value="2">
+                            <div class="form-text">Use 1 for a single approach, 2 for A/B, 3+ for A/B/C...</div>
+                        </div>
+                        <div class="col-md-4" id="comparison-mode-wrapper">
+                            <label for="comparison-mode" class="form-label">Comparison layout</label>
+                            <select class="form-select" id="comparison-mode">
+                                <option value="sequential">Sequential</option>
+                                <option value="side_by_side">Side-by-side</option>
+                            </select>
+                            <div class="form-text" id="comparison-mode-help">Side-by-side is only available for exactly 2 approaches.</div>
+                        </div>
+                        <div class="col-md-4" id="approach-order-wrapper">
+                            <label class="form-label d-block">Approach order</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="randomize-approach-order" checked>
+                                <label class="form-check-label" for="randomize-approach-order">
+                                    Randomize order per participant
+                                </label>
+                            </div>
+                            <div class="form-text">When off, approaches stay in the fixed order shown above: A -> B -> C.</div>
+                        </div>
+                    </div>
+                    <div class="hint-box mb-3">
+                        An approach represents one experimental condition. You can vary steering mode, base recommender, SAE model, or use a no-steering baseline.
+                    </div>
+                    <div class="approach-grid" id="approach-configs"></div>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Steering Setup</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="reranking-strategy" class="form-label">Reranking strategy</label>
+                            <select class="form-select" id="reranking-strategy">
+                                <option value="feature-conditioned" selected>Feature-conditioned</option>
+                            </select>
+                            <div class="form-text">Algorithm used to combine SAE feature steering with the base recommender. Additional strategies (latent perturbation, constrained optimization) are research TODOs.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="interaction-mode" class="form-label">Interaction History Mode</label>
+                            <select class="form-select" id="interaction-mode">
+                                <option value="cumulative" selected>Cumulative (adjustments stack)</option>
+                                <option value="reset">Reset each iteration (fresh start)</option>
+                            </select>
+                            <div class="form-text">Cumulative is recommended for the current flow.</div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="num-recommendations" class="form-label">Recommendations per approach</label>
+                            <input type="number" class="form-control" id="num-recommendations" value="20" min="5" max="30">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="num-iterations" class="form-label">Max iterations</label>
+                            <input type="number" class="form-control" id="num-iterations" value="3" min="1" max="10">
+                        </div>
+                    </div>
+
+                    <div class="hint-box mt-3">
+                        Approach-specific steering controls (sliders, toggles, text prompts and their composition mode, examples, reset) are configured directly in each approach card above.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card config-card">
+                <div class="card-header">
+                    <h5 class="mb-0">Study Flow</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="study-intro-text" class="form-label">Intro Page Text (HTML)</label>
+                            <textarea class="form-control" id="study-intro-text" rows="5"
+                                placeholder="Optional custom intro HTML. Leave empty to use the default study parts screen."></textarea>
+                            <div class="form-text">Shown before preference elicitation. Leave empty to keep the default styled intro screen. Supports HTML tags.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="time-estimate" class="form-label">Time Estimate</label>
+                            <input type="text" class="form-control" id="time-estimate" value="10-15 minutes"
+                                placeholder="e.g. 10-15 minutes">
+                            <div class="hint-box mt-3">
+                                Participation details are skipped for this study template. Users go directly to the study intro and the session keeps the study GUID and Prolific identifiers.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="prolific-code" class="form-label">Prolific Completion Code</label>
+                            <input type="text" class="form-control" id="prolific-code"
+                                placeholder="e.g. C123ABCD">
+                            <div class="form-text">
+                                The completion code from your Prolific study. Required if you want
+                                participants to be redirected back to Prolific (so you can pay them).
+                                Leave empty for a non-Prolific study.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Approach Questionnaires (HTML files)</label>
+                        <div class="form-text">Optional. These stack automatically based on the selected number of approaches and each one is shown after its specific approach.</div>
+                        <div class="questionnaire-stack" id="approach-questionnaire-stack"></div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label for="questionnaire-file" class="form-label">Final Questionnaire (HTML file)</label>
+                            <div id="final-questionnaire-status" class="mb-2 d-flex align-items-center flex-wrap gap-2"></div>
+                            <input type="file" class="form-control form-control-sm" id="questionnaire-file" accept=".html,.htm">
+                            <div class="form-text" id="final-questionnaire-hint">Upload a custom file to override.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-5">
+                <button type="submit" class="btn btn-primary btn-lg">{{ create }}</button>
+                <a href="{{ url_for('main.administration') }}" class="btn btn-secondary btn-lg">{{ cancel }}</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let saeModels = [];
+        let steeringModes = [];
+        let featureSelectionAlgorithms = [];
+        let approaches = [];
+        let uploadedQuestionnaire = null;
+
+        const DEFAULT_QUESTIONNAIRES = {
+            explicit: 'sae_explicit_feedback_approach_questionnaire.html',
+            implicit: 'sae_implicit_feedback_approach_questionnaire.html',
+            final:    'sae_final_questionnaire.html',
+        };
+
+        function defaultPhaseQuestionnaire(steeringMode) {
+            if (steeringMode === 'none') return DEFAULT_QUESTIONNAIRES.implicit;
+            return DEFAULT_QUESTIONNAIRES.explicit;
+        }
+
+        function preferredTopKModelId() {
+            const topk = saeModels.find(model => model.id === 'TopKSAE-1024');
+            return topk ? topk.id : (saeModels[0]?.id || '');
+        }
+
+        function usesSliderSettings(mode) {
+            return ['sliders', 'toggles', 'both'].includes(mode);
+        }
+
+        function deriveSteeringModeFromModalities(modalities) {
+            const values = new Set(modalities || []);
+            const hasSliders = values.has('sliders');
+            const hasToggles = values.has('toggles');
+            const hasText = values.has('text');
+            if (hasToggles) return 'toggles';
+            if (hasSliders && hasText) return 'both';
+            if (hasSliders) return 'sliders';
+            if (hasText) return 'text';
+            return 'none';
+        }
+
+        function featureControlType(approach) {
+            const values = new Set(approach.enabled_modalities || []);
+            if (values.has('toggles')) return 'toggles';
+            if (values.has('sliders')) return 'sliders';
+            return 'none';
+        }
+
+        function defaultSelectionSignalWeight(mode) {
+            return ['sliders', 'toggles', 'both'].includes(mode) ? 0.25 : 0.5;
+        }
+
+        function normalizeApproachControls(approach) {
+            const current = new Set(approach.enabled_modalities || []);
+            if (current.has('sliders') && current.has('toggles')) {
+                current.delete('toggles');
+            }
+            approach.enabled_modalities = Array.from(current);
+            approach.steering_mode = deriveSteeringModeFromModalities(approach.enabled_modalities);
+            return approach;
+        }
+
+        function deriveEnabledModalities(mode) {
+            if (mode === 'none') return [];
+            if (mode === 'text') return ['text', 'reset'];
+            if (mode === 'toggles') return ['toggles', 'reset'];
+            if (mode === 'both') return ['sliders', 'text', 'reset'];
+            return ['sliders', 'reset'];
+        }
+
+        function usesTextSettings(mode) {
+            return ['text', 'both'].includes(mode);
+        }
+
+        function usesToggleSettings(mode) {
+            return mode === 'toggles';
+        }
+
+        function approachLabel(index) {
+            if (index < 26) {
+                return `Approach ${String.fromCharCode(65 + index)}`;
+            }
+            return `Approach ${index + 1}`;
+        }
+
+        function steeringModeLabel(mode) {
+            const found = steeringModes.find(item => item.id === mode);
+            return found ? found.name : mode;
+        }
+
+        function exampleSourceHelp(approach) {
+            const controls = featureControlType(approach);
+            if (approach.use_selected_movies_as_examples && controls === 'none') {
+                return 'Example-based SAE steering: participants only select movies, and those selections are converted into hidden SAE feature boosts.';
+            }
+            if (approach.use_selected_movies_as_examples) {
+                return 'Explicit participant controls and selected-movie example boosts are combined. The audit records both contributions separately.';
+            }
+            if (controls === 'none') {
+                return 'No explicit SAE steering and no example-based SAE boosts. Recommendations use movie selections only as the base preference signal.';
+            }
+            return 'Selected movies affect the base preference profile, but they are not converted into extra SAE feature boosts.';
+        }
+
+        function defaultSteeringMode(index) {
+            if (index === 0) return 'sliders';
+            if (index === 1) return 'none';
+            return 'none';
+        }
+
+        function createApproach(index) {
+            const mode = defaultSteeringMode(index);
+            return {
+                id: `approach_${index + 1}`,
+                name: approachLabel(index),
+                base: 'elsa',
+                sae: preferredTopKModelId(),
+                steering_mode: mode,
+                enabled_modalities: deriveEnabledModalities(mode),
+                feature_selection_algorithm: 'personalized_grouped_topk',
+                text_steering_top_k: 6,
+                text_composition_mode: 'replace',
+                example_selection_top_k: 6,
+                use_selected_movies_as_examples: false,
+                example_selection_weight: 0.65,
+                selection_signal_weight: defaultSelectionSignalWeight(mode),
+                toggle_default_weight: 0.65,
+                phase_questionnaire_file: defaultPhaseQuestionnaire(mode),
+            };
+        }
+
+        function ensureApproachCount() {
+            const count = Math.max(1, Math.min(5, parseInt(document.getElementById('approach-count').value || '1', 10)));
+            while (approaches.length < count) {
+                approaches.push(createApproach(approaches.length));
+            }
+            if (approaches.length > count) {
+                approaches = approaches.slice(0, count);
+            }
+            approaches = approaches.map((approach, index) => ({
+                ...approach,
+                id: approach.id || `approach_${index + 1}`,
+                name: approach.name || approachLabel(index),
+                enabled_modalities: approach.enabled_modalities || deriveEnabledModalities(approach.steering_mode || defaultSteeringMode(index)),
+                selection_signal_weight: approach.selection_signal_weight ?? defaultSelectionSignalWeight(approach.steering_mode || defaultSteeringMode(index)),
+                phase_questionnaire_file: approach.phase_questionnaire_file || ''
+            })).map(normalizeApproachControls);
+            updateComparisonModeVisibility();
+            renderApproachQuestionnaireStack();
+            renderApproachCards();
+        }
+
+        function updateComparisonModeVisibility() {
+            const count = approaches.length;
+            const select = document.getElementById('comparison-mode');
+            const sideBySideOption = select.querySelector('option[value="side_by_side"]');
+            const help = document.getElementById('comparison-mode-help');
+            const orderWrapper = document.getElementById('approach-order-wrapper');
+            sideBySideOption.disabled = count !== 2;
+            if (count !== 2 && select.value === 'side_by_side') {
+                select.value = 'sequential';
+            }
+            orderWrapper.style.display = count > 1 ? '' : 'none';
+            help.textContent = count === 2
+                ? 'Sequential or side-by-side are both available for exactly 2 approaches.'
+                : 'Only sequential is available for the current number of approaches.';
+        }
+
+        function renderApproachCards() {
+            const container = document.getElementById('approach-configs');
+            container.innerHTML = approaches.map((approach, index) => `
+                <div class="approach-card">
+                    <h6><span class="approach-badge">${String.fromCharCode(65 + index)}</span>${approachLabel(index)}</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Displayed name</label>
+                        <input type="text" class="form-control" value="${approach.name}" onchange="updateApproachField(${index}, 'name', this.value)">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Base recommender</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'base', this.value)">
+                            ${['elsa'].map(option => `
+                                <option value="${option}" ${approach.base === option ? 'selected' : ''}>
+                                    ELSA
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">SAE model</label>
+                        <select class="form-select" onchange="updateApproachField(${index}, 'sae', this.value)">
+                            ${saeModels.map(model => `
+                                <option value="${model.id}" ${approach.sae === model.id ? 'selected' : ''}>${model.name}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3 approach-controls-panel">
+                        <div class="approach-controls-title">
+                            <label class="form-label">Feature controls</label>
+                            <span class="text-muted small">Derived mode: ${steeringModeLabel(approach.steering_mode)}</span>
+                        </div>
+                        <div class="modality-grid">
+                            ${[
+                                ['none', 'None'],
+                                ['sliders', 'Sliders'],
+                                ['toggles', 'Toggles']
+                            ].map(([value, label]) => `
+                                <label class="modality-chip">
+                                    <input type="radio" name="feature-control-${index}"
+                                        ${featureControlType(approach) === value ? 'checked' : ''}
+                                        onchange="setFeatureControlType(${index}, '${value}')">
+                                    <span>${label}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div class="form-text">This controls whether participants see continuous sliders, discrete boost/suppress toggles, or no visible SAE feature controls.</div>
+                        <div class="control-settings-panel">
+                            <label class="form-label">Selection strength</label>
+                            <input type="number" class="form-control" min="0" max="1" step="0.05"
+                                value="${approach.selection_signal_weight ?? defaultSelectionSignalWeight(approach.steering_mode)}"
+                                onchange="updateApproachField(${index}, 'selection_signal_weight', parseFloat(this.value || '${defaultSelectionSignalWeight(approach.steering_mode)}'))">
+                            <div class="form-text">Base recommender influence of movies selected by the participant. This applies even when example-based steering is off.</div>
+                        </div>
+                        <div class="control-settings-panel" ${usesSliderSettings(approach.steering_mode) ? '' : 'style="display:none;"'}>
+                            <label class="form-label">Feature selection algorithm</label>
+                            <select class="form-select" onchange="updateApproachField(${index}, 'feature_selection_algorithm', this.value)">
+                                ${featureSelectionAlgorithms.map(algorithm => `
+                                    <option value="${algorithm.id}" ${approach.feature_selection_algorithm === algorithm.id ? 'selected' : ''}>
+                                        ${algorithm.name}
+                                    </option>
+                                `).join('')}
+                            </select>
+                            <div class="form-text">Used when the approach exposes slider or toggle feature controls.</div>
+                            <div class="mt-2" ${usesToggleSettings(approach.steering_mode) ? '' : 'style="display:none;"'}>
+                                <label class="form-label">Toggle weight</label>
+                                <input type="number" class="form-control" min="0.1" max="1" step="0.05"
+                                    value="${approach.toggle_default_weight || 0.65}"
+                                    onchange="updateApproachField(${index}, 'toggle_default_weight', parseFloat(this.value || '0.65'))">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch backend-behavior-panel">
+                        <input class="form-check-input" type="checkbox"
+                            ${approach.enabled_modalities?.includes('text') ? 'checked' : ''}
+                            onchange="toggleApproachModality(${index}, 'text', this.checked)">
+                        <label class="form-check-label">Enable text prompts</label>
+                        <div class="form-text">Optional participant text input. It can be combined with sliders, toggles, examples, or used alone.</div>
+                    </div>
+                    <div class="nested-config-row" ${approach.enabled_modalities?.includes('text') ? '' : 'style="display:none;"'}>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Text top-K</label>
+                                <input type="number" class="form-control" min="1" max="12"
+                                    value="${approach.text_steering_top_k || 6}"
+                                    onchange="updateApproachField(${index}, 'text_steering_top_k', parseInt(this.value || '6', 10))">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Text steering composition</label>
+                                <select class="form-select"
+                                    onchange="updateApproachField(${index}, 'text_composition_mode', this.value)">
+                                    <option value="replace" ${(approach.text_composition_mode || 'replace') === 'replace' ? 'selected' : ''}>Replace previous prompt</option>
+                                    <option value="add" ${approach.text_composition_mode === 'add' ? 'selected' : ''}>Add on top of previous prompt</option>
+                                    <option value="intersect" ${approach.text_composition_mode === 'intersect' ? 'selected' : ''}>Intersect with previous prompt</option>
+                                </select>
+                                <div class="form-text">How iteration N+1 combines with iteration N. Default is "replace".</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check form-switch backend-behavior-panel">
+                        <input class="form-check-input" type="checkbox"
+                            ${approach.enabled_modalities?.includes('reset') ? 'checked' : ''}
+                            onchange="toggleApproachReset(${index}, this.checked)">
+                        <label class="form-check-label">Show global reset control</label>
+                        <div class="form-text">Participant utility control. It does not define the steering mode, but it records reset events when used.</div>
+                    </div>
+                    <div class="form-check form-switch backend-behavior-panel">
+                        <input class="form-check-input" type="checkbox"
+                            ${approach.use_selected_movies_as_examples ? 'checked' : ''}
+                            onchange="updateApproachField(${index}, 'use_selected_movies_as_examples', this.checked)">
+                        <label class="form-check-label">Use selected movies as example-based steering</label>
+                        <div class="form-text">${exampleSourceHelp(approach)}</div>
+                    </div>
+                    <div class="nested-config-row" ${approach.use_selected_movies_as_examples ? '' : 'style="display:none;"'}>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Example top-K</label>
+                                <input type="number" class="form-control" min="1" max="12"
+                                    value="${approach.example_selection_top_k || 6}"
+                                    onchange="updateApproachField(${index}, 'example_selection_top_k', parseInt(this.value || '6', 10))">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Example strength</label>
+                                <input type="number" class="form-control" min="0" max="1" step="0.05"
+                                    value="${approach.example_selection_weight ?? 0.65}"
+                                    onchange="updateApproachField(${index}, 'example_selection_weight', parseFloat(this.value || '0.65'))">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateApproachField(index, field, value) {
+            approaches[index][field] = value;
+            if (field === 'steering_mode') {
+                approaches[index].enabled_modalities = deriveEnabledModalities(value);
+                const currentQ = approaches[index].phase_questionnaire_file;
+                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
+                if (!currentQ || isDefault) {
+                    approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(value);
+                }
+            }
+            if (field === 'sae' || field === 'steering_mode' || field === 'use_selected_movies_as_examples') {
+                renderApproachCards();
+                renderApproachQuestionnaireStack();
+            }
+        }
+
+        function setFeatureControlType(index, controlType) {
+            const current = new Set(approaches[index].enabled_modalities || []);
+            current.delete('sliders');
+            current.delete('toggles');
+            if (controlType === 'sliders' || controlType === 'toggles') {
+                current.add(controlType);
+            }
+            approaches[index].enabled_modalities = Array.from(current);
+            normalizeApproachControls(approaches[index]);
+            const currentQ = approaches[index].phase_questionnaire_file;
+            const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
+            if (!currentQ || isDefault) {
+                approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
+            }
+            renderApproachCards();
+            renderApproachQuestionnaireStack();
+        }
+
+        function toggleApproachModality(index, modality, checked) {
+            const current = new Set(approaches[index].enabled_modalities || []);
+            if (checked) {
+                current.add(modality);
+                if (modality === 'sliders') current.delete('toggles');
+                if (modality === 'toggles') current.delete('sliders');
+            } else {
+                current.delete(modality);
+            }
+            approaches[index].enabled_modalities = Array.from(current);
+            normalizeApproachControls(approaches[index]);
+            const currentQ = approaches[index].phase_questionnaire_file;
+            const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
+            if (!currentQ || isDefault) {
+                approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
+            }
+            renderApproachCards();
+            renderApproachQuestionnaireStack();
+        }
+
+        function toggleApproachReset(index, checked) {
+            const current = new Set(approaches[index].enabled_modalities || []);
+            if (checked) current.add('reset');
+            else current.delete('reset');
+            approaches[index].enabled_modalities = Array.from(current);
+            normalizeApproachControls(approaches[index]);
+            renderApproachCards();
+        }
+
+        function renderApproachQuestionnaireStack() {
+            const container = document.getElementById('approach-questionnaire-stack');
+            if (!container) return;
+
+            container.innerHTML = approaches.map((approach, index) => {
+                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(approach.phase_questionnaire_file);
+                const hasCustom = !!approach.phase_questionnaire_file && !isDefault;
+
+                return `
+                <div class="questionnaire-item">
+                    <div class="questionnaire-item-title">${approach.name || approachLabel(index)} questionnaire</div>
+                    <div class="mb-2 d-flex align-items-center flex-wrap gap-2">
+                        <span class="text-muted small">Current:</span>
+                        ${isDefault
+                            ? `<code class="small">${approach.phase_questionnaire_file}</code>
+                               <span class="badge bg-secondary">default</span>
+                               <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:.75em" onclick="clearApproachQuestionnaire(${index})">remove</button>`
+                            : hasCustom
+                                ? `<span id="approach-questionnaire-filename-${index}" class="fw-semibold small">${approach.phase_questionnaire_file}</span>
+                                   <span class="badge bg-info">uploaded</span>
+                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">reset to default</button>`
+                                : `<span class="text-muted small fst-italic">none</span>
+                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">restore default</button>`}
+                    </div>
+                    <input type="file" class="form-control form-control-sm" id="approach-questionnaire-file-${index}" accept=".html,.htm">
+                    <div class="form-text">Upload a custom file to override${isDefault ? '' : ', or click "restore default"'}.</div>
+                </div>`;
+            }).join('');
+
+            approaches.forEach((approach, index) => {
+                const input = document.getElementById(`approach-questionnaire-file-${index}`);
+                if (!input) return;
+                input.addEventListener('change', async () => {
+                    try {
+                        await uploadQuestionnaire(
+                            `approach-questionnaire-file-${index}`,
+                            `approach-questionnaire-preview-${index}`,
+                            `approach-questionnaire-filename-${index}`,
+                            value => {
+                                approaches[index].phase_questionnaire_file = value;
+                                renderApproachQuestionnaireStack();
+                            }
+                        );
+                    } catch (error) {
+                        console.error(error);
+                        alert(`Failed to upload questionnaire for ${approach.name || approachLabel(index)}`);
+                    }
+                });
+            });
+        }
+
+        function clearApproachQuestionnaire(index) {
+            approaches[index].phase_questionnaire_file = '';
+            renderApproachQuestionnaireStack();
+        }
+
+        function resetApproachQuestionnaire(index) {
+            approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
+            renderApproachQuestionnaireStack();
+        }
+
+        async function uploadQuestionnaire(inputId, previewId, nameId, assignCallback) {
+            const file = document.getElementById(inputId).files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('plugin_name', 'sae_steering');
+            const resp = await fetch('/utils/upload', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token() }}' },
+                body: formData
+            });
+            const data = await resp.json();
+            assignCallback(data.upload_name);
+            document.getElementById(previewId).style.display = 'block';
+            document.getElementById(nameId).textContent = file.name;
+        }
+
+        async function loadOptions() {
+            try {
+                const [datasetsResp, saeResp, modesResp, algorithmResp] = await Promise.all([
+                    fetch('{{ url_for("sae_steering.available_datasets") }}'),
+                    fetch('{{ url_for("sae_steering.available_sae_models") }}'),
+                    fetch('{{ url_for("sae_steering.available_steering_modes") }}'),
+                    fetch('{{ url_for("sae_steering.available_feature_selection_algorithms") }}')
+                ]);
+
+                const datasets = await datasetsResp.json();
+                saeModels = await saeResp.json();
+                steeringModes = await modesResp.json();
+                featureSelectionAlgorithms = await algorithmResp.json();
+
+                const datasetSelect = document.getElementById('dataset-select');
+                datasetSelect.innerHTML = '';
+                datasets.forEach(ds => {
+                    const option = document.createElement('option');
+                    option.value = ds.id;
+                    option.textContent = ds.name;
+                    datasetSelect.appendChild(option);
+                });
+                const fullMl = datasets.find(ds => ds.id === 'ml-32m-filtered');
+                datasetSelect.value = fullMl ? fullMl.id : (datasets[0]?.id || '');
+
+                approaches = [createApproach(0), createApproach(1)];
+                ensureApproachCount();
+                renderFinalQuestionnaireStatus();
+            } catch (error) {
+                console.error('Error loading options:', error);
+                alert('Error loading configuration options');
+            }
+        }
+
+        document.getElementById('approach-count').addEventListener('input', ensureApproachCount);
+
+        let useDefaultFinalQuestionnaire = true;
+
+        function renderFinalQuestionnaireStatus() {
+            const container = document.getElementById('final-questionnaire-status');
+            const hint = document.getElementById('final-questionnaire-hint');
+            if (uploadedQuestionnaire) {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <span class="fw-semibold small">${uploadedQuestionnaire}</span>
+                    <span class="badge bg-info">uploaded</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetFinalQuestionnaire()">reset to default</button>`;
+                hint.textContent = 'Upload another file to replace, or click "reset to default".';
+            } else if (useDefaultFinalQuestionnaire) {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <code class="small">${DEFAULT_QUESTIONNAIRES.final}</code>
+                    <span class="badge bg-secondary">default</span>
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:.75em" onclick="clearFinalQuestionnaire()">remove</button>`;
+                hint.textContent = 'Upload a custom file to override.';
+            } else {
+                container.innerHTML = `
+                    <span class="text-muted small">Current:</span>
+                    <span class="text-muted small fst-italic">none</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetFinalQuestionnaire()">restore default</button>`;
+                hint.textContent = 'Upload a file or click "restore default".';
+            }
+        }
+
+        function clearFinalQuestionnaire() {
+            useDefaultFinalQuestionnaire = false;
+            uploadedQuestionnaire = null;
+            document.getElementById('questionnaire-file').value = '';
+            renderFinalQuestionnaireStatus();
+        }
+
+        function resetFinalQuestionnaire() {
+            useDefaultFinalQuestionnaire = true;
+            uploadedQuestionnaire = null;
+            document.getElementById('questionnaire-file').value = '';
+            renderFinalQuestionnaireStatus();
+        }
+
+        document.getElementById('questionnaire-file').addEventListener('change', async () => {
+            try {
+                await uploadQuestionnaire('questionnaire-file', 'final-questionnaire-status', 'final-questionnaire-status', value => {
+                    uploadedQuestionnaire = value;
+                    useDefaultFinalQuestionnaire = false;
+                    renderFinalQuestionnaireStatus();
+                });
+            } catch (error) {
+                console.error(error);
+                alert('Failed to upload final questionnaire file');
+            }
+        });
+
+        document.getElementById('create-study-form').addEventListener('submit', async event => {
+            event.preventDefault();
+
+            const approachCount = approaches.length;
+            const comparisonMode = approachCount === 1
+                ? 'none'
+                : (approachCount === 2 ? document.getElementById('comparison-mode').value : 'sequential');
+            const studyIntroText = document.getElementById('study-intro-text').value.trim();
+            const timeEstimate = document.getElementById('time-estimate').value.trim();
+            const prolificCode = document.getElementById('prolific-code').value.trim();
+
+            const models = approaches.map((approach, index) => {
+                const normalized = normalizeApproachControls({ ...approach, enabled_modalities: [...(approach.enabled_modalities || [])] });
+                return {
+                    id: normalized.id,
+                    name: normalized.name || approachLabel(index),
+                    base: normalized.base,
+                    sae: normalized.sae || preferredTopKModelId(),
+                    steering_mode: normalized.steering_mode,
+                    enabled_modalities: normalized.enabled_modalities || deriveEnabledModalities(normalized.steering_mode),
+                    feature_selection_algorithm: normalized.feature_selection_algorithm,
+                    text_steering_top_k: normalized.text_steering_top_k || 6,
+                    text_composition_mode: normalized.text_composition_mode || 'replace',
+                    example_selection_top_k: normalized.example_selection_top_k || 6,
+                    use_selected_movies_as_examples: !!normalized.use_selected_movies_as_examples,
+                    example_selection_weight: normalized.example_selection_weight ?? 0.65,
+                    selection_signal_weight: normalized.selection_signal_weight ?? defaultSelectionSignalWeight(normalized.steering_mode),
+                    toggle_default_weight: normalized.toggle_default_weight || 0.65,
+                    phase_questionnaire_file: normalized.phase_questionnaire_file || undefined
+                };
+            });
+
+            const configData = {
+                dataset: document.getElementById('dataset-select').value,
+                enable_comparison: approachCount > 1,
+                comparison_mode: comparisonMode,
+                randomize_approach_order: approachCount > 1
+                    ? document.getElementById('randomize-approach-order').checked
+                    : false,
+                approach_count: approachCount,
+                models,
+                steering_mode: models[0]?.steering_mode || 'sliders',
+                feature_selection_algorithm: models[0]?.feature_selection_algorithm || 'personalized_grouped_topk',
+                interaction_mode: document.getElementById('interaction-mode').value,
+                num_recommendations: parseInt(document.getElementById('num-recommendations').value, 10),
+                num_iterations: parseInt(document.getElementById('num-iterations').value, 10),
+                text_steering: { max_query_chars: 200 },
+                reranking_strategy: document.getElementById('reranking-strategy')?.value || 'feature-conditioned',
+                enabled_modalities: models[0]?.enabled_modalities || deriveEnabledModalities(models[0]?.steering_mode || 'sliders'),
+                selection_signal_weight: models[0]?.selection_signal_weight ?? defaultSelectionSignalWeight(models[0]?.steering_mode || 'sliders'),
+                show_general_features: false,
+                skip_participation_details: true,
+                disable_demographics: true,
+                time_estimate: timeEstimate || '10-15 minutes'
+            };
+
+            if (studyIntroText) {
+                configData.text_overrides = { study_intro: studyIntroText };
+            }
+            if (uploadedQuestionnaire) {
+                configData.questionnaire_file = uploadedQuestionnaire;
+            } else if (useDefaultFinalQuestionnaire) {
+                configData.questionnaire_file = DEFAULT_QUESTIONNAIRES.final;
+            }
+            if (prolificCode) {
+                configData.prolific_code = prolificCode;
+            }
+
+            try {
+                const response = await fetch('/create-user-study', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        parent_plugin: 'sae_steering',
+                        config: configData
+                    }),
+                    redirect: 'follow'
+                });
+
+                if (response.redirected) {
+                    window.location.href = response.url;
+                    return;
+                }
+
+                const text = await response.text();
+                if (response.ok) {
+                    window.location.href = '{{ url_for("main.administration") }}';
+                } else {
+                    alert('Error creating study: ' + text);
+                }
+            } catch (error) {
+                console.error('Error creating study:', error);
+                alert('Error creating study. Please try again.');
+            }
+        });
+
+        loadOptions();
+    </script>
+</body>
+</html>

@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAE Steering Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap.min.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --text-primary: #1a1a1a;
+            --text-secondary: #5c5c5c;
+            --text-muted: #8a8a8a;
+            --border-color: #e5e5e5;
+            --bg-subtle: #fafafa;
+            --accent-positive: #2d7d46;
+            --accent-negative: #c23c3c;
+            --accent-neutral: #4a6fa5;
+            --accent-warning: #b9770e;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background: #fff;
+            color: var(--text-primary);
+            font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+        .container { max-width: 1280px; margin: 0 auto; padding: 32px 24px 64px; }
+        .page-header { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border-color); }
+        .page-header h1 { font-size: 26px; font-weight: 600; letter-spacing: -0.5px; margin: 0 0 8px; }
+        .subtitle { color: var(--text-secondary); margin: 0; }
+        .guid {
+            font-family: "IBM Plex Mono", "SF Mono", monospace;
+            font-size: 12px; color: var(--text-muted);
+            background: var(--bg-subtle); padding: 4px 10px; border-radius: 4px; margin-left: 12px;
+        }
+        .header-actions { margin-top: 18px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn {
+            padding: 8px 16px; font-size: 13px; font-weight: 500;
+            border-radius: 6px; border: 1px solid var(--border-color);
+            background: #fff; color: var(--text-primary); cursor: pointer;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn:hover { background: var(--bg-subtle); }
+        .btn-primary { background: var(--text-primary); border-color: var(--text-primary); color: #fff; }
+        .btn-link { background: transparent; border: none; color: var(--accent-neutral); padding: 0; font-weight: 500; cursor: pointer; }
+        .btn-link:hover { text-decoration: underline; }
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 32px; overflow-x: auto; }
+        .tab {
+            padding: 10px 18px; border: none; background: transparent;
+            color: var(--text-secondary); font-weight: 500; font-size: 13px; cursor: pointer;
+            border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap;
+        }
+        .tab:hover { color: var(--text-primary); }
+        .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+        .section { margin-bottom: 36px; }
+        .section-header h2 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+        .section-header p { margin: 0 0 16px; color: var(--text-secondary); }
+        .stats-row {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+            background: var(--border-color); border: 1px solid var(--border-color);
+            border-radius: 8px; overflow: hidden; margin-bottom: 32px;
+        }
+        .stat-item { background: #fff; padding: 18px 12px; text-align: center; }
+        .stat-value { font-size: 26px; font-weight: 600; line-height: 1.2; }
+        .stat-label { margin-top: 6px; font-size: 10px; text-transform: uppercase; color: var(--text-muted); letter-spacing: .5px; }
+        .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .card { border: 1px solid var(--border-color); border-radius: 8px; background: #fff; padding: 20px; }
+        .insight-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .mono { font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
+        .table-wrap { border: 1px solid var(--border-color); border-radius: 8px; overflow: auto; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th {
+            text-align: left; font-size: 11px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: .5px;
+            padding: 10px 12px; border-bottom: 1px solid var(--border-color);
+            background: var(--bg-subtle); position: sticky; top: 0;
+        }
+        .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        .data-table tr:hover td { background: var(--bg-subtle); }
+        .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+        .chart-card { border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; }
+        .chart-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .chart-sub { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+        .chart-wrap { position: relative; height: 260px; }
+        .empty-state { border: 1px dashed var(--border-color); border-radius: 8px; padding: 24px; color: var(--text-muted); text-align: center; }
+        .loading { border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; color: var(--text-muted); text-align: center; }
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+        }
+        .badge-success { background: #e0f3e6; color: var(--accent-positive); }
+        .badge-warning { background: #fff3e0; color: var(--accent-warning); }
+        .badge-neutral { background: var(--bg-subtle); color: var(--text-secondary); }
+        .badge-kind { background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .copy-btn {
+            background: transparent; border: 1px solid var(--border-color);
+            border-radius: 4px; padding: 1px 6px; cursor: pointer; font-size: 11px; color: var(--text-secondary);
+        }
+        .copy-btn:hover { background: var(--bg-subtle); }
+        .pid-cell { display: flex; align-items: center; gap: 6px; font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
+        .filter-bar { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
+        .filter-bar label { font-size: 12px; color: var(--text-secondary); margin: 0; }
+        .filter-bar input, .filter-bar select {
+            border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 5px 10px; font-size: 13px;
+        }
+        .journey-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+        .journey-stat { background: var(--bg-subtle); border-radius: 8px; padding: 12px 14px; }
+        .journey-stat .v { font-size: 20px; font-weight: 600; }
+        .journey-stat .l { font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: .4px; }
+        .timeline { border-left: 2px solid var(--border-color); margin-left: 12px; padding: 0; }
+        .timeline-section { margin-top: 18px; padding-left: 16px; position: relative; }
+        .timeline-section::before {
+            content: ""; position: absolute; left: -7px; top: 6px;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--text-primary); border: 2px solid #fff;
+        }
+        .timeline-section-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; font-weight: 600; }
+        .timeline-row { display: grid; grid-template-columns: 80px 1fr; gap: 10px; padding: 4px 0; font-size: 13px; }
+        .timeline-row .ts { color: var(--text-muted); font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
+        .q-group { border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 18px; }
+        .q-group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .q-group-title { font-weight: 600; font-size: 15px; }
+        .q-group-meta { font-size: 12px; color: var(--text-muted); }
+        @media (max-width: 1100px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .chart-grid { grid-template-columns: 1fr; }
+            .journey-summary-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 600px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .card-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Study Results <span class="guid">{{ guid }}</span></h1>
+            <p class="subtitle">Per-participant payment table, individual journeys, modality observations, and questionnaire monitor for the SAE study.</p>
+            <div class="header-actions">
+                <a href="{{ url_for('main.administration') }}" class="btn">Back to Administration</a>
+                <button id="export-btn" class="btn btn-primary" title="Aggregated analytics payload exactly as the page consumes it.">Download analytics (JSON)</button>
+                <a href="{{ export_raw_url }}" class="btn" title="Per-participant typed event log.">Download raw events (JSON)</a>
+                <a href="{{ export_csv_url }}" class="btn" title="ZIP of one CSV per typed audit table.">Download CSV bundle (ZIP)</a>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-item"><div class="stat-value" id="stat-total">-</div><div class="stat-label">Joined</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-completed">-</div><div class="stat-label">Completed</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-inprogress">-</div><div class="stat-label">In Progress</div></div>
+            <div class="stat-item"><div class="stat-value" id="stat-with-prolific">-</div><div class="stat-label">With Prolific PID</div></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="overview">Overview</button>
+            <button class="tab" data-tab="modalities">Modalities</button>
+            <button class="tab" data-tab="questionnaires">Questionnaires</button>
+            <button class="tab" data-tab="participants">Participants</button>
+            <button class="tab" data-tab="journey">Journey</button>
+        </div>
+
+        <!-- ========================= OVERVIEW TAB ========================= -->
+        <div class="tab-panel active" id="tab-overview">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Approach Overview</h2>
+                    <p>Per-approach behavioural metrics drawn directly from the typed audit tables.</p>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Approach</th>
+                                <th>Participants</th>
+                                <th>Mean iterations</th>
+                                <th>Mean abs adjustment</th>
+                                <th>Mean adjustment events</th>
+                                <th>Mean slider changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approach-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Selected Movie Ranks by Approach</h2>
+                    <p>Where in the recommendation list did participants pick the movies they liked? Tighter to the top means the steered ordering matched their taste.</p>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Liked-movie rank distribution</div>
+                        <div class="chart-sub">Counts of likes by rank (lower rank = higher in the list), one series per approach.</div>
+                        <div class="chart-wrap"><canvas id="rankDistChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Selection Dynamics</div>
+                        <div class="chart-sub">Likes vs. neutrals per approach.</div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Approach</th>
+                                        <th>Participants</th>
+                                        <th>Likes</th>
+                                        <th>Removals</th>
+                                        <th>Likes / participant</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="selection-dynamics-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Structured Steering Events</h2>
+                    <p>Counts of modality usage and SAE-specific events from the typed audit pipeline.</p>
+                </div>
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="insight-title">Modality usage</div>
+                        <div id="modality-usage"></div>
+                    </div>
+                    <div class="card">
+                        <div class="insight-title">Interaction integrity</div>
+                        <div id="event-integrity"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================= MODALITIES TAB ========================= -->
+        <div class="tab-panel" id="tab-modalities">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Slider Movement by Cluster</h2>
+                    <p>Mean absolute movement for the 20 most-moved clusters in each approach (slider modality).</p>
+                </div>
+                <div class="chart-grid">
+                    <div class="chart-card">
+                        <div class="chart-title">Approach A</div>
+                        <div class="chart-wrap"><canvas id="sliderApproachAChart"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Approach B</div>
+                        <div class="chart-wrap"><canvas id="sliderApproachBChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2>Text Prompt → Cluster Mappings</h2>
+                    <p>Which clusters did participants’ text prompts map to? Top 50 prompt-cluster pairs sorted by occurrence.</p>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Prompt</th>
+                                <th>Cluster</th>
+                                <th>Cluster ID</th>
+                                <th>Mean weight (signed)</th>
+                                <th>n</th>
+                            </tr>
+                        </thead>
+                        <tbody id="text-mappings-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================= QUESTIONNAIRES TAB ========================= -->
+        <div class="tab-panel" id="tab-questionnaires">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Questionnaire Monitor</h2>
+                    <p>One section per questionnaire file. Every answer field is auto-detected (Likert / numeric / categorical / text) and aggregated. Adding a new questionnaire does not require code changes here.</p>
+                </div>
+                <div id="questionnaire-monitor"></div>
+            </div>
+        </div>
+
+        <!-- ========================= PARTICIPANTS TAB ========================= -->
+        <div class="tab-panel" id="tab-participants">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Participants &amp; Prolific Identity</h2>
+                    <p>One row per participation. Use the completion URL to pay Prolific participants.</p>
+                </div>
+                <div class="filter-bar">
+                    <label>Status:
+                        <select id="filter-status">
+                            <option value="">All</option>
+                            <option value="completed">Completed</option>
+                            <option value="in_progress">In progress</option>
+                        </select>
+                    </label>
+                    <label>Search:
+                        <input type="search" id="filter-search" placeholder="PID, UUID, language...">
+                    </label>
+                </div>
+                <div class="table-wrap">
+                    <table class="data-table" id="participants-table">
+                        <thead>
+                            <tr>
+                                <th>Prolific PID</th>
+                                <th>Study / Session</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Duration</th>
+                                <th>Approach order</th>
+                                <th>Questionnaires</th>
+                                <th>Completion URL</th>
+                                <th>Journey</th>
+                            </tr>
+                        </thead>
+                        <tbody id="participants-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================= JOURNEY TAB ========================= -->
+        <div class="tab-panel" id="tab-journey">
+            <div class="section">
+                <div class="section-header">
+                    <h2>Per-Participant Journey Reconstruction</h2>
+                    <p>Pick a participant from the dropdown (or click "Journey" in the participants table).</p>
+                </div>
+                <div class="filter-bar">
+                    <label>Participant:
+                        <select id="journey-picker">
+                            <option value="">— select —</option>
+                        </select>
+                    </label>
+                </div>
+                <div id="journey-content">
+                    <div class="empty-state">Select a participant to view their reconstructed journey.</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const FETCH_URL = "{{ fetch_results_url }}";
+        const JOURNEY_URL_BASE = "{{ journey_url_base }}";
+        const APPROACH_PALETTE = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
+
+        let resultsData = null;
+        const chartInstances = {};
+
+        Chart.defaults.font.family = "'IBM Plex Sans', -apple-system, sans-serif";
+        Chart.defaults.color = "#8a8a8a";
+
+        function fmt(value, digits = 2) {
+            if (value === null || value === undefined || Number.isNaN(value)) return "-";
+            return Number(value).toFixed(digits);
+        }
+        function fmtDuration(sec) {
+            if (sec === null || sec === undefined) return "-";
+            const m = Math.floor(sec / 60);
+            const s = sec % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+        function fmtDate(iso) {
+            if (!iso) return "-";
+            return new Date(iso).toLocaleString();
+        }
+        function statusBadge(s) {
+            if (s === "completed") return '<span class="badge badge-success">completed</span>';
+            if (s === "in_progress") return '<span class="badge badge-warning">in progress</span>';
+            return `<span class="badge badge-neutral">${s || "-"}</span>`;
+        }
+        function shortApproach(name) {
+            if (!name) return "";
+            return String(name).replace(/^Approach\s+/i, "").replace(/Explicit Feedback/i, "Feedback");
+        }
+        function formatApproachOrder(row) {
+            const effective = Array.isArray(row.effective_order) ? row.effective_order : null;
+            if (effective && effective.length) {
+                return effective.map((n, i) => `P${i + 1}: ${shortApproach(n)}`).join(" → ");
+            }
+            return "-";
+        }
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text || "").then(() => {
+                if (btn) { const orig = btn.textContent; btn.textContent = "✓"; setTimeout(() => { btn.textContent = orig; }, 900); }
+            });
+        }
+        function destroyChart(id) {
+            if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+        }
+
+        async function loadResults() {
+            try {
+                const response = await fetch(FETCH_URL);
+                resultsData = await response.json();
+                renderTopStats(resultsData);
+                renderApproachOverview(resultsData);
+                renderSelectionDynamics(resultsData);
+                renderStructuredEvents(resultsData);
+                renderRankDistribution(resultsData);
+                renderSliderMovement(resultsData);
+                renderTextMappings(resultsData);
+                renderQuestionnaireMonitor(resultsData);
+                renderParticipantsTable(resultsData);
+                renderJourneyPicker(resultsData);
+            } catch (err) {
+                console.error(err);
+                document.getElementById("approach-table").innerHTML =
+                    '<tr><td colspan="6" class="empty-state">Could not load results.</td></tr>';
+            }
+        }
+
+        // ---------- top stats + overview ----------
+        function renderTopStats(data) {
+            const s = data.sample || {};
+            document.getElementById("stat-total").textContent = s.participants_total ?? "-";
+            document.getElementById("stat-completed").textContent = s.participants_completed ?? "-";
+            document.getElementById("stat-inprogress").textContent = s.participants_in_progress ?? 0;
+            const withPid = (data.participants_table || []).filter(p => p.prolific && p.prolific.pid).length;
+            document.getElementById("stat-with-prolific").textContent = withPid;
+        }
+        function renderApproachOverview(data) {
+            const body = document.getElementById("approach-table");
+            const overview = data.approaches?.overview || {};
+            const rows = Object.values(overview);
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="6">No approach data yet.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.label || "-"}</td>
+                    <td>${row.participants ?? 0}</td>
+                    <td>${fmt(row.mean_iterations, 2)}</td>
+                    <td>${fmt(row.mean_abs_adjustment, 4)}</td>
+                    <td>${fmt(row.mean_nonzero_adjustments, 2)}</td>
+                    <td>${fmt(row.mean_total_slider_changes, 2)}</td>
+                </tr>
+            `).join("");
+        }
+        function renderSelectionDynamics(data) {
+            const body = document.getElementById("selection-dynamics-table");
+            const dynamics = data.approaches?.selection_dynamics || {};
+            const rows = Object.values(dynamics);
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="5">No feedback events captured yet.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.label || "-"}</td>
+                    <td>${row.participants_with_feedback ?? 0}</td>
+                    <td>${row.total_like_events ?? 0}</td>
+                    <td>${row.total_neutral_events ?? 0}</td>
+                    <td>${fmt(row.mean_like_events_per_participant, 3)}</td>
+                </tr>
+            `).join("");
+        }
+        function renderStructuredEvents(data) {
+            const modalityUsage = data.modalities?.modality_usage || {};
+            const usageEntries = Object.entries(modalityUsage);
+            document.getElementById("modality-usage").innerHTML = usageEntries.length
+                ? usageEntries.map(([m, c]) => `<div><strong>${m}</strong>: ${c}</div>`).join("")
+                : '<div class="text-muted">No modality events yet.</div>';
+            const ev = data.structured_events || {};
+            document.getElementById("event-integrity").innerHTML = `
+                <div><strong>Global resets</strong>: ${ev.reset_count ?? 0}</div>
+                <div><strong>Text queries</strong>: ${ev.text_queries_count ?? 0}</div>
+                <div><strong>Example events</strong>: ${ev.example_event_count ?? 0}</div>
+                <div><strong>Recommendation impressions</strong>: ${ev.recommendation_impressions ?? 0}</div>
+                <div><strong>Searched then adjusted</strong>: ${ev.searched_then_adjusted_count ?? 0}</div>
+            `;
+        }
+
+        // ---------- new charts ----------
+        function renderRankDistribution(data) {
+            destroyChart("rankDistChart");
+            const dist = data.approaches?.rank_distribution || {};
+            const approachRows = Object.entries(dist).sort((a, b) => Number(a[0]) - Number(b[0]));
+            if (!approachRows.length) return;
+            const allRanks = Array.from(new Set(
+                approachRows.flatMap(([, v]) => Object.keys(v.rank_counts || {}))
+            )).map(Number).sort((a, b) => a - b);
+            const datasets = approachRows.map(([, bucket], idx) => ({
+                label: bucket.label || `Approach ${idx + 1}`,
+                data: allRanks.map(r => (bucket.rank_counts || {})[String(r)] || 0),
+                backgroundColor: APPROACH_PALETTE[idx % APPROACH_PALETTE.length],
+                borderRadius: 3,
+            }));
+            chartInstances.rankDistChart = new Chart(document.getElementById("rankDistChart"), {
+                type: "bar",
+                data: { labels: allRanks.map(r => `#${r}`), datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { ticks: { precision: 0 } } },
+                },
+            });
+        }
+        function renderSliderMovement(data) {
+            const slider = data.modalities?.slider_movement || {};
+            const entries = Object.entries(slider).sort((a, b) => Number(a[0]) - Number(b[0]));
+            ["sliderApproachAChart", "sliderApproachBChart"].forEach(id => destroyChart(id));
+            entries.slice(0, 2).forEach(([, bucket], idx) => {
+                const canvasId = idx === 0 ? "sliderApproachAChart" : "sliderApproachBChart";
+                const clusters = (bucket.clusters || []).slice(0, 15);
+                if (!clusters.length) return;
+                const titleEl = document.querySelector(`#${canvasId}`).closest(".chart-card").querySelector(".chart-title");
+                if (titleEl) titleEl.textContent = bucket.label || `Approach ${idx + 1}`;
+                chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
+                    type: "bar",
+                    data: {
+                        labels: clusters.map(c => c.cluster_label),
+                        datasets: [{
+                            data: clusters.map(c => c.mean_abs_delta),
+                            backgroundColor: APPROACH_PALETTE[idx % APPROACH_PALETTE.length],
+                            borderRadius: 3,
+                        }],
+                    },
+                    options: {
+                        indexAxis: "y",
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { callbacks: { label: ctx => `mean |Δ| = ${fmt(ctx.raw, 3)} (n=${clusters[ctx.dataIndex].n})` } },
+                        },
+                    },
+                });
+            });
+        }
+        function renderTextMappings(data) {
+            const body = document.getElementById("text-mappings-table");
+            const rows = data.modalities?.text_prompt_mappings || [];
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="5" class="empty-state">No text-steering events yet.</td></tr>';
+                return;
+            }
+            body.innerHTML = rows.map(row => `
+                <tr>
+                    <td>${row.query_text || "-"}</td>
+                    <td>${row.cluster_label || "-"}</td>
+                    <td class="mono">${row.cluster_id || "-"}</td>
+                    <td>${fmt(row.mean_weight, 3)}</td>
+                    <td>${row.n ?? 0}</td>
+                </tr>
+            `).join("");
+        }
+
+        // ---------- questionnaire monitor ----------
+        function renderQuestionnaireMonitor(data) {
+            const container = document.getElementById("questionnaire-monitor");
+            const groups = data.questionnaires || {};
+            const entries = Object.entries(groups);
+            if (!entries.length) {
+                container.innerHTML = '<div class="empty-state">No questionnaire responses yet.</div>';
+                return;
+            }
+            container.innerHTML = entries.map(([fileKey, group]) => {
+                const approachLabel = group.approach_indices && group.approach_indices.length
+                    ? `Approach indices: ${group.approach_indices.map(i => `#${i + 1}`).join(", ")}`
+                    : "";
+                const responseTypeBadge = group.response_type
+                    ? `<span class="badge badge-kind">${group.response_type}</span>`
+                    : "";
+                const fields = Object.entries(group.fields || {});
+                const fieldsHtml = fields.length ? `
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Kind</th>
+                                    <th>n</th>
+                                    <th>Summary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${fields.map(([name, summary]) => `
+                                    <tr>
+                                        <td class="mono">${name}</td>
+                                        <td><span class="badge badge-kind">${summary.kind}</span></td>
+                                        <td>${summary.n ?? 0}</td>
+                                        <td>${renderFieldSummary(summary)}</td>
+                                    </tr>
+                                `).join("")}
+                            </tbody>
+                        </table>
+                    </div>
+                ` : '<div class="empty-state">No fields captured.</div>';
+                return `
+                    <div class="q-group">
+                        <div class="q-group-header">
+                            <div class="q-group-title">${fileKey} ${responseTypeBadge}</div>
+                            <div class="q-group-meta">${group.responses ?? 0} responses · ${approachLabel}</div>
+                        </div>
+                        ${fieldsHtml}
+                    </div>
+                `;
+            }).join("");
+        }
+        function renderFieldSummary(summary) {
+            if (!summary) return "-";
+            if (summary.kind === "likert" || summary.kind === "numeric") {
+                const counts = summary.counts || {};
+                const dist = Object.keys(counts).sort((a, b) => Number(a) - Number(b))
+                    .map(k => `${k}=${counts[k]}`).join(", ");
+                return `mean ${fmt(summary.mean, 2)} (min ${summary.min} · max ${summary.max}) — ${dist || "-"}`;
+            }
+            if (summary.kind === "categorical") {
+                return Object.entries(summary.counts || {})
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([k, v]) => `${k}: ${v}`).join(", ");
+            }
+            return (summary.samples || []).slice(0, 3).map(s => `"${s}"`).join(" · ");
+        }
+
+        // ---------- participants ----------
+        function renderParticipantsTable(data) {
+            const tbody = document.getElementById("participants-tbody");
+            const rows = data.participants_table || [];
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No participations yet.</td></tr>';
+                return;
+            }
+            const statusFilter = document.getElementById("filter-status").value;
+            const searchFilter = (document.getElementById("filter-search").value || "").toLowerCase();
+            tbody.innerHTML = rows.filter(r => {
+                if (statusFilter && r.status !== statusFilter) return false;
+                if (searchFilter) {
+                    const hay = [r.prolific?.pid, r.prolific?.study_id, r.prolific?.session_id, r.uuid, r.language]
+                        .filter(Boolean).join(" ").toLowerCase();
+                    if (!hay.includes(searchFilter)) return false;
+                }
+                return true;
+            }).map(r => {
+                const completionUrl = r.prolific?.completion_url || "";
+                const completionCell = completionUrl
+                    ? `<button class="copy-btn" onclick="copyToClipboard('${completionUrl}', this)">copy</button>
+                       <a class="btn-link mono" href="${completionUrl}" target="_blank" rel="noopener">open</a>`
+                    : '<span class="text-muted mono">no code</span>';
+                const pidValue = r.prolific?.pid || `(${r.uuid?.slice(0, 8) || "?"})`;
+                const pidCell = r.prolific?.pid
+                    ? `<span class="pid-cell">${pidValue}<button class="copy-btn" onclick="copyToClipboard('${r.prolific.pid}', this)">copy</button></span>`
+                    : `<span class="pid-cell mono">${pidValue}</span>`;
+                const study = r.prolific?.study_id;
+                const session = r.prolific?.session_id;
+                const studyCell = (study || session)
+                    ? `<div class="mono" style="font-size:11px">study: ${study || "-"}<br>sess: ${session || "-"}</div>`
+                    : '<span class="mono" style="font-size:11px;color:var(--text-muted)">—</span>';
+                return `
+                    <tr>
+                        <td>${pidCell}</td>
+                        <td>${studyCell}</td>
+                        <td>${statusBadge(r.status)}</td>
+                        <td>${fmtDate(r.time_joined)}</td>
+                        <td>${fmtDuration(r.duration_sec)}</td>
+                        <td class="mono">${formatApproachOrder(r)}</td>
+                        <td>${r.questionnaire_responses ?? 0}</td>
+                        <td>${completionCell}</td>
+                        <td><button class="btn-link" onclick="openJourney(${r.participation_id})">View →</button></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+        document.getElementById("filter-status").addEventListener("change", () => renderParticipantsTable(resultsData));
+        document.getElementById("filter-search").addEventListener("input", () => renderParticipantsTable(resultsData));
+
+        // ---------- journey ----------
+        function renderJourneyPicker(data) {
+            const sel = document.getElementById("journey-picker");
+            const rows = data.participants_table || [];
+            sel.innerHTML = '<option value="">— select —</option>' + rows.map(r => {
+                const label = r.prolific?.pid
+                    ? `${r.prolific.pid}${r.status === "completed" ? "" : " (in progress)"}`
+                    : `${r.uuid?.slice(0, 10) || "?"} (no PID)`;
+                return `<option value="${r.participation_id}">${label}</option>`;
+            }).join("");
+        }
+        function openJourney(participationId) {
+            document.querySelector('[data-tab="journey"]').click();
+            document.getElementById("journey-picker").value = String(participationId);
+            loadJourney(participationId);
+        }
+        async function loadJourney(participationId) {
+            if (!participationId) return;
+            const container = document.getElementById("journey-content");
+            container.innerHTML = '<div class="loading">Loading journey...</div>';
+            try {
+                const resp = await fetch(`${JOURNEY_URL_BASE}${participationId}`);
+                const j = await resp.json();
+                renderJourney(j);
+            } catch (err) {
+                container.innerHTML = '<div class="empty-state">Failed to load journey.</div>';
+                console.error(err);
+            }
+        }
+        function renderJourney(j) {
+            const container = document.getElementById("journey-content");
+            if (j.error) { container.innerHTML = `<div class="empty-state">${j.error}</div>`; return; }
+            const summary = j.summary || {};
+            const approaches = summary.approaches || [];
+            const prolific = j.participant?.prolific || {};
+            const effective = Array.isArray(j.participant?.effective_order) ? j.participant.effective_order : [];
+            const approachLabelOf = (p) => {
+                const idx = typeof p.approach_index === "number" ? p.approach_index : parseInt(p.approach_index, 10);
+                return effective[idx] || p.approach_name || "?";
+            };
+            const approachesText = approaches.map(p =>
+                `Approach ${Number(p.approach_index) + 1} (${approachLabelOf(p)}): ${p.likes} likes, ${p.slider_adjustments} adjustments, ${p.iterations.length} iterations`
+            ).join("; ");
+            const orderLine = effective.length
+                ? `Approach order: ${effective.map((n, i) => `A${i + 1}: ${shortApproach(n)}`).join(" → ")}.`
+                : "";
+            const conclusion = approaches.length
+                ? `Participant completed ${approaches.length} approach(es) over ${fmtDuration(summary.duration_sec)}. ${orderLine} ${approachesText}.`
+                : `Participant performed ${summary.total_interactions} interaction(s).`;
+
+            const sections = [];
+            let current = null;
+            (j.timeline || []).forEach(entry => {
+                if (!current || current.section !== entry.section) {
+                    current = { section: entry.section, rows: [] };
+                    sections.push(current);
+                }
+                current.rows.push(entry);
+            });
+
+            const qResponses = (j.questionnaire_responses || []).map(r => {
+                const answerCount = Object.keys(r.answers || {}).length;
+                const file = r.questionnaire_file || r.response_type || "(unnamed)";
+                const approachInfo = r.approach_index != null ? ` (approach #${r.approach_index + 1})` : "";
+                return `<li><span class="mono">${file}</span>${approachInfo} — ${answerCount} answers</li>`;
+            }).join("");
+
+            container.innerHTML = `
+                <div class="card" style="margin-bottom:18px;">
+                    <div class="insight-title">Participant ${prolific.pid || j.participant?.uuid || "?"}</div>
+                    <div class="mono" style="margin-bottom:10px;">
+                        ${prolific.pid ? `PID: ${prolific.pid} · STUDY: ${prolific.study_id || "-"} · SESSION: ${prolific.session_id || "-"}<br>` : ""}
+                        Joined: ${fmtDate(j.participant?.time_joined)} · Finished: ${fmtDate(j.participant?.time_finished)}
+                    </div>
+                    <div class="journey-summary-grid">
+                        <div class="journey-stat"><div class="v">${fmtDuration(summary.duration_sec)}</div><div class="l">Duration</div></div>
+                        <div class="journey-stat"><div class="v">${summary.total_interactions ?? "-"}</div><div class="l">Interactions</div></div>
+                        <div class="journey-stat"><div class="v">${(j.questionnaire_responses || []).length}</div><div class="l">Questionnaires</div></div>
+                    </div>
+                    <p>${conclusion}</p>
+                    ${qResponses ? `<div><strong>Questionnaire responses:</strong><ul style="margin:6px 0 0 18px;">${qResponses}</ul></div>` : ""}
+                </div>
+                ${sections.length ? `
+                <div class="timeline">
+                    ${sections.map(s => `
+                        <div class="timeline-section">
+                            <div class="timeline-section-label">${s.section}</div>
+                            ${s.rows.map(r => `<div class="timeline-row"><span class="ts">${r.ts_short}</span><span>${r.summary}</span></div>`).join("")}
+                        </div>
+                    `).join("")}
+                </div>` : '<div class="empty-state">No timeline events.</div>'}
+            `;
+        }
+        document.getElementById("journey-picker").addEventListener("change", e => loadJourney(Number(e.target.value)));
+
+        // ---------- tabs + export ----------
+        document.querySelectorAll(".tab").forEach(t => {
+            t.addEventListener("click", () => {
+                document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+                document.querySelectorAll(".tab-panel").forEach(x => x.classList.remove("active"));
+                t.classList.add("active");
+                document.getElementById(`tab-${t.dataset.tab}`).classList.add("active");
+            });
+        });
+        document.getElementById("export-btn").addEventListener("click", () => {
+            if (!resultsData) return;
+            const blob = new Blob([JSON.stringify(resultsData, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `results_${resultsData.study_guid || "export"}.json`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        });
+
+        loadResults();
+    </script>
+</body>
+</html>
