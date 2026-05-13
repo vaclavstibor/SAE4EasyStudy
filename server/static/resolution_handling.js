@@ -1,16 +1,10 @@
 
 function validateScreenResolution(minW, minH) {
-    let success = true;
-
-    if (minW) {
-        success = success && window.innerWidth >= minW;
-    }
-
-    if (minH) {
-        success = success && window.innerHeight >= minH;
-    }
-
-    return success;
+    const w = Number(minW) || 0;
+    const h = Number(minH) || 0;
+    if (w > 0 && window.innerWidth < w) return false;
+    if (h > 0 && window.innerHeight < h) return false;
+    return true;
 }
 
 function getScreenSizes() {

@@ -43,7 +43,7 @@ from mandate_allocation.weighted_average_strategy import weighted_average_strate
 
 from data_loading import load_ml_dataset, MLDataLoader
 
-from common import get_abs_project_root_path
+from server.platform.shared.common import get_abs_project_root_path
 
 MOST_RATED_MOVIES_THRESHOLD = 200
 USERS_RATING_RATIO_THRESHOLD = 0.75

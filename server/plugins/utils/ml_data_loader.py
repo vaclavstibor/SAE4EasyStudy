@@ -15,10 +15,9 @@ from PIL import Image
 from io import BytesIO
 import requests
 
-# from app import pm
 from flask import url_for, has_app_context
 
-from plugins.utils.helpers import cos_sim_np
+from server.plugins.utils.helpers import cos_sim_np
 
 # Movie-lens data loader
 

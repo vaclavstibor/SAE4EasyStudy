@@ -1,25 +1,48 @@
 import functools
 import os
 import pickle
+import re
 import time
 import sys
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 
 from ml_data_loader import MLDataLoader
 
-from common import get_abs_project_root_path
+from server.platform.shared.common import get_abs_project_root_path
 from pathlib import Path
+
+
+_ML_VARIANT_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _resolve_safe_cache_path(ml_variant: str) -> Path:
+    """Resolve the pickle cache path inside the allow-list root (server/cache/utils/<ml_variant>).
+
+    Reject any traversal attempt by enforcing a strict variant name pattern and re-resolving
+    the final path under the canonical cache root.
+    """
+    if not isinstance(ml_variant, str) or not _ML_VARIANT_RE.match(ml_variant):
+        raise ValueError(f"Invalid dataset variant: {ml_variant!r}")
+    cache_root = Path(get_abs_project_root_path()).resolve() / "cache" / "utils"
+    cache_root.mkdir(parents=True, exist_ok=True)
+    cache_dir = (cache_root / ml_variant).resolve()
+    if cache_root not in cache_dir.parents and cache_dir != cache_root:
+        raise ValueError(f"Variant directory escapes cache root: {cache_dir}")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_path = (cache_dir / "data_cache.pckl").resolve()
+    if cache_root not in cache_path.parents:
+        raise ValueError(f"Cache path escapes cache root: {cache_path}")
+    return cache_path
+
 
 # Loads the movielens dataset
 @functools.lru_cache(maxsize=None)
 def load_ml_dataset(ml_variant="ml-32m-filtered"):
     basedir = os.path.join(get_abs_project_root_path(), 'static', 'datasets')
-    #cache_base_dir = os.path.join(Path(__file__).parent.absolute(), "cache", 'utils', ml_variant)
-    cache_base_dir = os.path.join(get_abs_project_root_path(), "cache", 'utils', ml_variant)
-    Path(cache_base_dir).mkdir(parents=True, exist_ok=True)
-
-    cache_path = os.path.join(cache_base_dir, "data_cache.pckl")
-    if os.path.exists(cache_path):
+    cache_path_obj = _resolve_safe_cache_path(ml_variant)
+    cache_base_dir = str(cache_path_obj.parent)
+    cache_path = str(cache_path_obj)
+    if cache_path_obj.exists():
         print(f"Trying to load data cache from: {cache_path}")
         try:
             with open(cache_path, "rb") as f:

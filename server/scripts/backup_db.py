@@ -35,12 +35,11 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+from server.platform.persistence.db import resolve_database_url
+
 
 def _resolve_db_url() -> str:
-    url = os.environ.get("DATABASE_URL", "sqlite:///instance/db.sqlite")
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    return url
+    return resolve_database_url()
 
 
 def _ensure_backup_dir() -> Path:

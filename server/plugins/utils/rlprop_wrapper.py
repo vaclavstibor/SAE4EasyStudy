@@ -36,6 +36,12 @@ class RLPropWrapper:
         self.n_users = n_users
 
     def _load_cache(self, cache_path):
+        from server.platform.shared.common import get_abs_project_root_path
+
+        allowed_root = os.path.realpath(os.path.join(get_abs_project_root_path(), "cache", "utils"))
+        real_path = os.path.realpath(cache_path)
+        if not (real_path == allowed_root or real_path.startswith(allowed_root + os.sep)):
+            raise ValueError(f"Refusing to load pickle outside {allowed_root}: {real_path}")
         print(f"Loading cache from: {cache_path}")
         with open(cache_path, 'rb') as f:
             cache = pickle.load(f)
