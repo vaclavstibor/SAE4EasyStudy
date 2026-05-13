@@ -1,3 +1,14 @@
+.git
+.pytest_cache
+.ruff_cache
+.venv
+.venv39
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.sqlite
+*.db
 # Python caches
 **/__pycache__/
 **/*.pyc

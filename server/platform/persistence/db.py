@@ -15,8 +15,8 @@ naming_convention = {
 }
 
 DEFAULT_DATABASE_URL = "sqlite:///db.sqlite"
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_INSTANCE_PATH = PROJECT_ROOT / "instance"
+SERVER_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_INSTANCE_PATH = SERVER_ROOT / "instance"
 
 
 def resolve_database_url() -> str:
@@ -26,6 +26,7 @@ def resolve_database_url() -> str:
     if url.startswith("sqlite:///") and not url.startswith("sqlite:////"):
         sqlite_path = url.removeprefix("sqlite:///")
         if sqlite_path and sqlite_path != ":memory:":
+            DEFAULT_INSTANCE_PATH.mkdir(parents=True, exist_ok=True)
             absolute_path = (DEFAULT_INSTANCE_PATH / sqlite_path).resolve()
             url = f"sqlite:///{absolute_path}"
     return url

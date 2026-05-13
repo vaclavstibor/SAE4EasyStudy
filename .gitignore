@@ -1,12 +1,44 @@
-__pycache__
+# Python environment
+server/.venv39/
+
+# pytest cache
+.pytest_cache/
+server/.pytest_cache/
+
+# ruff cache
+.ruff_cache/
+server/.ruff_cache/
+
+# pycache folders
+**/__pycache__/
+
+# sqlite database instance
+server/instance/
+
+# cache
+server/cache/
+
+# macOS noise
 .DS_Store
+**/.DS_Store
+
+# static datasets
+server/static/datasets/ml-32m-filtered/
+!server/static/datasets/ml-32m-filtered/.gitkeep
+
+# Temporarily ignore local offline folder
+OfflineEasyStudies
+
+.cursor/
+notes.txt
+proposal_instruction.txt
+proposal.tex
+__pycache__
 *.pyc
 *.pckl
 *.csv
 *.npy
 flask_session
-server/cache/
-server/instance/
 *.sqlite
 img
 cache
@@ -15,22 +47,21 @@ __MACOSX
 db.sqlite
 .ipynb_checkpoints/
 
-# Models 
+# Models
 *.pt
 *ckpt
 *.sha256
 *.xz
-
-# Environments
-server/.venv39_tmp/
-server/.venv39/
-server/.venv/
 
 # Proposal and specification
 texs/
 
 # Research
 research/
+labeling/
+data_preparation/
+.cache/
+/overleaf/
 
 # Notes from meetings
 notes/
@@ -52,22 +83,8 @@ notes/
 /server/.playwright-browsers/
 /server/static/datasets/kaggle-tmdb/
 /server/static/datasets/ml-latest/
-/server/static/datasets/ml-32m-filtered/
 
-# SAE runtime data (downloaded from release at startup)
-server/plugins/sae_steering/data/item_sae_features_*.pt
-server/plugins/sae_steering/data/item_embeddings.pt
-server/plugins/sae_steering/data/llm_labels_*.json
-server/plugins/sae_steering/data/semantic_merged_*.json
-server/plugins/sae_steering/data/cluster_profile_*.json
-
-/scripts/*
-!/scripts/reconstruct_journey.py
-labeling/
-data_preparation/
-.cache/
-/overleaf/
-# study_framework paths
+# Legacy study_framework paths
 study_framework/server/.venv39/
 study_framework/.pytest_cache/
 study_framework/server/.pytest_cache/
