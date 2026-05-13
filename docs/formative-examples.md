@@ -2,7 +2,7 @@
 
 This page is the *how-to* companion to [`tech-docs.md`](tech-docs.md) and [`design-decisions.md`](design-decisions.md). It collects worked recipes for the things future contributors will most often want to do.
 
-Every recipe is grounded in the real code. File paths are relative to `study_framework/`. Where a recipe references a binding decision, it links back to [`design-decisions.md`](design-decisions.md).
+Every recipe is grounded in the real code. File paths are relative to repository root. Where a recipe references a binding decision, it links back to [`design-decisions.md`](design-decisions.md).
 
 | Recipe | Section |
 | --- | --- |

@@ -15,6 +15,6 @@ Top-level documentation for the SAE Steering study framework, an EasyStudy deriv
 
 ## Conventions
 
-- Code paths are relative to `study_framework/`.
+- Code paths are relative to repository root.
 - The proposal (`../proposal.tex`) is the source of truth for FR / NFR ids referenced in the docs.
 - "Research TODO" features (latent-perturbation reranking, constrained-optimization reranking, sentence-transformer text steering, Redis-backed sessions for >100 concurrent users) are **documented** but **not enabled** in this build. See [`tech-docs.md`](tech-docs.md) §11 for the limitations table.

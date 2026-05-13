@@ -12,7 +12,7 @@ This directory documents the canonical local container runtime.
 
 ## Important path conventions
 
-- SQLite volume mount: `/app/instance`
+- SQLite volume mount: `/app/server/instance`
 - cache volume mount: `/app/server/cache`
 - dataset assets: `/app/server/static/datasets/ml-32m-filtered`
 - steering model/data assets: `/app/server/plugins/steering/models` and
@@ -24,15 +24,15 @@ resolution is rooted under the `server/` package.
 For the SAE plugin, only the two JSON metadata files are available in the older
 local repo copy:
 
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/study_framework/server/plugins/sae_steering/data/llm_labels_TopKSAE-1024_llm.json`
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/study_framework/server/plugins/sae_steering/data/semantic_merged_TopKSAE-1024.json`
+- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/llm_labels_TopKSAE-1024_llm.json`
+- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/semantic_merged_TopKSAE-1024.json`
 
 The checkpoint and `.pt` tensor files must come from the release/bootstrap flow
 or from an existing prepared asset directory.
 
 ## Local use
 
-From `study_framework/`:
+From repository root:
 
 ```bash
 cp docker/compose.env.example .env

@@ -12,7 +12,7 @@ Cross-references:
 
 All four user-facing modalities in `server/plugins/steering/modalities/` implement the same strategy interface:
 
-```16:22:study_framework/server/plugins/steering/modalities/base.py
+```16:22:server/plugins/steering/modalities/base.py
 class SteeringModality:
     """Small strategy interface for one user-facing steering modality."""
 
@@ -32,7 +32,7 @@ $$
 \Delta_n \;=\; \sum_{c\,:\,n \in c} \delta_c
 $$
 
-```38:52:study_framework/server/plugins/steering/recommendation/semantic_registry.py
+```38:52:server/plugins/steering/recommendation/semantic_registry.py
 def expand_feature_adjustments(raw_adjustments: dict, cluster_map: dict = None) -> dict:
     feature_adjustments = {}
     cluster_map = cluster_map or {}
@@ -54,7 +54,7 @@ def expand_feature_adjustments(raw_adjustments: dict, cluster_map: dict = None) 
 
 Each item `i` has a row `f_i` of SAE activations of length `n_features`. The recommender builds a sparse profile `a` with `a_n = Δ_n` (after expansion) and computes the SAE term as the inner product `f_i · a`, implemented as a matrix–vector product:
 
-```381:396:study_framework/server/plugins/steering/recommendation/sae_recommender.py
+```381:396:server/plugins/steering/recommendation/sae_recommender.py
         # --- 3. SAE steering score (from sliders / like boosts) ---
         sae_profile = torch.zeros(n_features, device=device)
         has_adjustments = False
@@ -85,7 +85,7 @@ $$
 w_{\text{slider}}(c) \;=\; \alpha \cdot \delta_c \quad\text{for }|\delta_c| > 10^{-3}
 $$
 
-```17:28:study_framework/server/plugins/steering/modalities/sliders.py
+```17:28:server/plugins/steering/modalities/sliders.py
 class SliderSteering(SteeringModality):
     
     modality_id = Modalities.SLIDERS
@@ -106,7 +106,7 @@ $$
 \Delta_n^{(t)} \;=\; \Delta_n^{(t-1)} \,+\, \alpha \cdot \delta_n^{(t)}
 $$
 
-```109:117:study_framework/server/plugins/steering/service/iteration_controller.py
+```109:117:server/plugins/steering/service/iteration_controller.py
     for key, val in feature_adjustments.items():
         skey = str(key)
         prev = float(previous_adjustments.get(skey, 0))
@@ -130,7 +130,7 @@ $$
 w_{\text{toggle}}(c) \;=\; \operatorname{sign}(\delta_c) \cdot \beta \quad\text{for }|\delta_c| > 10^{-3}
 $$
 
-```14:26:study_framework/server/plugins/steering/modalities/toggles.py
+```14:26:server/plugins/steering/modalities/toggles.py
 class ToggleSteering(SteeringModality):
     modality_id = Modalities.TOGGLES
 
@@ -160,7 +160,7 @@ class ToggleSteering(SteeringModality):
 - `intensity(s_i) ∈ {0.65, 1.0, 1.35}` — `1.35` for "much/way/a lot more|less" or "strongly/definitely"; `0.65` for "slightly/a bit/somewhat/kind of"; `1.0` otherwise. *(ladder and triggers are hardcoded.)*
 - `tokens(s_i)` — alphanumeric tokens of length ≥ 2 with `_STOP_WORDS` removed. *(stop-list is hardcoded.)*
 
-```103:119:study_framework/server/plugins/steering/modalities/text.py
+```103:119:server/plugins/steering/modalities/text.py
 def _split_query(query: str) -> List[Dict]:
     chunks = _SEGMENT_BOUNDARY_RE.split(query or "")
     segments = []
@@ -202,7 +202,7 @@ w(t, c) =
 \end{cases}
 $$
 
-```133:157:study_framework/server/plugins/steering/modalities/text.py
+```133:157:server/plugins/steering/modalities/text.py
 def _score_cluster(segment: Dict, cluster: Dict) -> float:
     label = (cluster.get("label") or "").lower()
     description = (cluster.get("description") or "").lower()
@@ -260,7 +260,7 @@ $$
 w(c) = \overline{\text{dir}}(c) \cdot \min\!\Big(0.95,\; \max\big(0.1,\; w_0(c) \cdot \overline{\text{int}}(c)\big)\Big)
 $$
 
-```186:202:study_framework/server/plugins/steering/modalities/text.py
+```186:202:server/plugins/steering/modalities/text.py
         avg_direction = 1 if not direction_votes else (1 if sum(direction_votes) >= 0 else -1)
         avg_intensity = (intensity_sum / contributing_segments) if contributing_segments else 1.0
         normalized_weight = min(0.95, max(0.25, default_weight + (total_score / 10.0)))
@@ -290,7 +290,7 @@ Composition with the previous iteration's map is governed by the active approach
 - **`add`** — sum per cluster, clipped to `[-0.95, 0.95]` *(clip is hardcoded)*.
 - **`intersect`** — keep only clusters present in both iterations; use iteration `t`'s weight.
 
-```44:56:study_framework/server/plugins/steering/routes/steering/actions.py
+```44:56:server/plugins/steering/routes/steering/actions.py
 def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
     mode = (mode or DEFAULT_TEXT_COMPOSITION_MODE).strip().lower()
     if mode not in SUPPORTED_TEXT_COMPOSITION_MODES:
@@ -338,7 +338,7 @@ $$
 
 The top `example_selection_top_k` clusters (config key, per-approach with study-level fallback; default `6`) by `score_e(c)` are written to `sae_example_steering` + children; the others are dropped.
 
-```48:73:study_framework/server/plugins/steering/modalities/examples.py
+```48:73:server/plugins/steering/modalities/examples.py
     mean_activation = np.mean(np.asarray(activations), axis=0)
     cluster_rows: List[Dict] = []
     for cluster in semantic_clusters.get("clusters", []):
@@ -371,7 +371,7 @@ The top `example_selection_top_k` clusters (config key, per-approach with study-
 
 **Composition (configurable).** Whether example weights are merged with the slider/toggle cumulative map at all is governed by the per-approach flag `use_selected_movies_as_examples` (config key, per-approach with study-level fallback; default `false`). When the flag is on, the iteration controller runs the `ExampleSteering` strategy on the participant's current likes every iteration and merges its output with the cumulative slider/toggle map via `_merge_adjustments` (additive, then values with `|·| < 10⁻³` are dropped). When the flag is off, likes drive only the ELSA seed re-weighting (§7) and the example modality is invoked only by the explicit `/apply-example-steering` route. In either case, example adjustments do not stack across iterations on their own — each call to `/apply-example-steering` overwrites `session["last_example_steering"]`.
 
-```129:143:study_framework/server/plugins/steering/service/iteration_controller.py
+```129:143:server/plugins/steering/service/iteration_controller.py
     example_adjustments = {}
     example_metadata = {}
     if active_model_cfg.get("use_selected_movies_as_examples") and current_liked_set:
@@ -397,7 +397,7 @@ $$
 \Delta^{(t+1)}_n \;=\; 0 \quad \forall n,\qquad \text{session cleared}
 $$
 
-```288:316:study_framework/server/plugins/steering/routes/steering/actions.py
+```288:316:server/plugins/steering/routes/steering/actions.py
 @bp.route("/reset", methods=["POST"])
 def reset_steering():
     """Dedicated reset endpoint (FR-12).
@@ -439,7 +439,7 @@ $$
 
 where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend `(1-λ)·\hat{s}_{old} + λ·…`. The seed is then consumed by the recommender as the query vector for the cosine-similarity CF term (see §1.2 and §8 below).
 
-```27:54:study_framework/server/plugins/steering/service/engine.py
+```27:54:server/plugins/steering/service/engine.py
         id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
         original_movies = session.get("elicitation_selected_movies", [])
 

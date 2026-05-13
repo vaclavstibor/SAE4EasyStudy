@@ -53,7 +53,7 @@ Each section follows the same shape: **Decision → Context → Alternatives con
 1. `db.create_all()` ran first inside `create_app()`, creating the new tables. Then `flask db upgrade` tried to `CREATE TABLE` for the same tables and failed with `OperationalError: table sae_feature_adjustment already exists`.
 2. Because the migration aborted mid-way, the `ALTER TABLE sae_steering_event ADD COLUMN raw_payload` step never ran, and every subsequent request crashed with `OperationalError: ... has no column named raw_payload`.
 
-We also discovered two `migrations/` directories existed (`study_framework/migrations/` and a stale leftover `study_framework/server/migrations/`).
+We also discovered two `migrations/` directories existed (`migrations/` and a stale leftover `server/migrations/`).
 
 **Alternatives considered.**
 

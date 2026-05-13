@@ -155,7 +155,7 @@ There is no migration framework. See [`design-decisions.md`](design-decisions.md
 ### 4.1 Module map
 
 ```
-study_framework/
+
   server/
     platform/                  framework-owned code (one-to-one with upstream EasyStudy roles)
       app.py                   create_app() factory, DB/session/login init
@@ -575,7 +575,7 @@ Column headers in each CSV match §5.2 exactly. Recommended pipeline for downstr
 ### 9.1 Local development
 
 ```bash
-# from study_framework/
+# from repository root
 ./scripts/init-db.sh                 # create-if-missing: db.create_all() from models
 ./scripts/run-dev.sh                 # gunicorn --preload on :5000
 ```
@@ -609,7 +609,7 @@ docker compose up --build
 
 The compose file mounts:
 
-- `instance/` for the SQLite dev DB,
+- `server/instance/` for the SQLite dev DB,
 - `cache/` for dataset pickles and SAE models,
 - `static/datasets/` for raw MovieLens CSVs.
 
@@ -619,7 +619,7 @@ The image entrypoint runs `scripts/init-db.sh` then starts gunicorn.
 
 | Var | Default | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `sqlite:///instance/db.sqlite` | SQLAlchemy URI. Relative SQLite paths are resolved under `study_framework/instance/`. |
+| `DATABASE_URL` | `sqlite:///db.sqlite` | SQLAlchemy URI. Relative SQLite paths are resolved under `server/instance/`. |
 | `APP_SECRET_KEY` | random per run | Flask secret. **Set this in production.** |
 | `SESSION_TYPE` | `sqlalchemy` | Flask-Session backend. Swap to `redis` and provide `SESSION_REDIS` for NFR-02. |
 | `BACKUP_DIR` | `/app/backups` | Where `/administration/db-backup` looks for `db_*.gz`. |
@@ -657,7 +657,7 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 | File | Coverage |
 | --- | --- |
-| `test_database_resolution.py` | Relative-SQLite paths resolve under `instance/`. Guards `resolve_database_url`. |
+| `test_database_resolution.py` | Relative-SQLite paths resolve under `server/instance/`. Guards `resolve_database_url`. |
 | `test_healthz.py` | `/healthz` returns 200. |
 | `test_shared_flow.py` | Shared participant-flow helpers (model effective resolution, questionnaire path resolution). |
 
