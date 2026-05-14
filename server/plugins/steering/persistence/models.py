@@ -260,6 +260,9 @@ class SaeQuestionnaireResponse(db.Model):
     questionnaire_file = db.Column(db.String)
     answers = db.Column(db.JSON, nullable=False)
     submitted_at = db.Column(db.DateTime, nullable=False)
+    # NULL when the questionnaire file declares no attention-check spec
+    # (the submission does not contribute to the pass/total ratio).
+    attention_check_passed = db.Column(db.Boolean)
 
     __table_args__ = (
         db.Index("ix_sae_questionnaire_response_participation_id", "participation_id"),

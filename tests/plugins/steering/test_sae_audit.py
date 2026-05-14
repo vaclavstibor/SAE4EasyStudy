@@ -397,5 +397,67 @@ def test_complete_study_records_final_questionnaire_and_completes_run(app_ctx):
         assert questionnaire.response_type == "final"
         assert questionnaire.questionnaire_file == "final.html"
         assert questionnaire.answers["f1_preference"] == "approach_a"
+        # ``final.html`` is a synthetic test fixture without a spec → no
+        # attention-check verdict is recorded.
+        assert questionnaire.attention_check_passed is None
         assert study_run.status == "completed"
         assert study_run.finished_at is not None
+
+
+def test_record_questionnaire_response_stores_attention_check_verdict(app_ctx):
+    """Audit writes True/False/None into ``attention_check_passed`` based on
+    the questionnaire's declared spec.
+
+    This is the cross-cut between the attention-check evaluator and the
+    typed audit pipeline — covered here so regressions in either side
+    fail loudly.
+    """
+    app, db = app_ctx
+    study, participation = _seed_participation(db)
+    db.session.commit()
+
+    with app.test_request_context("/"):
+        from flask import session
+
+        from server.plugins.steering.persistence.models import SaeQuestionnaireResponse
+        from server.plugins.steering.service import audit
+
+        session["participation_id"] = participation.id
+        session["user_study_id"] = study.id
+        session["user_study_guid"] = study.guid
+        session["approach_order"] = [0, 1]
+        session["current_phase"] = 0
+
+        audit.ensure_study_run(participation.id)
+
+        passing = audit.record_questionnaire_response(
+            "final",
+            {"f_attention_check": "same"},
+            participation_id=participation.id,
+            questionnaire_file="sae_final_questionnaire.html",
+        )
+        failing = audit.record_questionnaire_response(
+            "approach",
+            {"p_attention_check": "9"},
+            participation_id=participation.id,
+            approach_index=0,
+            questionnaire_file="sae_implicit_feedback_approach_questionnaire.html",
+        )
+        unspecified = audit.record_questionnaire_response(
+            "approach",
+            {"some_field": "x"},
+            participation_id=participation.id,
+            approach_index=1,
+            questionnaire_file="final.html",
+        )
+
+        db.session.flush()
+
+        assert passing.attention_check_passed is True
+        assert failing.attention_check_passed is False
+        assert unspecified.attention_check_passed is None
+
+        rows = SaeQuestionnaireResponse.query.order_by(
+            SaeQuestionnaireResponse.id.asc()
+        ).all()
+        assert [r.attention_check_passed for r in rows] == [True, False, None]

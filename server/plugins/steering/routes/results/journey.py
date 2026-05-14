@@ -23,6 +23,7 @@ from server.plugins.steering.persistence.models import (
 )
 
 from ...plugin import bp
+from ...results import attention_checks
 from ...results.analytics import build_prolific_block, safe_parse_json
 
 
@@ -290,17 +291,22 @@ def participant_journey(participation_id):
     questionnaire_rows = SaeQuestionnaireResponse.query.filter(
         SaeQuestionnaireResponse.study_run_id == study_run.id
     ).all()
-    questionnaire_responses = [
-        {
-            "response_type": row.response_type,
-            "approach_index": row.approach_index,
-            "approach_name": row.approach_name,
-            "questionnaire_file": row.questionnaire_file,
-            "submitted_at": row.submitted_at.isoformat() if row.submitted_at else None,
-            "answers": row.answers or {},
-        }
-        for row in questionnaire_rows
-    ]
+    questionnaire_responses = []
+    for row in questionnaire_rows:
+        spec = attention_checks.load_spec(row.questionnaire_file)
+        details = attention_checks.failure_details(spec, row.answers or {})
+        questionnaire_responses.append(
+            {
+                "response_type": row.response_type,
+                "approach_index": row.approach_index,
+                "approach_name": row.approach_name,
+                "questionnaire_file": row.questionnaire_file,
+                "submitted_at": row.submitted_at.isoformat() if row.submitted_at else None,
+                "answers": row.answers or {},
+                "attention_check_passed": row.attention_check_passed,
+                "attention_check_details": details,
+            }
+        )
 
     first_ts = events[0].created_at if events else study_run.started_at
     last_ts = (study_run.finished_at or events[-1].created_at) if events else study_run.finished_at

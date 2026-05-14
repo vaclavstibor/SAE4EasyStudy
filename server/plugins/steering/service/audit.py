@@ -14,6 +14,7 @@ from typing import Any, Iterable, List, Optional
 from server.platform.persistence.base_models import Participation, UserStudy
 from server.platform.persistence.db import db
 from server.platform.shared.common import load_user_study_config
+from server.plugins.steering.results import attention_checks
 from server.plugins.steering.persistence.models import (
     SaeApproachRun,
     SaeElicitationPick,
@@ -945,6 +946,9 @@ def record_questionnaire_response(
         questionnaire_file=questionnaire_file,
         answers=answers,
         submitted_at=utcnow(),
+        attention_check_passed=attention_checks.evaluate_for_file(
+            questionnaire_file, answers
+        ),
     )
     db.session.add(response)
     db.session.commit()
