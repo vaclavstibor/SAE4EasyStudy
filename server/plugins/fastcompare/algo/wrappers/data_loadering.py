@@ -14,7 +14,7 @@ from cachetools import cached
 from plugins.fastcompare.algo.algorithm_base import DataLoaderBase
 from plugins.utils.ml_data_loader import MLDataLoader, RatingLowFilter, MovieFilterByYear, RatingFilterOld, RatingsPerYearFilter, RatingUserFilter, RatedMovieFilter, LinkFilter
 
-from common import get_abs_project_root_path
+from server.platform.shared.common import get_abs_project_root_path
 
 from flask import url_for, has_app_context
 from PIL import Image

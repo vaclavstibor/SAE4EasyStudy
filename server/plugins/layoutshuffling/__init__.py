@@ -12,9 +12,9 @@ from plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted
 from plugins.utils.data_loading import load_ml_dataset
 from plugins.utils.interaction_logging import log_interaction, study_ended
 
-from models import Interaction, Participation, UserStudy
-from app import db
-from common import get_tr, load_languages, multi_lang, load_user_study_config
+from server.platform.persistence.base_models import Interaction, Participation, UserStudy
+from server.platform.persistence.db import db
+from server.platform.shared.common import get_tr, load_languages, multi_lang, load_user_study_config
 
 import numpy as np
 

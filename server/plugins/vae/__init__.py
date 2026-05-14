@@ -3,7 +3,7 @@ import sys
 [sys.path.append(i) for i in ['.', '..']]
 [sys.path.append(i) for i in ['../.', '../..', '../../.']]
 
-from models import UserStudy
+from server.platform.persistence.base_models import UserStudy
 
 from multiprocessing import Process
 from sqlalchemy import create_engine
