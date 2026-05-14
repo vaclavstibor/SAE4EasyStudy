@@ -1,7 +1,11 @@
-    <div class="footerDiv mt-3">
-        <p>
-            <strong>Anonymous Authors</strong>
-        </p>
+    <div class="footerDiv mt-3" style="text-align:center;padding:18px 20px 24px;color:#6c757d;font-size:0.85em;">
+        {% if study_author_contact %}
+        <span>Study contact:</span>
+        <a href="mailto:{{ study_author_contact }}"
+           style="display:inline-block;background:#eef5ff;color:#0d6efd;border-radius:999px;padding:4px 14px;margin-left:6px;font-weight:600;text-decoration:none;">
+            {{ study_author_contact }}
+        </a>
+        {% endif %}
     </div>
 </body>
 </html>

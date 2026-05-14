@@ -64,6 +64,20 @@ def create_app() -> flask.Flask:
         return "ok", 200
 
     app.config["SECRET_KEY"] = os.environ.get("APP_SECRET_KEY", "8bf29bd88d0bfb94509f5fb0")
+    app.config["STUDY_AUTHOR_NAME"] = os.environ.get(
+        "STUDY_AUTHOR_NAME", "Václav Stibor"
+    )
+    app.config["STUDY_AUTHOR_CONTACT"] = os.environ.get(
+        "STUDY_AUTHOR_CONTACT", "vaclav.stibor@student.cuni.cz"
+    )
+
+    @app.context_processor
+    def inject_study_author_info():
+        return {
+            "study_author_name": app.config["STUDY_AUTHOR_NAME"],
+            "study_author_contact": app.config["STUDY_AUTHOR_CONTACT"],
+        }
+
     db_url = resolve_database_url()
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 

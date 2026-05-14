@@ -40,9 +40,8 @@ PLUGIN = StudyPluginContract(
     metadata=PluginMetadata(
         name=PLUGIN_NAME,
         version="0.1.0",
-        author="Study Framework",
-        author_contact="noreply@example.com",
         description="Minimal template plugin for creating new study plugins.",
+        hidden_from_admin=True,
     ),
     blueprint=bp,
 )

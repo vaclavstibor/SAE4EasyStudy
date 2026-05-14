@@ -8,8 +8,6 @@ from server.platform.runtime import PluginMetadata, StudyPluginContract
 from server.platform.shared.common import load_languages
 
 from .constants import (
-    PLUGIN_AUTHOR,
-    PLUGIN_AUTHOR_CONTACT,
     PLUGIN_DESCRIPTION,
     PLUGIN_NAME,
     PLUGIN_VERSION,
@@ -40,14 +38,12 @@ def plugin_name():
 
 from .routes import admin, api, study  # noqa: E402,F401
 from .routes.results import journey, views  # noqa: E402,F401
-from .routes.steering import actions  # noqa: E402,F401
+from .routes.steering import actions, views as steering_views  # noqa: E402,F401
 
 PLUGIN = StudyPluginContract(
     metadata=PluginMetadata(
         name=PLUGIN_NAME,
         version=PLUGIN_VERSION,
-        author=PLUGIN_AUTHOR,
-        author_contact=PLUGIN_AUTHOR_CONTACT,
         description=PLUGIN_DESCRIPTION,
     ),
     blueprint=bp,

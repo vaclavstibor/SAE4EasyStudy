@@ -8,9 +8,8 @@ from typing import Any
 class PluginMetadata:
     name: str
     version: str
-    author: str
-    author_contact: str
     description: str
+    hidden_from_admin: bool = False
 
 
 @dataclass

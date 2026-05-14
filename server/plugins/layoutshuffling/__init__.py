@@ -8,23 +8,31 @@ try:
 except Exception:
     QuantileTransformer = None
 
-from plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance, prepare_tf_model
-from plugins.utils.data_loading import load_ml_dataset
-from plugins.utils.interaction_logging import log_interaction, study_ended
+from server.plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance, prepare_tf_model
+from server.plugins.utils.data_loading import load_ml_dataset
+from server.plugins.utils.interaction_logging import log_interaction, study_ended
 
 from server.platform.persistence.base_models import Interaction, Participation, UserStudy
 from server.platform.persistence.db import db
+from server.platform.runtime import PluginMetadata, StudyPluginContract
 from server.platform.shared.common import get_tr, load_languages, multi_lang, load_user_study_config
 
 import numpy as np
 
-__plugin_name__ = "layoutshuffling"
-__version__ = "0.1.0"
-__author__ = "Anonymous Author"
-__author_contact__ = "Anonymous@Author.com"
-__description__ = "Simple plugin comparing RLprop with Matrix Factorization while shuffling result layouts (for illustration purposes only)."
+PLUGIN_NAME = "layoutshuffling"
+PLUGIN_VERSION = "0.1.0"
+PLUGIN_DESCRIPTION = (
+    "Simple plugin comparing RLprop with Matrix Factorization while shuffling result "
+    "layouts (kept as an upstream illustration of a multi-algorithm comparison study)."
+)
 
-bp = Blueprint(__plugin_name__, __plugin_name__, url_prefix=f"/{__plugin_name__}")
+bp = Blueprint(
+    PLUGIN_NAME,
+    __name__,
+    url_prefix=f"/{PLUGIN_NAME}",
+    template_folder="templates",
+    static_folder="static",
+)
 
 NUM_TO_SELECT = 5
 
@@ -52,7 +60,7 @@ def get_lang():
 @bp.context_processor
 def plugin_name():
     return {
-        "plugin_name": __plugin_name__
+        "plugin_name": PLUGIN_NAME
     }
 
 @bp.route("/create")
@@ -149,7 +157,7 @@ def compare_algorithms():
         "iteration": session["iteration"],
         "result_layout": result_layout,
         "MIN_ITERATION_TO_CANCEL": len(session["permutation"]),
-        "consuming_plugin": __plugin_name__
+        "consuming_plugin": PLUGIN_NAME
     }
    
     params["contacts"] = tr("footer_contacts")
@@ -694,8 +702,15 @@ def initialize():
 def dispose():
     return "OK"
 
-def register():
-    return {
-        "bep": dict(blueprint=bp, prefix=None),
-        # "hep": dict(before_request=limit_handler)
-    }
+PLUGIN = StudyPluginContract(
+    metadata=PluginMetadata(
+        name=PLUGIN_NAME,
+        version=PLUGIN_VERSION,
+        description=PLUGIN_DESCRIPTION,
+    ),
+    blueprint=bp,
+)
+
+
+def get_plugin() -> StudyPluginContract:
+    return PLUGIN

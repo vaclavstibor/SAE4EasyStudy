@@ -8,6 +8,8 @@ CANONICAL_PLUGIN_MODULES = [
     "server.plugins.steering",
     "server.plugins.fastcompare",
     "server.plugins.empty_template",
+    "server.plugins.layoutshuffling",
+    "server.plugins.vae",
 ]
 
 

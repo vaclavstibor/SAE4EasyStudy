@@ -73,7 +73,7 @@
 
       .hero-copy {
         color: #556274;
-        max-width: 760px;
+        max-width: 550px;
         margin-bottom: 6px;
       }
 
@@ -371,7 +371,7 @@
         color: #64748b;
       }
 
-      @media (max-width: 768px) {
+      @media (max-width: 991.98px) {
         .admin-shell {
           padding: 18px 12px 28px;
         }
@@ -406,12 +406,11 @@
             <div>
               <div class="hero-title">EasyStudy Administration</div>
               <div class="hero-copy">
-                A framework for Easy Deployment of User Studies on Recommender Systems.
+                The framework administration panel for Easy Deployment of User Studies on Recommender Systems. It allows you to create, manage, and analyze user studies.
               </div>
-              <div class="hero-subcopy">Contact information: Hidden due to <strong>Anonymization</strong></div>
+              <div class="hero-subcopy">Contact information: <a href="mailto:{{ study_author_contact }}">{{ study_author_contact }}</a></div>
             </div>
             <div class="hero-toolbar">
-              <span class="signed-in-badge">Signed in as <strong>{{ current_user }}</strong></span>
               <div class="hero-button-row">
                 <b-btn class="hero-btn-primary" href="">
                   <b-icon icon="github" class="mr-1"></b-icon>
@@ -428,6 +427,7 @@
                   </b-button>
                 </b-form>
               </div>
+              <span class="signed-in-badge">Signed in as <strong>{{ current_user }}</strong></span>
             </div>
           </div>
         </div>
@@ -473,10 +473,6 @@
 
             <template #cell(plugin_version)="data">
               <span class="status-pill status-inactive">v[[ data.value ]]</span>
-            </template>
-
-            <template #cell(plugin_author)="data">
-              <div class="table-sub">[[ data.value ]]</div>
             </template>
 
             <template #cell(create_url)="data">
@@ -618,16 +614,6 @@
                 >
                   Results
                 </a>
-                <a
-                  v-if="data.item.initialized && data.item.parent_plugin === 'sae_steering'"
-                  class="btn btn-sm table-action-btn"
-                  style="background:#e7f1ff;color:#0b57d0;"
-                  target="_blank"
-                  :href="'/sae_steering/export-raw/' + data.item.guid"
-                  title="Per-participant event log (every interaction row + Prolific IDs from the DB). Noisy mouse/viewport events are filtered out by default."
-                >
-                  Download raw events (JSON)
-                </a>
                 <span v-if="!data.item.initialized" class="empty-copy">Unavailable</span>
               </div>
             </template>
@@ -652,7 +638,6 @@
                     {key: "plugin_name", label: "Template"},
                     {key: "plugin_description", label: "Description"},
                     {key: "plugin_version", label: "Version", thClass: "cell-center", tdClass: "cell-center"},
-                    {key: "plugin_author", label: "Author"},
                     {key: "create_url", label: "Create", thClass: "cell-center", tdClass: "cell-center"}
                 ],
                 existingUserStudiesFields: [

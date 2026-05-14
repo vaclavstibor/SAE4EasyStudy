@@ -63,6 +63,16 @@ def notify():
 
 
 def get_loaded_plugins():
+    """Return plugins that should appear in the admin "Available templates" table.
+
+    A plugin is listed when it (1) registered a ``/<name>/create`` endpoint so
+    a researcher can actually instantiate a study, and (2) did not opt out via
+    ``PluginMetadata.hidden_from_admin``. The flag lets the platform keep
+    internally-useful plugins (developer scaffolding such as ``emptytemplate``,
+    or algorithm-wrapper helpers such as ``vae`` that are consumed by another
+    plugin) loaded and routable without exposing them as a study type
+    researchers can pick.
+    """
     endpoints = {str(rule) for rule in flask.current_app.url_map.iter_rules()}
     plugin_contracts = flask.current_app.extensions.get("study_plugin_contracts", [])
     return [
@@ -70,11 +80,11 @@ def get_loaded_plugins():
             "plugin_name": plugin.metadata.name,
             "plugin_description": plugin.metadata.description,
             "plugin_version": plugin.metadata.version,
-            "plugin_author": plugin.metadata.author,
             "create_url": f"/{plugin.metadata.name}/create",
         }
         for plugin in plugin_contracts
         if f"/{plugin.metadata.name}/create" in endpoints
+        and not plugin.metadata.hidden_from_admin
     ]
 
 

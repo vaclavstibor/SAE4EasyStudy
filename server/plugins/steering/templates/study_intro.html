@@ -235,6 +235,9 @@
                     {% if has_questionnaire %}
                     <span class="meta-pill">Questionnaire included</span>
                     {% endif %}
+                    {% if study_author_contact %}
+                    <span class="meta-pill">Contact: {{ study_author_contact }}</span>
+                    {% endif %}
                 </div>
 
                 {% if custom_intro_html %}

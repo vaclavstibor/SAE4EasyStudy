@@ -201,6 +201,11 @@
 
             <div class="finish-footer">
                 <div class="contact-chips">
+                    {% if study_author_contact %}
+                    <a class="contact-chip" href="mailto:{{ study_author_contact }}">
+                        {{ study_author_contact }}
+                    </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

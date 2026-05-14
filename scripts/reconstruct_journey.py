@@ -5,8 +5,11 @@ Reconstruct a participant's chronological journey from an exported study JSON.
 Usage:
     python scripts/reconstruct_journey.py <export.json> [--participant 0] [--verbose]
 
-This thin CLI wraps the shared `journey` module used by the admin UI so the
-on-screen journey view and the offline reconstruction stay perfectly in sync.
+Consumes the ``schema = sae-typed-audit.v1`` JSON shape produced by the admin
+``/export-raw/<guid>`` endpoint and replays one participant's chronological
+journey on stdout. The actual timeline assembly lives in
+:mod:`server.plugins.steering.results.journey_builder` so the offline CLI and
+the on-screen admin journey view stay in sync.
 """
 
 import argparse
@@ -14,14 +17,10 @@ import json
 import os
 import sys
 
-# Allow running both from the repo root and from inside server/.
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(_REPO_ROOT, "server"))
-sys.path.insert(0, os.path.join(_REPO_ROOT, "server", "plugins"))
+sys.path.insert(0, _REPO_ROOT)
 
-from sae_steering.journey import (  # noqa: E402
-    build_journey,
-)
+from server.plugins.steering.results.journey_builder import build_journey  # noqa: E402
 
 
 def main():
@@ -31,7 +30,7 @@ def main():
         "--participant", "-p", type=int, default=0, help="Participant index (default: 0)"
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Include mouse/viewport noise events"
+        "--verbose", "-v", action="store_true", help="Include autosave / system noise events"
     )
     args = parser.parse_args()
 
@@ -44,8 +43,7 @@ def main():
         sys.exit(1)
 
     p = participants[args.participant]
-    interactions = p.get("interactions", [])
-    journey = build_journey(interactions, include_noise=args.verbose)
+    journey = build_journey(p, include_noise=args.verbose)
 
     conf = data.get("study_config", {})
     models = conf.get("models", [])

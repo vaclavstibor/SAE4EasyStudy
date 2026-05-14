@@ -17,8 +17,6 @@ PLUGIN = StudyPluginContract(
     metadata=PluginMetadata(
         name="fastcompare",
         version="0.1.0",
-        author="Study Framework",
-        author_contact="noreply@example.com",
         description="Minimal comparison-study plugin skeleton used as a plugin-first reference.",
     ),
     blueprint=bp,
