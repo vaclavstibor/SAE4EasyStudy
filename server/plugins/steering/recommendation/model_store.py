@@ -1,3 +1,5 @@
+"""Default identifiers and filesystem layout for SAE checkpoints and runtime assets."""
+
 from pathlib import Path
 
 DEFAULT_TOPK_SAE_MODEL_ID = "TopKSAE-1024"

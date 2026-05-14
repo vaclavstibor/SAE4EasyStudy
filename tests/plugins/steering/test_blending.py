@@ -1,3 +1,5 @@
+"""Tests for SAE feature-conditioned reranking and signal blending."""
+
 import numpy as np
 import torch
 

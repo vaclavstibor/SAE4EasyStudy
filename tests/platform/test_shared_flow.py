@@ -1,3 +1,5 @@
+"""Tests for shared participant flow routes (start, join, finish, export)."""
+
 import json
 from datetime import datetime
 from io import BytesIO

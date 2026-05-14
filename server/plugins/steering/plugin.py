@@ -40,8 +40,7 @@ def plugin_name():
 
 from .routes import admin, api, study  # noqa: E402,F401
 from .routes.results import journey, views  # noqa: E402,F401
-from .routes.steering import actions, views as steering_views  # noqa: E402,F401
-
+from .routes.steering import actions  # noqa: E402,F401
 
 PLUGIN = StudyPluginContract(
     metadata=PluginMetadata(

@@ -1,3 +1,9 @@
+"""Platform-owned SQLAlchemy models (User, UserStudy, Participation, ...).
+
+These tables are shared across all study plugins; plugin-specific tables live in
+``server/plugins/<name>/persistence/models.py``.
+"""
+
 from flask_wtf import FlaskForm
 from wtforms import EmailField, PasswordField
 from wtforms.validators import DataRequired, Length

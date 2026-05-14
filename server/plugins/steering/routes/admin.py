@@ -75,8 +75,7 @@ def available_steering_modes():
                 "name": "Natural Language (Text)",
                 "id": Modalities.TEXT,
                 "description": (
-                    "Describe preferences in natural language and map them to "
-                    "feature adjustments"
+                    "Describe preferences in natural language and map them to feature adjustments"
                 ),
             },
             {
@@ -96,16 +95,14 @@ def available_feature_selection_algorithms():
                 "id": "personalized_grouped_topk",
                 "name": "Personalized grouped Top-K",
                 "description": (
-                    "Personalize sliders from elicitation picks and deduplicate "
-                    "similar concepts."
+                    "Personalize sliders from elicitation picks and deduplicate similar concepts."
                 ),
             },
             {
                 "id": "global_label_topk",
                 "name": "Global label-diverse Top-K",
                 "description": (
-                    "Show globally strong, label-diverse features independent of "
-                    "elicitation."
+                    "Show globally strong, label-diverse features independent of elicitation."
                 ),
             },
         ]

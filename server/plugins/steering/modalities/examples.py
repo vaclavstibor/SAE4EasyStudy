@@ -10,7 +10,6 @@ from ..constants import DEFAULT_TOPK_SAE_MODEL_ID, Modalities
 from ..recommendation.semantic_registry import load_semantic_clusters
 from .base import SteeringModality, SteeringResult
 
-
 DEFAULT_EXAMPLE_TOP_K = 6
 DEFAULT_EXAMPLE_WEIGHT = 0.65
 
@@ -25,11 +24,21 @@ def derive_example_based_clusters(
 ) -> Dict:
     example_ids = [int(movie_id) for movie_id in (example_movie_ids or []) if movie_id is not None]
     if not example_ids:
-        return {"example_movie_ids": [], "clusters": [], "adjustments": {}, "matched_movie_count": 0}
+        return {
+            "example_movie_ids": [],
+            "clusters": [],
+            "adjustments": {},
+            "matched_movie_count": 0,
+        }
 
     recommender.load()
     if recommender.item_features is None or recommender.item_ids is None:
-        return {"example_movie_ids": example_ids, "clusters": [], "adjustments": {}, "matched_movie_count": 0}
+        return {
+            "example_movie_ids": example_ids,
+            "clusters": [],
+            "adjustments": {},
+            "matched_movie_count": 0,
+        }
 
     id_to_idx = {int(movie_id): idx for idx, movie_id in enumerate(recommender.item_ids)}
     activations = []
@@ -43,7 +52,12 @@ def derive_example_based_clusters(
         activations.append(row)
 
     if not activations:
-        return {"example_movie_ids": example_ids, "clusters": [], "adjustments": {}, "matched_movie_count": 0}
+        return {
+            "example_movie_ids": example_ids,
+            "clusters": [],
+            "adjustments": {},
+            "matched_movie_count": 0,
+        }
 
     mean_activation = np.mean(np.asarray(activations), axis=0)
     cluster_rows: List[Dict] = []
@@ -94,8 +108,18 @@ class ExampleSteering(SteeringModality):
             example_movie_ids=example_movie_ids,
             recommender=recommender,
             semantic_clusters=semantic_registry,
-            top_k=int(active_model.get("example_selection_top_k", conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K))),
-            default_weight=float(active_model.get("example_selection_weight", conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT))),
+            top_k=int(
+                active_model.get(
+                    "example_selection_top_k",
+                    conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K),
+                )
+            ),
+            default_weight=float(
+                active_model.get(
+                    "example_selection_weight",
+                    conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT),
+                )
+            ),
         )
         return SteeringResult(
             features=derived.get("clusters", []),
@@ -103,9 +127,18 @@ class ExampleSteering(SteeringModality):
             metadata={
                 "example_movie_ids": derived.get("example_movie_ids", []),
                 "matched_movie_count": derived.get("matched_movie_count", 0),
-                "example_top_k": int(active_model.get("example_selection_top_k", conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K))),
-                "example_strength": float(active_model.get("example_selection_weight", conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT))),
+                "example_top_k": int(
+                    active_model.get(
+                        "example_selection_top_k",
+                        conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K),
+                    )
+                ),
+                "example_strength": float(
+                    active_model.get(
+                        "example_selection_weight",
+                        conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT),
+                    )
+                ),
                 "matched_clusters": derived.get("clusters", []),
             },
         )
-

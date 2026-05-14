@@ -9,7 +9,6 @@ from ..constants import DEFAULT_TOPK_SAE_MODEL_ID, Modalities
 from ..recommendation.semantic_registry import load_semantic_clusters
 from .base import SteeringModality, SteeringResult
 
-
 DEFAULT_TEXT_TOP_K = 6
 DEFAULT_TEXT_WEIGHT = 0.55
 
@@ -223,12 +222,19 @@ class TextSteering(SteeringModality):
         resolved = resolve_text_query_to_clusters(
             query,
             clusters=semantic_registry.get("clusters", []),
-            top_k=int(active_model.get("text_steering_top_k", conf.get("text_steering_top_k", DEFAULT_TEXT_TOP_K))),
-            default_weight=float(active_model.get("text_steering_weight", conf.get("text_steering_weight", DEFAULT_TEXT_WEIGHT))),
+            top_k=int(
+                active_model.get(
+                    "text_steering_top_k", conf.get("text_steering_top_k", DEFAULT_TEXT_TOP_K)
+                )
+            ),
+            default_weight=float(
+                active_model.get(
+                    "text_steering_weight", conf.get("text_steering_weight", DEFAULT_TEXT_WEIGHT)
+                )
+            ),
         )
         return SteeringResult(
             features=resolved.get("clusters", []),
             adjustments=resolved.get("adjustments", {}),
             metadata={"query": query, "segments": resolved.get("segments", [])},
         )
-

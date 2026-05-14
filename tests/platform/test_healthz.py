@@ -1,3 +1,6 @@
+"""Smoke test for the ``/healthz`` liveness probe."""
+
+
 def test_healthz_endpoint(test_app):
     app, _ = test_app
     client = app.test_client()

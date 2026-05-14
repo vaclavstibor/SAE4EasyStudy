@@ -1,3 +1,5 @@
+"""SQLAlchemy, session, and CSRF singletons plus database URL resolution."""
+
 import os
 from pathlib import Path
 

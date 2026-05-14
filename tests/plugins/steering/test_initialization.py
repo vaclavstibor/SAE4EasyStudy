@@ -1,3 +1,5 @@
+"""Tests for the SAE steering study initialization endpoint."""
+
 import json
 from datetime import datetime
 

@@ -7,23 +7,37 @@ from flask import session
 from server.platform.shared.common import load_user_study_config
 from server.plugins.utils.data_loading import load_ml_dataset
 
+from ..approach_state import (
+    get_approach_id_map,
+    get_approach_movie_set,
+    remember_shown_movies,
+    set_approach_movie_set,
+)
 from ..constants import (
     DEFAULT_RERANKING_STRATEGY,
     DEFAULT_STEERING_MODE,
     DEFAULT_TOPK_SAE_MODEL_ID,
-    Modalities,
     SUPPORTED_RERANKING_STRATEGIES,
+    Modalities,
     get_default_models,
 )
-from .participation import get_effective_models
-from ..approach_state import get_approach_id_map, get_approach_movie_set, remember_shown_movies, set_approach_movie_set
-from ..recommendation.service import generate_steered_recommendations, generate_steered_recommendations_for_model, unwrap_recommendation_payload
-from ..recommendation.semantic_registry import expand_feature_adjustments
-from . import audit
-from ..study_config import get_active_model_config, get_study_dataset_variant, normalize_steering_mode, normalize_study_config
-from .engine import update_elsa_seed_with_likes
 from ..modalities.registry import get_modality_strategy
 from ..modalities.sliders import SLIDER_AMPLIFICATION, compute_updated_sliders
+from ..recommendation.semantic_registry import expand_feature_adjustments
+from ..recommendation.service import (
+    generate_steered_recommendations,
+    generate_steered_recommendations_for_model,
+    unwrap_recommendation_payload,
+)
+from ..study_config import (
+    get_active_model_config,
+    get_study_dataset_variant,
+    normalize_steering_mode,
+    normalize_study_config,
+)
+from . import audit
+from .engine import update_elsa_seed_with_likes
+from .participation import get_effective_models
 
 
 def preference_confirmation_error():
@@ -52,10 +66,14 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     suppressed_genres = data.get("suppressed_features", data.get("suppressed_genres", []))
     search_context = data.get("search_context", {})
     control_state = data.get("control_state", [])
-    preferences_approved = bool(data.get("preferences_approved", session.get("iteration_preferences_approved", False)))
+    preferences_approved = bool(
+        data.get("preferences_approved", session.get("iteration_preferences_approved", False))
+    )
 
     cluster_map = session.get("cluster_map", {})
-    feature_adjustments = expand_feature_adjustments(raw_adjustments=raw_adjustments, cluster_map=cluster_map)
+    feature_adjustments = expand_feature_adjustments(
+        raw_adjustments=raw_adjustments, cluster_map=cluster_map
+    )
 
     conf = normalize_study_config(load_user_study_config(session.get("user_study_id")))
     if not conf:
@@ -72,7 +90,9 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     enable_comparison = conf.get("enable_comparison", False)
     interaction_mode = conf.get("interaction_mode", request_interaction_mode)
     models = get_effective_models(conf)
-    is_sequential_cfg = conf.get("comparison_mode", "side_by_side") == "sequential" and len(models) >= 2
+    is_sequential_cfg = (
+        conf.get("comparison_mode", "side_by_side") == "sequential" and len(models) >= 2
+    )
     current_phase = session.get("current_phase", 0)
     if is_sequential_cfg:
         enable_comparison = False
@@ -80,8 +100,12 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     num_recommendations = max(1, int(conf.get("num_recommendations", 20)))
     active_model_cfg = get_active_model_config(conf)
     active_sae_id = active_model_cfg.get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
-    steering_mode_for_iteration = active_model_cfg.get("steering_mode", conf.get("steering_mode", DEFAULT_STEERING_MODE))
-    reranking_strategy = str(conf.get("reranking_strategy") or DEFAULT_RERANKING_STRATEGY).strip().lower()
+    steering_mode_for_iteration = active_model_cfg.get(
+        "steering_mode", conf.get("steering_mode", DEFAULT_STEERING_MODE)
+    )
+    reranking_strategy = (
+        str(conf.get("reranking_strategy") or DEFAULT_RERANKING_STRATEGY).strip().lower()
+    )
     if reranking_strategy not in SUPPORTED_RERANKING_STRATEGIES:
         reranking_strategy = DEFAULT_RERANKING_STRATEGY
 
@@ -98,7 +122,9 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
         remember_shown_movies(0, shown_map.get("0", []))
 
     participation_id = session.get("participation_id")
-    previous_adjustments = {} if interaction_mode == "reset" else dict(session.get("cumulative_adjustments", {}))
+    previous_adjustments = (
+        {} if interaction_mode == "reset" else dict(session.get("cumulative_adjustments", {}))
+    )
     user_touched = set(session.get("user_touched_features", []))
 
     previous_adjustments_before = dict(previous_adjustments)
@@ -146,9 +172,13 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     already_boosted = set(int(movie) for movie in session.get("boosted_liked_ids", []))
     new_likes = [movie for movie in current_liked if movie not in already_boosted]
     removed_likes = [movie for movie in already_boosted if movie not in current_liked]
-    like_weight = float(active_model_cfg.get("selection_signal_weight", conf.get("selection_signal_weight", 0.5)))
+    like_weight = float(
+        active_model_cfg.get("selection_signal_weight", conf.get("selection_signal_weight", 0.5))
+    )
     if new_likes or removed_likes:
-        update_elsa_seed_with_likes(current_liked, active_sae_id, like_weight=like_weight, like_cap=10)
+        update_elsa_seed_with_likes(
+            current_liked, active_sae_id, like_weight=like_weight, like_cap=10
+        )
     session["boosted_liked_ids"] = list(current_liked)
 
     loader = load_ml_dataset(ml_variant=get_study_dataset_variant(conf))
@@ -202,7 +232,9 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     is_sequential = conf.get("comparison_mode", "side_by_side") == "sequential" and len(models) >= 2
     total_phases = len(models) if is_sequential else 1
     is_final_iteration_in_phase = (current_iteration + 1) > max_iterations
-    is_final_of_study = is_final_iteration_in_phase and ((current_phase + 1) >= total_phases if is_sequential else True)
+    is_final_of_study = is_final_iteration_in_phase and (
+        (current_phase + 1) >= total_phases if is_sequential else True
+    )
 
     response_data = {
         "status": "success",
@@ -232,7 +264,7 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
         recommendations, debug_insights = unwrap_recommendation_payload(payload)
         response_data["recommendations"] = recommendations
         if participation_id:
-            audit.record_recommendations_shown(
+            audit.record_recommendation_set(
                 recommendations,
                 participation_id=participation_id,
                 approach_index=current_phase,
@@ -242,12 +274,20 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                 debug_payload=debug_insights,
             )
         shown_map = get_approach_id_map("last_shown_movies_per_phase")
-        shown_map[str(int(current_phase))] = [int(row.get("movie_idx")) for row in recommendations if row.get("movie_idx") is not None]
+        shown_map[str(int(current_phase))] = [
+            int(row.get("movie_idx")) for row in recommendations if row.get("movie_idx") is not None
+        ]
         session["last_shown_movies_per_phase"] = shown_map
     elif enable_comparison and len(models) >= 2:
         payload_a = generate_steered_recommendations_for_model(
             loader=loader,
-            selected_movies=list(set(selected_movies + excluded_movie_ids + list(get_approach_movie_set("seen_movies_per_phase", 0)))),
+            selected_movies=list(
+                set(
+                    selected_movies
+                    + excluded_movie_ids
+                    + list(get_approach_movie_set("seen_movies_per_phase", 0))
+                )
+            ),
             feature_adjustments=recommendation_adjustments,
             model_config=models[0],
             k=num_recommendations,
@@ -255,7 +295,13 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
         )
         payload_b = generate_steered_recommendations_for_model(
             loader=loader,
-            selected_movies=list(set(selected_movies + excluded_movie_ids + list(get_approach_movie_set("seen_movies_per_phase", 1)))),
+            selected_movies=list(
+                set(
+                    selected_movies
+                    + excluded_movie_ids
+                    + list(get_approach_movie_set("seen_movies_per_phase", 1))
+                )
+            ),
             feature_adjustments=recommendation_adjustments,
             model_config=models[1],
             k=num_recommendations,
@@ -268,7 +314,7 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
         response_data["recommendations_b"] = recommendations_b
         response_data["recommendations"] = recommendations_a
         if participation_id:
-            audit.record_recommendations_shown(
+            audit.record_recommendation_set(
                 recommendations_a,
                 participation_id=participation_id,
                 approach_index=0,
@@ -277,7 +323,7 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                 steering_mode=models[0].get("steering_mode", steering_mode_for_iteration),
                 debug_payload=debug_a,
             )
-            audit.record_recommendations_shown(
+            audit.record_recommendation_set(
                 recommendations_b,
                 participation_id=participation_id,
                 approach_index=1,
@@ -287,8 +333,16 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                 debug_payload=debug_b,
             )
         shown_map = get_approach_id_map("last_shown_movies_per_phase")
-        shown_map["0"] = [int(row.get("movie_idx")) for row in recommendations_a if row.get("movie_idx") is not None]
-        shown_map["1"] = [int(row.get("movie_idx")) for row in recommendations_b if row.get("movie_idx") is not None]
+        shown_map["0"] = [
+            int(row.get("movie_idx"))
+            for row in recommendations_a
+            if row.get("movie_idx") is not None
+        ]
+        shown_map["1"] = [
+            int(row.get("movie_idx"))
+            for row in recommendations_b
+            if row.get("movie_idx") is not None
+        ]
         session["last_shown_movies_per_phase"] = shown_map
     else:
         seen_single = get_approach_movie_set("seen_movies_per_phase", 0)
@@ -311,7 +365,7 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
             )
         response_data["recommendations"] = recommendations
         if participation_id:
-            audit.record_recommendations_shown(
+            audit.record_recommendation_set(
                 recommendations,
                 participation_id=participation_id,
                 approach_index=0,
@@ -321,7 +375,9 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                 debug_payload=debug_insights,
             )
         shown_map = get_approach_id_map("last_shown_movies_per_phase")
-        shown_map["0"] = [int(row.get("movie_idx")) for row in recommendations if row.get("movie_idx") is not None]
+        shown_map["0"] = [
+            int(row.get("movie_idx")) for row in recommendations if row.get("movie_idx") is not None
+        ]
         session["last_shown_movies_per_phase"] = shown_map
 
     if steering_mode_for_iteration == Modalities.TEXT:
@@ -344,4 +400,3 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = bool(is_final_iteration_in_phase)
     return response_data
-

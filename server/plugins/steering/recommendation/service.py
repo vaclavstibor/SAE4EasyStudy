@@ -16,7 +16,14 @@ def load_tmdb_overviews():
     if TMDB_CACHE is not None:
         return TMDB_CACHE
     plots_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "static", "datasets", "ml-32m-filtered", "plots.csv"
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "static",
+        "datasets",
+        "ml-32m-filtered",
+        "plots.csv",
     )
     TMDB_CACHE = {}
     if os.path.exists(plots_path):
@@ -81,7 +88,10 @@ def generate_steered_recommendations_for_model(
         recommender = get_sae_recommender(model_id=sae_model_id)
         recommender.load()
         if recommender.item_features is None or recommender.item_ids is None:
-            print("[generate_steered_recs] SAE runtime activations missing; falling back to metadata-based recommendations")
+            print(
+                "[generate_steered_recs] SAE runtime activations missing; "
+                "falling back to metadata-based recommendations"
+            )
             return fallback_genre_recommendations(loader, selected_movies, feature_adjustments, k)
 
         neuron_adjustments = {int(key): float(value) for key, value in feature_adjustments.items()}
@@ -113,7 +123,9 @@ def generate_steered_recommendations_for_model(
             genre_bonus=genre_bonus,
             return_debug=True,
         )
-        raw_recommendations = rec_payload.get("results", []) if isinstance(rec_payload, dict) else rec_payload
+        raw_recommendations = (
+            rec_payload.get("results", []) if isinstance(rec_payload, dict) else rec_payload
+        )
         debug_payload = rec_payload.get("debug", {}) if isinstance(rec_payload, dict) else {}
         print(f"[generate_steered_recs] Raw recommendations: {len(raw_recommendations)}")
         if debug_payload:
@@ -169,7 +181,9 @@ def generate_steered_recommendations_for_model(
                     "title": title,
                     "movie_idx": movie_id,
                     "score": rec.get("score", 0.5),
-                    "metadata": " | ".join([genre for genre in genres if genre != "(no genres listed)"]),
+                    "metadata": " | ".join(
+                        [genre for genre in genres if genre != "(no genres listed)"]
+                    ),
                     "matched_features": rec.get("matched_features", {}),
                     "model": model_config.get("id", "unknown"),
                     "url": image_url,
@@ -182,16 +196,24 @@ def generate_steered_recommendations_for_model(
         if skipped_unknown_id:
             print(
                 "[generate_steered_recommendations_for_model] "
-                f"Skipped {len(skipped_unknown_id)} items with unknown IDs, sample: {skipped_unknown_id[:10]}"
+                f"Skipped {len(skipped_unknown_id)} items with unknown IDs, "
+                f"sample: {skipped_unknown_id[:10]}"
             )
         if skipped_missing_meta:
             print(
                 "[generate_steered_recommendations_for_model] "
-                f"Skipped {len(skipped_missing_meta)} items with missing metadata, sample: {skipped_missing_meta[:10]}"
+                f"Skipped {len(skipped_missing_meta)} items with missing metadata, "
+                f"sample: {skipped_missing_meta[:10]}"
             )
         if len(results) < k:
-            print(f"[generate_steered_recommendations_for_model] WARNING: only {len(results)} results after filtering (target {k})")
-        print(f"[generate_steered_recommendations_for_model] Returning {len(results)} recommendations (target {k})")
+            print(
+                "[generate_steered_recommendations_for_model] WARNING: "
+                f"only {len(results)} results after filtering (target {k})"
+            )
+        print(
+            "[generate_steered_recommendations_for_model] "
+            f"Returning {len(results)} recommendations (target {k})"
+        )
         return {"recommendations": results[:k], "debug": debug_payload}
     except Exception as exc:
         print(f"[generate_steered_recommendations_for_model] Error: {exc}")
@@ -254,7 +276,9 @@ def fallback_genre_recommendations(loader, selected_movies, feature_adjustments,
                     "title": title,
                     "movie_idx": movie_id,
                     "score": final_score,
-                    "metadata": " | ".join([genre for genre in movie_genres if genre != "(no genres listed)"]),
+                    "metadata": " | ".join(
+                        [genre for genre in movie_genres if genre != "(no genres listed)"]
+                    ),
                     "url": image_url,
                 }
             )

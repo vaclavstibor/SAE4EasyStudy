@@ -24,7 +24,9 @@ def get_approach_movie_set(session_key: str, approach_idx: int) -> set:
 
 def set_approach_movie_set(session_key: str, approach_idx: int, movie_ids: set) -> None:
     approach_map = get_approach_id_map(session_key)
-    approach_map[str(int(approach_idx))] = sorted({int(mid) for mid in movie_ids if mid is not None})
+    approach_map[str(int(approach_idx))] = sorted(
+        {int(mid) for mid in movie_ids if mid is not None}
+    )
     session[session_key] = approach_map
 
 
@@ -38,7 +40,9 @@ def get_approach_token_set(session_key: str, approach_idx: int) -> set:
 
 def set_approach_token_set(session_key: str, approach_idx: int, tokens: set) -> None:
     approach_map = get_approach_id_map(session_key)
-    approach_map[str(int(approach_idx))] = sorted({str(token) for token in tokens if token is not None})
+    approach_map[str(int(approach_idx))] = sorted(
+        {str(token) for token in tokens if token is not None}
+    )
     session[session_key] = approach_map
 
 

@@ -11,7 +11,6 @@ from server.plugins.steering.persistence.models import (
     SaeExampleSteeringMovie,
     SaeFeatureAdjustment,
     SaeFeatureSearch,
-    SaeFeatureSearchHit,
     SaeMovieFeedback,
     SaeQuestionnaireResponse,
     SaeRecommendationItem,
@@ -41,7 +40,7 @@ def _event_summary(event, ctx):
 
     if event.event_type == "elicitation-search":
         return (
-            f"Elicitation search: \"{raw.get('query') or event.search_query}\" "
+            f'Elicitation search: "{raw.get("query") or event.search_query}" '
             f"-> {raw.get('result_count')} results"
         )
     if event.event_type == "elicitation-completed":
@@ -55,22 +54,27 @@ def _event_summary(event, ctx):
                 f"{m.label} ({m.cluster_id}, weight={m.weight:+.2f})"
                 for m in ctx["text_matches_by_query"].get(query_row.id, [])
             )
-            return f"Text steering: \"{query_row.query_text}\" -> {mapped}"
-        return f"Text steering: \"{event.search_query}\""
+            return f'Text steering: "{query_row.query_text}" -> {mapped}'
+        return f'Text steering: "{event.search_query}"'
     if event.event_type == "feature-search":
         search_row = ctx["feature_search_by_event"].get(event.id)
         result_count = search_row.result_count if search_row else raw.get("result_count")
-        query = (search_row.query_text if search_row else None) or raw.get("query") or event.search_query
-        return f"Feature search: \"{query}\" -> {result_count} results"
+        query = (
+            (search_row.query_text if search_row else None)
+            or raw.get("query")
+            or event.search_query
+        )
+        return f'Feature search: "{query}" -> {result_count} results'
     if event.event_type == "feature-adjustment":
         adjustments = ctx["feature_adjustments_by_event"].get(event.id, [])
         changed = [
-            f"{row.cluster_label or row.feature_id}: {row.before_value:+.2f} -> {row.after_value:+.2f}"
+            (
+                f"{row.cluster_label or row.feature_id}: "
+                f"{row.before_value:+.2f} -> {row.after_value:+.2f}"
+            )
             for row in adjustments[:5]
         ]
-        search_queries = sorted(
-            {row.search_query for row in adjustments if row.search_query}
-        )
+        search_queries = sorted({row.search_query for row in adjustments if row.search_query})
         search_note = f", search: {', '.join(search_queries)}" if search_queries else ""
         change_note = f", controls [{'; '.join(changed)}]" if changed else ""
         return (
@@ -84,15 +88,14 @@ def _event_summary(event, ctx):
         top_titles = ", ".join(item["title"] for item in (rec_set or {}).get("items", [])[:5])
         return (
             f"Recommendations shown: {approach_label}, iteration {event.iteration}, "
-            f"{count} movies stored with ranks"
-            + (f" (top: {top_titles})" if top_titles else "")
+            f"{count} movies stored with ranks" + (f" (top: {top_titles})" if top_titles else "")
         )
     if event.event_type == "movie-feedback":
         feedback = ctx["movie_feedback_by_event"].get(event.id)
         if feedback is None:
             return f"Movie feedback: {approach_label}, iteration {event.iteration}"
         return (
-            f"Movie feedback: {feedback.action} \"{feedback.title}\" at rank {feedback.rank} "
+            f'Movie feedback: {feedback.action} "{feedback.title}" at rank {feedback.rank} '
             f"in {approach_label}, iteration {event.iteration}"
         )
     if event.event_type == "preferences-approved":
@@ -125,10 +128,7 @@ def _event_summary(event, ctx):
         movie_count = ctx["example_movie_counts"].get(example_row.id, 0) if example_row else 0
         strength = example_row.example_strength if example_row else raw.get("example_strength")
         top_k = example_row.example_top_k if example_row else raw.get("example_top_k")
-        return (
-            f"Example steering applied: {movie_count} movies, "
-            f"strength={strength}, top_k={top_k}"
-        )
+        return f"Example steering applied: {movie_count} movies, strength={strength}, top_k={top_k}"
     if event.event_type == "approach-order-assigned":
         return f"Approach order assigned: {raw.get('effective_order') or raw.get('approach_order')}"
     return event.event_type
@@ -201,9 +201,11 @@ def participant_journey(participation_id):
     )
 
     feature_adjustments_by_event: dict[int, list[SaeFeatureAdjustment]] = {}
-    for adj in SaeFeatureAdjustment.query.filter(
-        SaeFeatureAdjustment.study_run_id == study_run.id
-    ).order_by(SaeFeatureAdjustment.created_at.asc()).all():
+    for adj in (
+        SaeFeatureAdjustment.query.filter(SaeFeatureAdjustment.study_run_id == study_run.id)
+        .order_by(SaeFeatureAdjustment.created_at.asc())
+        .all()
+    ):
         feature_adjustments_by_event.setdefault(adj.event_id, []).append(adj)
 
     text_queries = SaeTextSteeringQuery.query.filter(
@@ -211,9 +213,13 @@ def participant_journey(participation_id):
     ).all()
     text_queries_by_event = {row.event_id: row for row in text_queries}
     text_matches_by_query: dict[int, list[SaeTextSteeringMatch]] = {}
-    for match in SaeTextSteeringMatch.query.filter(
-        SaeTextSteeringMatch.query_id.in_([row.id for row in text_queries])
-    ).all() if text_queries else []:
+    for match in (
+        SaeTextSteeringMatch.query.filter(
+            SaeTextSteeringMatch.query_id.in_([row.id for row in text_queries])
+        ).all()
+        if text_queries
+        else []
+    ):
         text_matches_by_query.setdefault(match.query_id, []).append(match)
 
     feature_searches = SaeFeatureSearch.query.filter(
@@ -229,18 +235,14 @@ def participant_journey(participation_id):
     }
 
     elicitation_picks = (
-        SaeElicitationPick.query.filter(
-            SaeElicitationPick.participation_id == participation.id
-        )
+        SaeElicitationPick.query.filter(SaeElicitationPick.participation_id == participation.id)
         .order_by(SaeElicitationPick.created_at.asc(), SaeElicitationPick.id.asc())
         .all()
     )
 
     resets_by_event = {
         row.event_id: row
-        for row in SaeResetAction.query.filter(
-            SaeResetAction.study_run_id == study_run.id
-        ).all()
+        for row in SaeResetAction.query.filter(SaeResetAction.study_run_id == study_run.id).all()
     }
 
     example_rows = SaeExampleSteering.query.filter(

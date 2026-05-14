@@ -33,8 +33,8 @@ from server.plugins.steering.persistence.models import (
 from ..constants import PROLIFIC_BASE_URL
 from ..study_config import approach_label, normalize_study_config
 
+# Helpers
 
-# ---------- helpers ----------------------------------------------------------
 
 def safe_parse_json(raw):
     if raw is None:
@@ -85,7 +85,8 @@ def _round(value, digits=3):
     return round(value, digits)
 
 
-# ---------- modality observations -------------------------------------------
+# Modality observations
+
 
 def _selected_rank_distribution(user_study_id: int) -> dict:
     """Histogram of rank for liked movies, grouped by approach.
@@ -168,7 +169,7 @@ def _slider_movement_by_position(user_study_id: int) -> dict:
             }
         )
     for bucket in by_approach.values():
-        bucket["clusters"].sort(key=lambda r: (r["mean_abs_delta"] or 0), reverse=True)
+        bucket["clusters"].sort(key=lambda r: r["mean_abs_delta"] or 0, reverse=True)
         bucket["clusters"] = bucket["clusters"][:20]
     return by_approach
 
@@ -216,7 +217,8 @@ def _text_prompt_cluster_mappings(user_study_id: int) -> list[dict]:
     ]
 
 
-# ---------- approach + selection overview -----------------------------------
+# Approach and selection overview
+
 
 def _approach_overview(user_study_id: int, config_models: list[dict]) -> dict:
     """One row per approach with the metrics shown in the overview table."""
@@ -277,9 +279,7 @@ def _selection_dynamics(user_study_id: int) -> dict:
             func.count(SaeMovieFeedback.id),
         )
         .join(SaeStudyRun, SaeApproachRun.study_run_id == SaeStudyRun.id)
-        .outerjoin(
-            SaeMovieFeedback, SaeMovieFeedback.approach_run_id == SaeApproachRun.id
-        )
+        .outerjoin(SaeMovieFeedback, SaeMovieFeedback.approach_run_id == SaeApproachRun.id)
         .filter(SaeStudyRun.user_study_id == user_study_id)
         .group_by(
             SaeApproachRun.approach_index,
@@ -323,7 +323,8 @@ def _selection_dynamics(user_study_id: int) -> dict:
     return dynamics
 
 
-# ---------- questionnaire monitor -------------------------------------------
+# Questionnaire monitor
+
 
 def _infer_field_kind(values: list) -> str:
     """Best-effort field classification: likert, numeric, categorical, text."""
@@ -419,14 +420,13 @@ def _questionnaire_monitor(user_study_id: int) -> dict:
             "response_type": group["response_type"],
             "approach_indices": sorted(group["approach_indices"]),
             "responses": group["responses"],
-            "fields": {
-                name: _summarize_field(values) for name, values in fields.items()
-            },
+            "fields": {name: _summarize_field(values) for name, values in fields.items()},
         }
     return monitor
 
 
-# ---------- main entry ------------------------------------------------------
+# Main entry
+
 
 def build_results_payload(guid):
     user_study = UserStudy.query.filter(UserStudy.guid == guid).first()
@@ -436,8 +436,7 @@ def build_results_payload(guid):
     study_config = normalize_study_config(load_user_study_config_by_guid(guid))
     config_models = list(study_config.get("models", []))
     completed_participations = Participation.query.filter(
-        (Participation.time_finished.isnot(None))
-        & (Participation.user_study_id == user_study.id)
+        (Participation.time_finished.isnot(None)) & (Participation.user_study_id == user_study.id)
     ).all()
     all_participations = Participation.query.filter(
         Participation.user_study_id == user_study.id
@@ -504,9 +503,7 @@ def build_results_payload(guid):
 
     participants_table = []
     for participant in all_participations:
-        study_run = SaeStudyRun.query.filter(
-            SaeStudyRun.participation_id == participant.id
-        ).first()
+        study_run = SaeStudyRun.query.filter(SaeStudyRun.participation_id == participant.id).first()
         duration_sec = None
         if participant.time_joined and participant.time_finished:
             duration_sec = int(
@@ -544,9 +541,7 @@ def build_results_payload(guid):
         "sample": {
             "participants_total": len(all_participations),
             "participants_completed": len(completed_participations),
-            "participants_in_progress": (
-                len(all_participations) - len(completed_participations)
-            ),
+            "participants_in_progress": (len(all_participations) - len(completed_participations)),
         },
         "approaches": {
             "labels": {

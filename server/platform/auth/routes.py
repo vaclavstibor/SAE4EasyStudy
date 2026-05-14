@@ -1,3 +1,5 @@
+"""Login, signup, and logout endpoints for the administration UI."""
+
 import flask
 from flask_login import current_user, login_required, login_user, logout_user
 from is_safe_url import is_safe_url

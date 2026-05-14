@@ -2,8 +2,8 @@
 
 from flask import redirect, render_template, url_for
 
-from ...plugin import bp
 from ...constants import PLUGIN_NAME
+from ...plugin import bp
 from ...service.session_controller import build_steering_page_context
 from ..study import get_min_resolution_settings, phase_questionnaire_exists
 

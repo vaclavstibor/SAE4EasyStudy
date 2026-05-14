@@ -20,9 +20,7 @@ Produces inside server/plugins/steering/:
 
 import argparse
 import csv
-import json
 import shutil
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -54,9 +52,7 @@ def _extract_elsa_embeddings(elsa_ckpt: Path, item_ids):
     encoder = payload["model_state_dict"]["encoder"].detach()
     embeddings = F.normalize(encoder, dim=1)
     if embeddings.shape[0] != len(item_ids):
-        print(
-            f"  WARNING: ELSA encoder rows ({embeddings.shape[0]}) != item_ids ({len(item_ids)})"
-        )
+        print(f"  WARNING: ELSA encoder rows ({embeddings.shape[0]}) != item_ids ({len(item_ids)})")
     return embeddings
 
 
@@ -71,7 +67,9 @@ def _find_labeling_artifact(run_dir: Path, pattern: str):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Integrate TopKSAE-1024 model artifacts into the steering plugin")
+    ap = argparse.ArgumentParser(
+        description="Integrate TopKSAE-1024 model artifacts into the steering plugin"
+    )
     ap.add_argument("--sae-ckpt", type=Path, required=True)
     ap.add_argument("--elsa-ckpt", type=Path, required=True)
     ap.add_argument("--dataset-dir", type=Path, required=True)
@@ -90,7 +88,7 @@ def main():
     print(f"  done ({dst_ckpt.stat().st_size / 1e6:.1f} MB)")
 
     # 2. Generate item_embeddings.pt from ELSA
-    print(f"[2/4] Generating item_embeddings.pt from ELSA checkpoint")
+    print("[2/4] Generating item_embeddings.pt from ELSA checkpoint")
     item_ids = _load_sorted_item_ids(args.dataset_dir)
     print(f"  item_ids: {len(item_ids)}")
     embeddings = _extract_elsa_embeddings(args.elsa_ckpt, item_ids)
@@ -100,7 +98,7 @@ def main():
     print(f"  saved -> {dst_emb}")
 
     # 3. Copy labeling artifacts (llm_labels, semantic_merged)
-    print(f"[3/5] Copying labeling artifacts")
+    print("[3/5] Copying labeling artifacts")
     run_dir = args.labeling_run
 
     llm_src = _find_labeling_artifact(run_dir, "llm_labels_*_llm*.json")
@@ -120,7 +118,7 @@ def main():
         print("  WARNING: no semantic_merged artifact found")
 
     # 4. Clean up legacy artifacts
-    print(f"[4/5] Cleaning legacy artifacts")
+    print("[4/5] Cleaning legacy artifacts")
     for legacy in [
         data_dir / f"cluster_profile_{NEW_MODEL_ID}.json",
     ]:
@@ -131,7 +129,7 @@ def main():
     # 5. Summary
     print(f"\n[5/5] Integration complete. Plugin model_id: {NEW_MODEL_ID}")
     print(f"  models/ : {dst_ckpt.name}")
-    print(f"  data/   : item_embeddings.pt")
+    print("  data/   : item_embeddings.pt")
     if llm_src:
         print(f"  data/   : llm_labels_{NEW_MODEL_ID}_llm.json")
     if merged_src:

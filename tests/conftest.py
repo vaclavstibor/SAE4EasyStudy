@@ -1,3 +1,5 @@
+"""Shared pytest fixtures (test Flask app + in-memory SQLite database)."""
+
 import os
 
 import pytest

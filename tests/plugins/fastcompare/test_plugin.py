@@ -1,3 +1,5 @@
+"""Smoke tests for the upstream FastCompare plugin contract and routes."""
+
 from server.plugins.fastcompare import get_plugin
 
 
@@ -21,9 +23,7 @@ def test_fastcompare_lifecycle_routes(test_app):
     app, _ = test_app
     client = app.test_client()
 
-    initialize_response = client.get(
-        "/fastcompare/initialize?continuation_url=/administration"
-    )
+    initialize_response = client.get("/fastcompare/initialize?continuation_url=/administration")
     join_response = client.get("/fastcompare/join")
     results_response = client.get("/fastcompare/results")
 

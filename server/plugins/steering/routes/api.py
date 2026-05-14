@@ -23,8 +23,10 @@ def get_initial_data():
         tr = get_tr(languages, get_lang())
         for row in rows:
             if "genres" in row:
-                row["movie"] = row["movie"] + " " + "|".join(
-                    [tr(f"genre_{genre.lower()}") for genre in row["genres"]]
+                row["movie"] = (
+                    row["movie"]
+                    + " "
+                    + "|".join([tr(f"genre_{genre.lower()}") for genre in row["genres"]])
                 )
         el_movies.extend(rows)
         session["elicitation_movies"] = el_movies

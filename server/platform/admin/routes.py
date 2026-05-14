@@ -1,3 +1,5 @@
+"""Administration endpoints: study list, study creation, DB backup, and exports."""
+
 import datetime
 import json
 import os
@@ -223,10 +225,9 @@ def get_user_study_participants():
 @login_required
 def get_user_participated_user_studies():
     user_email = flask.request.args.get("user_email")
-    studies = (
-        Participation.query.filter(Participation.participant_email == user_email)
-        .with_entities(Participation.user_study_id)
-    )
+    studies = Participation.query.filter(
+        Participation.participant_email == user_email
+    ).with_entities(Participation.user_study_id)
     return flask.jsonify([{"user_study_id": row[0]} for row in studies])
 
 

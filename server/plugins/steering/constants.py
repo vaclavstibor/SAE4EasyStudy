@@ -1,9 +1,9 @@
 """Constants and defaults for the SAE steering plugin."""
 
 try:
-    from .recommendation.model_store import DEFAULT_BOOTSTRAP_COMMAND, DEFAULT_TOPK_SAE_MODEL_ID
+    from .recommendation.model_store import DEFAULT_TOPK_SAE_MODEL_ID
 except ImportError:
-    from model_store import DEFAULT_BOOTSTRAP_COMMAND, DEFAULT_TOPK_SAE_MODEL_ID
+    from model_store import DEFAULT_TOPK_SAE_MODEL_ID
 
 
 PLUGIN_NAME = "sae_steering"

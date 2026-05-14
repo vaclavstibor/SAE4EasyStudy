@@ -1,3 +1,5 @@
+"""Public contract objects that study plugins expose to the platform kernel."""
+
 from dataclasses import dataclass, field
 from typing import Any
 

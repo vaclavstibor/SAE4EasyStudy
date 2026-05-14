@@ -1,3 +1,9 @@
+"""Flask application factory and platform composition root.
+
+Wires together the platform blueprints (auth, admin, participant flow), loads the
+canonical study plugins, and configures persistence, sessions, and CSRF protection.
+"""
+
 import os
 import random
 import time
@@ -40,7 +46,13 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
         cursor.close()
 
 
-def create_app():
+def create_app() -> flask.Flask:
+    """Build and return the configured Flask application.
+
+    Returns:
+        The application instance with all blueprints, persistence, and plugin
+        contracts registered.
+    """
     app = flask.Flask(
         "server",
         template_folder=str(PLATFORM_ROOT / "web" / "templates"),
@@ -55,8 +67,10 @@ def create_app():
     db_url = resolve_database_url()
     app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
-    backend = "postgres" if db_url.startswith("postgresql") else (
-        "sqlite" if db_url.startswith("sqlite") else db_url.split(":", 1)[0]
+    backend = (
+        "postgres"
+        if db_url.startswith("postgresql")
+        else ("sqlite" if db_url.startswith("sqlite") else db_url.split(":", 1)[0])
     )
     print(f"[startup] SQLAlchemy backend: {backend}", flush=True)
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {

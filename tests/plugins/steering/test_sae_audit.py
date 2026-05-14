@@ -1,3 +1,5 @@
+"""Tests for the SAE typed audit pipeline (rows + envelope events)."""
+
 import json
 from datetime import datetime
 

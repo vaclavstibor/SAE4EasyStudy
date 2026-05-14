@@ -8,19 +8,26 @@ from flask import session
 
 from server.platform.shared.common import get_tr, load_user_study_config
 
-from ..plugin import get_lang, languages
+from ..approach_state import (
+    get_approach_id_map,
+    get_approach_movie_set,
+    get_approach_token_set,
+    set_approach_token_set,
+)
 from ..constants import (
     DEFAULT_STEERING_MODE,
     DEFAULT_TOPK_SAE_MODEL_ID,
     TEXT_STEERING_MAX_QUERY_CHARS,
     get_default_models,
 )
+from ..plugin import get_lang, languages
 from ..recommendation.features import select_slider_features
-from .participation import get_effective_models
-from ..approach_state import get_approach_id_map, get_approach_movie_set, get_approach_token_set, set_approach_token_set
-from ..recommendation.service import generate_steered_recommendations, generate_steered_recommendations_for_model, unwrap_recommendation_payload
 from ..recommendation.semantic_registry import load_semantic_clusters
-from . import audit
+from ..recommendation.service import (
+    generate_steered_recommendations,
+    generate_steered_recommendations_for_model,
+    unwrap_recommendation_payload,
+)
 from ..study_config import (
     get_active_model_config,
     get_steering_guidance,
@@ -28,6 +35,8 @@ from ..study_config import (
     get_study_dataset_variant,
     normalize_study_config,
 )
+from . import audit
+from .participation import get_effective_models
 
 
 def _default_config(interaction_mode="cumulative"):
@@ -44,8 +53,13 @@ def _default_config(interaction_mode="cumulative"):
 
 
 def build_steering_page_context(get_min_resolution_settings, phase_questionnaire_exists):
-    conf = normalize_study_config(load_user_study_config(session.get("user_study_id"))) or _default_config()
-    min_resolution_width, min_resolution_height, min_resolution_error = get_min_resolution_settings(conf)
+    conf = (
+        normalize_study_config(load_user_study_config(session.get("user_study_id")))
+        or _default_config()
+    )
+    min_resolution_width, min_resolution_height, min_resolution_error = get_min_resolution_settings(
+        conf
+    )
     tr = get_tr(languages, get_lang())
     selected_movies = session.get("elicitation_selected_movies", [])
 
@@ -78,11 +92,16 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
     session["cluster_map"] = cluster_map
     shown_phase = (
         current_phase_tmp
-        if (conf.get("comparison_mode", "side_by_side") == "sequential" and len(get_effective_models(conf)) >= 2)
+        if (
+            conf.get("comparison_mode", "side_by_side") == "sequential"
+            and len(get_effective_models(conf)) >= 2
+        )
         else 0
     )
     shown_ids = get_approach_token_set("shown_sliders_per_phase", shown_phase)
-    shown_ids.update({str(feature.get("id")) for feature in features if feature.get("id") is not None})
+    shown_ids.update(
+        {str(feature.get("id")) for feature in features if feature.get("id") is not None}
+    )
     set_approach_token_set("shown_sliders_per_phase", shown_phase, shown_ids)
 
     max_iterations = conf.get("num_iterations", 3)
@@ -117,7 +136,9 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
     try:
         import numpy as np
         import torch as _torch_init
+
         from server.plugins.utils.data_loading import load_ml_dataset
+
         from ..recommendation.sae_recommender import get_sae_recommender
 
         loader = load_ml_dataset(ml_variant=get_study_dataset_variant(conf))
@@ -170,7 +191,7 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
             initial_recs, initial_debug = unwrap_recommendation_payload(payload)
             participation_id = session.get("participation_id")
             if participation_id:
-                audit.record_recommendations_shown(
+                audit.record_recommendation_set(
                     initial_recs,
                     participation_id=participation_id,
                     approach_index=current_phase,
@@ -200,7 +221,7 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
             initial_recs_b, initial_debug_b = unwrap_recommendation_payload(payload_b)
             participation_id = session.get("participation_id")
             if participation_id:
-                audit.record_recommendations_shown(
+                audit.record_recommendation_set(
                     initial_recs_a,
                     participation_id=participation_id,
                     approach_index=0,
@@ -209,7 +230,7 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
                     steering_mode=models[0].get("steering_mode", DEFAULT_STEERING_MODE),
                     debug_payload=initial_debug_a,
                 )
-                audit.record_recommendations_shown(
+                audit.record_recommendation_set(
                     initial_recs_b,
                     participation_id=participation_id,
                     approach_index=1,
@@ -231,7 +252,7 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
                 initial_recs, initial_debug = unwrap_recommendation_payload(payload)
                 participation_id = session.get("participation_id")
                 if participation_id:
-                    audit.record_recommendations_shown(
+                    audit.record_recommendation_set(
                         initial_recs,
                         participation_id=participation_id,
                         approach_index=0,
@@ -250,12 +271,28 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
 
         shown_map = get_approach_id_map("last_shown_movies_per_phase")
         if is_sequential:
-            shown_map[str(int(current_phase))] = [int(row.get("movie_idx")) for row in initial_recs if row.get("movie_idx") is not None]
+            shown_map[str(int(current_phase))] = [
+                int(row.get("movie_idx"))
+                for row in initial_recs
+                if row.get("movie_idx") is not None
+            ]
         elif enable_comparison and len(models) >= 2:
-            shown_map["0"] = [int(row.get("movie_idx")) for row in initial_recs_a if row.get("movie_idx") is not None]
-            shown_map["1"] = [int(row.get("movie_idx")) for row in initial_recs_b if row.get("movie_idx") is not None]
+            shown_map["0"] = [
+                int(row.get("movie_idx"))
+                for row in initial_recs_a
+                if row.get("movie_idx") is not None
+            ]
+            shown_map["1"] = [
+                int(row.get("movie_idx"))
+                for row in initial_recs_b
+                if row.get("movie_idx") is not None
+            ]
         else:
-            shown_map["0"] = [int(row.get("movie_idx")) for row in initial_recs if row.get("movie_idx") is not None]
+            shown_map["0"] = [
+                int(row.get("movie_idx"))
+                for row in initial_recs
+                if row.get("movie_idx") is not None
+            ]
         session["last_shown_movies_per_phase"] = shown_map
     except Exception as exc:
         print(f"[steering] Could not generate initial recs: {exc}")
@@ -277,7 +314,9 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
         "iteration": session.get("iteration", 1),
         "max_iterations": max_iterations,
         "steering_mode": steering_mode,
-        "enabled_modalities": active_model_cfg.get("enabled_modalities", conf.get("enabled_modalities", [])),
+        "enabled_modalities": active_model_cfg.get(
+            "enabled_modalities", conf.get("enabled_modalities", [])
+        ),
         "submit": tr("get_recommendations"),
         "enable_comparison": enable_comparison,
         "interaction_mode": interaction_mode,
@@ -313,8 +352,9 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
             or text_cfg.get("composition_mode")
             or "replace"
         ),
-        "text_steering_max_chars": int(text_cfg.get("max_query_chars") or TEXT_STEERING_MAX_QUERY_CHARS),
+        "text_steering_max_chars": int(
+            text_cfg.get("max_query_chars") or TEXT_STEERING_MAX_QUERY_CHARS
+        ),
         "previous_text_query": previous_text_query,
         "reranking_strategy": conf.get("reranking_strategy", "feature-conditioned"),
     }
-

@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""
-Download the SAE steering checkpoint and runtime features from GitHub Releases.
+"""Download SAE steering assets (checkpoint + runtime features + labels) from GitHub Releases.
+
+Lives inside ``server/plugins/steering/`` because it operates on this plugin's
+asset layout (``model_store.py`` provides the canonical filenames and defaults).
+The canonical entrypoint is module execution from the repository root so the
+``server`` package is importable:
 
 Examples:
-    cd server
-    python plugins/steering/bootstrap_model.py
-    python plugins/steering/bootstrap_model.py --tag v1.0.0
-    python plugins/steering/bootstrap_model.py --model-asset-name model.pkl
+    python -m server.plugins.steering.bootstrap_model
+    python -m server.plugins.steering.bootstrap_model --tag v1.0.0
+    python -m server.plugins.steering.bootstrap_model --model-asset-name model.pkl
+
+When invoked at container startup via ``SAE_BOOTSTRAP_MODEL=1`` the entrypoint
+script ([server/docker-entrypoint.sh](../../docker-entrypoint.sh)) does exactly
+this.
 """
 
 import argparse
@@ -81,7 +88,9 @@ def _release_api_url(repo: str, tag: str) -> str:
     return f"https://api.github.com/repos/{repo}/releases/tags/{safe_tag}"
 
 
-def _select_asset(release: dict, asset_name: str, candidates: tuple[str, ...], purpose: str) -> dict:
+def _select_asset(
+    release: dict, asset_name: str, candidates: tuple[str, ...], purpose: str
+) -> dict:
     assets = release.get("assets") or []
     if not assets:
         raise RuntimeError("The selected release has no uploaded assets.")
@@ -92,7 +101,8 @@ def _select_asset(release: dict, asset_name: str, candidates: tuple[str, ...], p
         if asset:
             return asset
         raise RuntimeError(
-            f"{purpose}: asset '{asset_name}' was not found. Available assets: {', '.join(sorted(by_name))}"
+            f"{purpose}: asset '{asset_name}' was not found. "
+            f"Available assets: {', '.join(sorted(by_name))}"
         )
 
     for candidate in candidates:
@@ -111,7 +121,9 @@ def _extract_sha256(text: str) -> str:
     return match.group(1).lower() if match else ""
 
 
-def _expected_sha256(asset: dict, assets: list, headers: dict, timeout: int, aliases: tuple[str, ...] = ()) -> str:
+def _expected_sha256(
+    asset: dict, assets: list, headers: dict, timeout: int, aliases: tuple[str, ...] = ()
+) -> str:
     digest = asset.get("digest")
     if isinstance(digest, str) and digest.lower().startswith("sha256:"):
         return digest.split(":", 1)[1].strip().lower()
@@ -152,7 +164,10 @@ def _download_asset(asset: dict, destination: Path, headers: dict, timeout: int)
     hasher = hashlib.sha256()
     request = urllib.request.Request(asset["browser_download_url"], headers=headers)
 
-    with urllib.request.urlopen(request, timeout=timeout) as response, tmp_path.open("wb") as handle:
+    with (
+        urllib.request.urlopen(request, timeout=timeout) as response,
+        tmp_path.open("wb") as handle,
+    ):
         while True:
             chunk = response.read(1024 * 1024)
             if not chunk:
@@ -214,7 +229,9 @@ def _ensure_asset(
     )
 
     if require_checksum and not expected_sha:
-        raise RuntimeError(f"{purpose}: no SHA256 checksum was found for asset '{asset.get('name')}'.")
+        raise RuntimeError(
+            f"{purpose}: no SHA256 checksum was found for asset '{asset.get('name')}'."
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists() and not force:
@@ -226,7 +243,10 @@ def _ensure_asset(
             print(f"{purpose}: local file exists but checksum differs; downloading a fresh copy...")
         elif expected_sha and _is_compressed_asset(asset.get("name", "")):
             print(f"{purpose}: already present at {output_path}")
-            print("Compressed release asset cannot be re-verified after extraction. Use --force to replace it.")
+            print(
+                "Compressed release asset cannot be re-verified after extraction. "
+                "Use --force to replace it."
+            )
             return
         else:
             print(f"{purpose}: already present at {output_path}")
@@ -235,13 +255,16 @@ def _ensure_asset(
 
     download_path = output_path
     if _is_compressed_asset(asset.get("name", "")):
-        download_path = output_path.with_name(f"{output_path.name}{Path(asset['name']).suffix}.download")
+        download_path = output_path.with_name(
+            f"{output_path.name}{Path(asset['name']).suffix}.download"
+        )
 
     actual_sha = _download_asset(asset, download_path, headers=headers, timeout=timeout)
     if expected_sha and actual_sha != expected_sha:
         download_path.unlink(missing_ok=True)
         raise RuntimeError(
-            f"{purpose}: SHA256 mismatch for {asset.get('name')}: expected {expected_sha}, got {actual_sha}"
+            f"{purpose}: SHA256 mismatch for {asset.get('name')}: "
+            f"expected {expected_sha}, got {actual_sha}"
         )
 
     if download_path != output_path:
@@ -291,10 +314,16 @@ def _optional_asset_download(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Download the SAE steering model checkpoint and runtime features from GitHub Releases."
+        description=(
+            "Download the SAE steering model checkpoint and runtime features from GitHub Releases."
+        )
     )
-    parser.add_argument("--repo", default=DEFAULT_GITHUB_REPO, help="GitHub repository slug, e.g. owner/repo")
-    parser.add_argument("--tag", default=DEFAULT_RELEASE_TAG, help="Release tag to fetch, or 'latest'")
+    parser.add_argument(
+        "--repo", default=DEFAULT_GITHUB_REPO, help="GitHub repository slug, e.g. owner/repo"
+    )
+    parser.add_argument(
+        "--tag", default=DEFAULT_RELEASE_TAG, help="Release tag to fetch, or 'latest'"
+    )
     parser.add_argument(
         "--model-asset-name",
         "--asset-name",
@@ -307,7 +336,10 @@ def parse_args():
         "--output",
         dest="model_output",
         default="",
-        help=f"Checkpoint destination; defaults to plugins/steering/models/{DEFAULT_LOCAL_MODEL_FILENAME}",
+        help=(
+            "Checkpoint destination; defaults to "
+            f"plugins/steering/models/{DEFAULT_LOCAL_MODEL_FILENAME}"
+        ),
     )
     parser.add_argument(
         "--runtime-asset-name",
@@ -319,7 +351,10 @@ def parse_args():
         "--runtime-output",
         dest="runtime_output",
         default="",
-        help=f"Runtime features destination; defaults to plugins/steering/data/{DEFAULT_RUNTIME_FEATURES_FILENAME}",
+        help=(
+            "Runtime features destination; defaults to "
+            f"plugins/steering/data/{DEFAULT_RUNTIME_FEATURES_FILENAME}"
+        ),
     )
     parser.add_argument(
         "--label-asset-name",
@@ -331,7 +366,9 @@ def parse_args():
         "--label-output",
         dest="label_output",
         default="",
-        help="Label cache destination; defaults to plugins/steering/data/llm_labels_<model>_llm.json",
+        help=(
+            "Label cache destination; defaults to plugins/steering/data/llm_labels_<model>_llm.json"
+        ),
     )
     parser.add_argument(
         "--label-optional",
@@ -343,7 +380,9 @@ def parse_args():
         action="store_true",
         help="Download only the checkpoint and skip the precomputed item_sae_features asset",
     )
-    parser.add_argument("--force", action="store_true", help="Re-download even if local files already exist")
+    parser.add_argument(
+        "--force", action="store_true", help="Re-download even if local files already exist"
+    )
     parser.add_argument(
         "--require-checksum",
         action="store_true",
@@ -363,7 +402,9 @@ def main() -> int:
     timeout = DEFAULT_TIMEOUT_SECONDS
 
     try:
-        release = _fetch_json(_release_api_url(args.repo, args.tag), headers=headers, timeout=timeout)
+        release = _fetch_json(
+            _release_api_url(args.repo, args.tag), headers=headers, timeout=timeout
+        )
         assets = release.get("assets") or []
 
         model_output = (
@@ -382,7 +423,10 @@ def main() -> int:
             output_path=model_output,
             force=args.force,
             require_checksum=args.require_checksum,
-            checksum_aliases=(f"{DEFAULT_TOPK_SAE_MODEL_ID}.sha256", f"{DEFAULT_LOCAL_MODEL_FILENAME}.sha256"),
+            checksum_aliases=(
+                f"{DEFAULT_TOPK_SAE_MODEL_ID}.sha256",
+                f"{DEFAULT_LOCAL_MODEL_FILENAME}.sha256",
+            ),
         )
 
         if not args.skip_runtime_features:

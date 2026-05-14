@@ -3,8 +3,8 @@
 import numpy as np
 
 from ..constants import DEFAULT_TOPK_SAE_MODEL_ID
-from .semantic_registry import load_semantic_clusters
 from ..study_config import normalize_feature_selection_algorithm
+from .semantic_registry import load_semantic_clusters
 
 
 def select_cluster_features(model_id: str = None, top_k: int = 21) -> list:
@@ -110,8 +110,11 @@ def get_sae_features(top_k: int = 21, model_id: str = None) -> list:
     return features
 
 
-def personalized_features(selected_movies: list, model_id: str = None, num_sliders: int = 21) -> list:
+def personalized_features(
+    selected_movies: list, model_id: str = None, num_sliders: int = 21
+) -> list:
     import re as _re
+
     import torch as _torch
 
     from .sae_recommender import get_sae_recommender
@@ -225,7 +228,9 @@ def personalized_features(selected_movies: list, model_id: str = None, num_slide
     return features
 
 
-def select_slider_features(selected_movies: list, conf: dict, active_model_cfg: dict, num_sliders: int) -> list:
+def select_slider_features(
+    selected_movies: list, conf: dict, active_model_cfg: dict, num_sliders: int
+) -> list:
     algorithm = normalize_feature_selection_algorithm(
         active_model_cfg.get("feature_selection_algorithm", conf.get("feature_selection_algorithm"))
     )
@@ -237,4 +242,3 @@ def select_slider_features(selected_movies: list, conf: dict, active_model_cfg: 
         model_id=active_sae_model_id,
         num_sliders=num_sliders,
     )
-

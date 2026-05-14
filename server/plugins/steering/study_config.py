@@ -12,12 +12,12 @@ from .constants import (
     DEFAULT_STEERING_MODE,
     DEFAULT_TEXT_COMPOSITION_MODE,
     DEFAULT_TOPK_SAE_MODEL_ID,
-    Modalities,
     SUPPORTED_DATASET_VARIANTS,
     SUPPORTED_FEATURE_SELECTION_ALGORITHMS,
     SUPPORTED_RERANKING_STRATEGIES,
     SUPPORTED_STEERING_MODES,
     SUPPORTED_TEXT_COMPOSITION_MODES,
+    Modalities,
     get_default_models,
 )
 from .modalities.examples import DEFAULT_EXAMPLE_TOP_K, DEFAULT_EXAMPLE_WEIGHT
@@ -38,13 +38,13 @@ def normalize_steering_mode(mode: str) -> str:
     return DEFAULT_STEERING_MODE
 
 
-def derive_steering_mode_from_modalities(raw_modalities=None, fallback: str = DEFAULT_STEERING_MODE) -> str:
+def derive_steering_mode_from_modalities(
+    raw_modalities=None, fallback: str = DEFAULT_STEERING_MODE
+) -> str:
     if isinstance(raw_modalities, str):
         raw_modalities = [raw_modalities]
     modalities = {
-        str(item or "").strip().lower()
-        for item in raw_modalities or []
-        if str(item or "").strip()
+        str(item or "").strip().lower() for item in raw_modalities or [] if str(item or "").strip()
     }
     has_sliders = Modalities.SLIDERS in modalities
     has_toggles = Modalities.TOGGLES in modalities
@@ -140,13 +140,22 @@ def normalize_study_config(conf):
     conf["dataset"] = normalize_dataset_variant(conf.get("dataset"))
     conf["randomize_approach_order"] = bool(conf.get("randomize_approach_order", True))
     conf["text_steering_top_k"] = max(1, int(conf.get("text_steering_top_k", DEFAULT_TEXT_TOP_K)))
-    conf["example_selection_top_k"] = max(1, int(conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K)))
-    conf["use_selected_movies_as_examples"] = bool(conf.get("use_selected_movies_as_examples", False))
+    conf["example_selection_top_k"] = max(
+        1, int(conf.get("example_selection_top_k", DEFAULT_EXAMPLE_TOP_K))
+    )
+    conf["use_selected_movies_as_examples"] = bool(
+        conf.get("use_selected_movies_as_examples", False)
+    )
     conf["toggle_default_weight"] = float(conf.get("toggle_default_weight", DEFAULT_TOGGLE_WEIGHT))
     conf["text_steering_weight"] = float(conf.get("text_steering_weight", DEFAULT_TEXT_WEIGHT))
-    conf["example_selection_weight"] = float(conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT))
+    conf["example_selection_weight"] = float(
+        conf.get("example_selection_weight", DEFAULT_EXAMPLE_WEIGHT)
+    )
     conf["selection_signal_weight"] = float(
-        conf.get("selection_signal_weight", default_selection_signal_weight(conf.get("steering_mode", DEFAULT_STEERING_MODE)))
+        conf.get(
+            "selection_signal_weight",
+            default_selection_signal_weight(conf.get("steering_mode", DEFAULT_STEERING_MODE)),
+        )
     )
     conf["feature_selection_algorithm"] = normalize_feature_selection_algorithm(
         conf.get("feature_selection_algorithm")
@@ -211,7 +220,9 @@ def normalize_study_config(conf):
             model.get("example_selection_weight", conf["example_selection_weight"])
         )
         model["selection_signal_weight"] = float(
-            model.get("selection_signal_weight", default_selection_signal_weight(model["steering_mode"]))
+            model.get(
+                "selection_signal_weight", default_selection_signal_weight(model["steering_mode"])
+            )
         )
         model["text_composition_mode"] = normalize_text_composition_mode(
             model.get("text_composition_mode", conf["text_steering"]["composition_mode"])
@@ -286,9 +297,21 @@ def get_steering_subtitle(steering_mode: str) -> str:
 def get_steering_guidance(steering_mode: str) -> str:
     steering_mode = normalize_steering_mode(steering_mode)
     if steering_mode == Modalities.TEXT:
-        return "Start by reviewing the current recommendations, then describe the kind of change you want in your own words before getting updated recommendations."
+        return (
+            "Start by reviewing the current recommendations, then describe the kind of "
+            "change you want in your own words before getting updated recommendations."
+        )
     if steering_mode == Modalities.HYBRID:
-        return "Start by reviewing the current recommendations, then either write what you want or adjust the discovered concepts before getting updated recommendations."
+        return (
+            "Start by reviewing the current recommendations, then either write what you "
+            "want or adjust the discovered concepts before getting updated recommendations."
+        )
     if steering_mode == Modalities.NONE:
-        return "Start by reviewing the current recommendations, select what you would watch, and then continue to the next recommendation update."
-    return "Start by reviewing the current recommendations, adjust the discovered concepts below, and then get updated recommendations."
+        return (
+            "Start by reviewing the current recommendations, select what you would watch, "
+            "and then continue to the next recommendation update."
+        )
+    return (
+        "Start by reviewing the current recommendations, adjust the discovered concepts "
+        "below, and then get updated recommendations."
+    )

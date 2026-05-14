@@ -1,3 +1,5 @@
+"""Tests for randomized approach ordering and the results aggregation endpoint."""
+
 import json
 from datetime import datetime
 
@@ -96,7 +98,11 @@ def test_get_effective_models_randomizes_n_approaches_once(app_ctx, monkeypatch)
         models_again = participation.get_effective_models(_three_approach_config(randomize=True))
 
         assert [model["name"] for model in models] == ["Approach C", "Approach A", "Approach B"]
-        assert [model["name"] for model in models_again] == ["Approach C", "Approach A", "Approach B"]
+        assert [model["name"] for model in models_again] == [
+            "Approach C",
+            "Approach A",
+            "Approach B",
+        ]
         assert session["approach_order"] == [2, 0, 1]
 
 
@@ -118,5 +124,3 @@ def test_audit_study_run_uses_canonical_order_mapping_for_randomized_n_approache
 
         assert study_run.approach_order == [2, 0, 1]
         assert study_run.effective_order == ["Approach C", "Approach A", "Approach B"]
-
-

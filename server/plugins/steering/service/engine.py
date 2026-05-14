@@ -60,4 +60,3 @@ def update_elsa_seed_with_likes(
     except Exception as exc:
         print(f"[update_elsa_seed_with_likes] Error: {exc}")
         traceback.print_exc()
-

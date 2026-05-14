@@ -1,3 +1,5 @@
+"""Plugin registry: resolves canonical plugin modules into ``StudyPluginContract``s."""
+
 from importlib import import_module
 
 from .plugin_contract import StudyPluginContract

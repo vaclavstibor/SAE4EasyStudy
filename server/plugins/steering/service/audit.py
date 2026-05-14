@@ -8,6 +8,7 @@ envelope carries only ids + timestamps for timeline ordering.
 from __future__ import annotations
 
 import datetime
+import json
 from typing import Any, Iterable, List, Optional
 
 from server.platform.persistence.base_models import Participation, UserStudy
@@ -44,7 +45,6 @@ from ..study_config import (
     normalize_study_config,
 )
 
-
 SCHEMA_VERSION = 1
 
 
@@ -71,6 +71,14 @@ def _json_dict(raw: Any) -> dict:
 
 
 def _participation(participation_id: Optional[int] = None) -> Participation:
+    """Return the ``Participation`` row for a given id.
+
+    Args:
+        participation_id: Foreign key into ``Participation``.
+
+    Returns:
+        The persisted ``Participation`` row.
+    """
     if not participation_id:
         raise AuditContractError("Missing participation_id")
     participation = Participation.query.filter(Participation.id == int(participation_id)).first()
@@ -80,6 +88,14 @@ def _participation(participation_id: Optional[int] = None) -> Participation:
 
 
 def _study(participation: Participation) -> UserStudy:
+    """Return the ``UserStudy`` row for a given participation.
+
+    Args:
+        participation: The ``Participation`` row.
+
+    Returns:
+        The persisted ``UserStudy`` row.
+    """
     study = UserStudy.query.filter(UserStudy.id == participation.user_study_id).first()
     if study is None:
         raise AuditContractError(f"UserStudy {participation.user_study_id} does not exist")
@@ -87,10 +103,27 @@ def _study(participation: Participation) -> UserStudy:
 
 
 def _conf(participation: Participation) -> dict:
+    """Return the normalized study config for a given participation.
+
+    Args:
+        participation: The ``Participation`` row.
+
+    Returns:
+        The normalized study config.
+    """
     return normalize_study_config(load_user_study_config(participation.user_study_id))
 
 
 def _movie_snapshot(loader, movie_id: Any) -> dict:
+    """Return the movie snapshot for a given movie id.
+
+    Args:
+        loader: The dataset loader.
+        movie_id: The movie id.
+
+    Returns:
+        The movie snapshot.
+    """
     mid = int(movie_id)
     if mid not in loader.movies_df_indexed.index:
         raise AuditContractError(f"Movie {mid} missing from dataset")
@@ -119,6 +152,16 @@ def ensure_study_run(
     *,
     approach_order: Optional[list] = None,
 ) -> SaeStudyRun:
+    """Return the ``SaeStudyRun`` for a participation, creating it on first call.
+
+    Args:
+        participation_id: Foreign key into ``Participation``.
+        approach_order: Optional explicit approach permutation; if omitted the
+            order is derived from the study config.
+
+    Returns:
+        The persisted ``SaeStudyRun`` row.
+    """
     participation = _participation(participation_id)
     existing = SaeStudyRun.query.filter(SaeStudyRun.participation_id == participation.id).first()
     if existing:
@@ -149,6 +192,22 @@ def ensure_approach_run(
     conf: Optional[dict] = None,
     approach_order: Optional[list] = None,
 ) -> SaeApproachRun:
+    """Return the ``SaeApproachRun`` for a participation+approach, creating it on first call.
+
+    Args:
+        participation_id: Foreign key into ``Participation``.
+        approach_index: 0-based index into the effective approach order.
+        conf: Optional pre-loaded study config (otherwise loaded by ``user_study_id``).
+        approach_order: Optional explicit approach permutation forwarded to
+            ``ensure_study_run``.
+
+    Returns:
+        The persisted ``SaeApproachRun`` row with a snapshot of the active model
+        configuration.
+
+    Raises:
+        AuditContractError: If the active model is missing committee-critical fields.
+    """
     participation = _participation(participation_id)
     conf = normalize_study_config(conf or load_user_study_config(participation.user_study_id))
     idx = int(approach_index)
@@ -163,11 +222,11 @@ def ensure_approach_run(
     for key in ("id", "name", "steering_mode", "enabled_modalities", "sae", "base"):
         if model.get(key) in (None, ""):
             raise AuditContractError(f"Approach {idx} missing {key}")
-    text_cfg = (conf.get("text_steering") or {}) if isinstance(conf.get("text_steering"), dict) else {}
+    text_cfg = (
+        (conf.get("text_steering") or {}) if isinstance(conf.get("text_steering"), dict) else {}
+    )
     composition_mode = str(
-        model.get("text_composition_mode")
-        or text_cfg.get("composition_mode")
-        or "replace"
+        model.get("text_composition_mode") or text_cfg.get("composition_mode") or "replace"
     )
     run = SaeApproachRun(
         study_run_id=study_run.id,
@@ -205,15 +264,34 @@ def record_event(
     allow_no_approach: bool = False,
     approach_order: Optional[list] = None,
 ) -> SaeSteeringEvent:
+    """Append a minimal envelope row to the ``SaeSteeringEvent`` timeline.
+
+    The envelope carries only ids, timestamps, and an optional ``raw_payload``
+    for debugging; the actual data for each interaction lives in the typed
+    domain tables (see the ``record_*`` helpers below).
+
+    Args:
+        event_type: One of the controlled event types (e.g. ``"text-steering"``).
+        participation_id: Foreign key into ``Participation``.
+        approach_index: 0-based index into the effective approach order. Required
+            unless ``allow_no_approach=True``.
+        iteration: 1-based iteration counter within the approach.
+        modality, steering_mode, source, search_query: Optional dimensions.
+        raw_payload: Optional debug payload (must be JSON-serialisable).
+        allow_no_approach: Allow envelope rows that are not bound to an approach
+            (e.g. for study-level events).
+        approach_order: Optional approach permutation forwarded to ``ensure_*``.
+
+    Returns:
+        The persisted envelope row.
+    """
     participation = _participation(participation_id)
     conf = _conf(participation)
     study_run = ensure_study_run(participation.id, approach_order=approach_order)
     approach_run = None
     if not allow_no_approach:
         if approach_index is None:
-            raise AuditContractError(
-                "approach_index is required unless allow_no_approach=True"
-            )
+            raise AuditContractError("approach_index is required unless allow_no_approach=True")
         approach_run = ensure_approach_run(
             participation.id,
             approach_index=approach_index,
@@ -245,7 +323,7 @@ def record_event(
     return event
 
 
-def cluster_details(
+def _cluster_details(
     model_id: str, raw_adjustments: dict, *, cluster_map: Optional[dict] = None
 ) -> List[dict]:
     if not raw_adjustments:
@@ -457,7 +535,11 @@ def record_example_steering(
         steering_mode=active_model.get("steering_mode"),
         source="example",
         raw_payload={
-            "movie_ids": [int(m.get("movie_id", m.get("id"))) for m in movie_list if m.get("movie_id") or m.get("id")],
+            "movie_ids": [
+                int(m.get("movie_id", m.get("id")))
+                for m in movie_list
+                if m.get("movie_id") or m.get("id")
+            ],
             "example_strength": example_strength,
             "example_top_k": example_top_k,
         },
@@ -597,7 +679,7 @@ def record_feature_adjustment(
             "recommendation_neuron_adjustments": recommendation_adjustments,
             "selected_movie_example_neuron_adjustments": example_adjustments,
             "selected_movie_example_metadata": example_metadata,
-            "cluster_details": cluster_details(
+            "cluster_details": _cluster_details(
                 model_id, raw_adjustments, cluster_map=cluster_map or {}
             ),
             "liked_movie_ids": liked_movies,
@@ -638,7 +720,7 @@ def record_feature_adjustment(
     return event
 
 
-def record_recommendations_shown(
+def record_recommendation_set(
     recommendations: list,
     *,
     participation_id: int,
@@ -650,9 +732,7 @@ def record_recommendations_shown(
 ) -> SaeRecommendationSet:
     participation = _participation(participation_id)
     conf = _conf(participation)
-    approach_run = ensure_approach_run(
-        participation.id, approach_index=approach_index, conf=conf
-    )
+    approach_run = ensure_approach_run(participation.id, approach_index=approach_index, conf=conf)
     study_run = ensure_study_run(participation.id)
     rec_set = SaeRecommendationSet(
         study_run_id=study_run.id,
@@ -734,9 +814,7 @@ def record_movie_feedback(
 ) -> SaeMovieFeedback:
     participation = _participation(participation_id)
     conf = _conf(participation)
-    approach_run = ensure_approach_run(
-        participation.id, approach_index=approach_index, conf=conf
-    )
+    approach_run = ensure_approach_run(participation.id, approach_index=approach_index, conf=conf)
     movie_id = data.get("movie_id")
     if movie_id is None:
         raise AuditContractError("Movie feedback missing movie_id")

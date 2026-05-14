@@ -140,7 +140,9 @@ class SAERecommender:
             item_col = (
                 "movieId"
                 if "movieId" in reader.fieldnames
-                else "item_id" if "item_id" in reader.fieldnames else None
+                else "item_id"
+                if "item_id" in reader.fieldnames
+                else None
             )
             if item_col is None:
                 return None
@@ -188,24 +190,26 @@ class SAERecommender:
         embeddings_path = os.path.join(self.data_dir, "item_embeddings.pt")
         if os.path.exists(embeddings_path):
             data = torch.load(embeddings_path, map_location=device, weights_only=False)
-            self.item_embeddings = data['embeddings']
-            self.item_ids = data['item_ids']
+            self.item_embeddings = data["embeddings"]
+            self.item_ids = data["item_ids"]
             print(f"Loaded {len(self.item_ids)} item embeddings")
 
         # Pre-compute SAE activations if not cached
         features_path = os.path.join(self.data_dir, features_cache_name)
         if os.path.exists(features_path):
             data = torch.load(features_path, map_location=device, weights_only=False)
-            self.item_features = data['features']
-            if 'item_ids' in data and data['item_ids'] is not None:
-                self.item_ids = data['item_ids']
+            self.item_features = data["features"]
+            if "item_ids" in data and data["item_ids"] is not None:
+                self.item_ids = data["item_ids"]
             if self.item_ids is not None and len(self.item_ids) != int(self.item_features.shape[0]):
                 print(
                     "[SAERecommender.load] WARNING: item_ids length does not match feature rows "
                     f"({len(self.item_ids)} vs {int(self.item_features.shape[0])})"
                 )
-            print(f"Loaded pre-computed SAE features: {self.item_features.shape}"
-                  f" ({len(self.item_ids)} item_ids)")
+            print(
+                f"Loaded pre-computed SAE features: {self.item_features.shape}"
+                f" ({len(self.item_ids)} item_ids)"
+            )
         elif self.item_embeddings is not None:
             print("Computing SAE features for all items...")
             self._compute_item_features(features_cache_name)
@@ -248,10 +252,7 @@ class SAERecommender:
             self.item_features = self.sae_model.get_feature_activations(embeddings_norm)
 
         cache_path = os.path.join(self.data_dir, cache_filename)
-        torch.save({
-            'features': self.item_features.cpu(),
-            'item_ids': self.item_ids
-        }, cache_path)
+        torch.save({"features": self.item_features.cpu(), "item_ids": self.item_ids}, cache_path)
         print(f"Cached SAE features to {cache_path}")
 
     def _build_rank_deltas(
@@ -365,7 +366,9 @@ class SAERecommender:
         cf_scores = torch.zeros(n_items_total, device=device)
         if seed_embedding is not None and self.item_embeddings is not None:
             seed_t = torch.tensor(
-                seed_embedding, device=device, dtype=self.item_embeddings.dtype,
+                seed_embedding,
+                device=device,
+                dtype=self.item_embeddings.dtype,
             )
             item_norms = F.normalize(self.item_embeddings.to(device), dim=1)
             seed_norm = F.normalize(seed_t.unsqueeze(0), dim=1).squeeze(0)
@@ -374,9 +377,14 @@ class SAERecommender:
         # --- 2. Genre overlap bonus ---
         genre_scores = torch.zeros(n_items_total, device=device)
         if genre_bonus is not None:
-            genre_scores = torch.tensor(
-                genre_bonus, device=device, dtype=torch.float32,
-            ) * blend_plan.genre_weight
+            genre_scores = (
+                torch.tensor(
+                    genre_bonus,
+                    device=device,
+                    dtype=torch.float32,
+                )
+                * blend_plan.genre_weight
+            )
 
         # --- 3. SAE steering score (from sliders / like boosts) ---
         sae_profile = torch.zeros(n_features, device=device)
@@ -397,25 +405,21 @@ class SAERecommender:
 
             allowed_mask_tmp = torch.tensor(
                 [mid in allowed_set for mid in self.item_ids],
-                device=device, dtype=torch.bool,
+                device=device,
+                dtype=torch.bool,
             )
             candidate_sae = sae_scores[allowed_mask_tmp]
 
             if blend_plan.strategy == "steering_primary":
                 steering_scores = sae_scores
-                if (
-                    blend_plan.prior_tiebreak_weight > 0
-                    and int(allowed_mask_tmp.sum().item()) > 0
-                ):
+                if blend_plan.prior_tiebreak_weight > 0 and int(allowed_mask_tmp.sum().item()) > 0:
                     candidate_base = base_scores[allowed_mask_tmp]
                     base_min = torch.min(candidate_base)
                     base_max = torch.max(candidate_base)
                     base_span = float((base_max - base_min).item())
                     if base_span > 1e-6:
                         normalized_base = (base_scores - base_min) / (base_max - base_min)
-                        prior_tiebreak_scores = (
-                            normalized_base * blend_plan.prior_tiebreak_weight
-                        )
+                        prior_tiebreak_scores = normalized_base * blend_plan.prior_tiebreak_weight
                 clamp_value = (
                     float(torch.max(torch.abs(candidate_sae)).item())
                     if int(candidate_sae.numel())
@@ -465,7 +469,8 @@ class SAERecommender:
         # Mask disallowed items with -inf so they never appear in top-k
         allowed_mask = torch.tensor(
             [mid in allowed_set for mid in self.item_ids],
-            device=device, dtype=torch.bool,
+            device=device,
+            dtype=torch.bool,
         )
         if not allowed_mask.any():
             return {"results": [], "debug": {}} if bool(_kwargs.get("return_debug", False)) else []
@@ -482,13 +487,15 @@ class SAERecommender:
             if item_id in exclude_set:
                 valid_mask[idx] = False
                 continue
-            results.append({
-                "movie_id": int(item_id),
-                "score": round(scores[idx].item(), 4),
-                "cf_score": round(cf_scores[idx].item(), 4),
-                "genre_score": round(genre_scores[idx].item(), 4),
-                "steering_score": round(steering_scores[idx].item(), 4),
-            })
+            results.append(
+                {
+                    "movie_id": int(item_id),
+                    "score": round(scores[idx].item(), 4),
+                    "cf_score": round(cf_scores[idx].item(), 4),
+                    "genre_score": round(genre_scores[idx].item(), 4),
+                    "steering_score": round(steering_scores[idx].item(), 4),
+                }
+            )
             if len(results) >= n_items:
                 break
 
@@ -613,10 +620,7 @@ def get_available_models() -> List[Dict]:
     for model_id, name, description in candidates:
         path = find_local_model_path(model_id)
         if path is not None:
-            available.append({
-                "id": model_id,
-                "name": name,
-                "description": description,
-                "path": str(path)
-            })
+            available.append(
+                {"id": model_id, "name": name, "description": description, "path": str(path)}
+            )
     return available

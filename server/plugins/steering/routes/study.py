@@ -12,6 +12,7 @@ from server.platform.shared.common import (
     load_user_study_config_by_guid,
     multi_lang,
 )
+
 from ..constants import PLUGIN_NAME
 from ..paths import ensure_questionnaire_cached
 from ..plugin import bp, get_lang, languages
@@ -267,9 +268,7 @@ def show_features():
     if participation_id:
         approach_order = session.get("approach_order")
         audit.ensure_study_run(participation_id, approach_order=approach_order)
-        audit.record_elicitation_completed(
-            selected_movies, participation_id=participation_id
-        )
+        audit.record_elicitation_completed(selected_movies, participation_id=participation_id)
         audit.ensure_approach_run(
             participation_id,
             approach_index=0,

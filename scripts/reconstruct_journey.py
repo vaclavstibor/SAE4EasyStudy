@@ -8,6 +8,7 @@ Usage:
 This thin CLI wraps the shared `journey` module used by the admin UI so the
 on-screen journey view and the offline reconstruction stay perfectly in sync.
 """
+
 import argparse
 import json
 import os
@@ -19,19 +20,19 @@ sys.path.insert(0, os.path.join(_REPO_ROOT, "server"))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "server", "plugins"))
 
 from sae_steering.journey import (  # noqa: E402
-    NOISE_TYPES,
-    PHASE_LABELS,
     build_journey,
-    describe_interaction,
-    fmt_time,
 )
 
 
 def main():
     parser = argparse.ArgumentParser(description="Reconstruct participant journey")
     parser.add_argument("export_json", help="Path to exported study JSON")
-    parser.add_argument("--participant", "-p", type=int, default=0, help="Participant index (default: 0)")
-    parser.add_argument("--verbose", "-v", action="store_true", help="Include mouse/viewport noise events")
+    parser.add_argument(
+        "--participant", "-p", type=int, default=0, help="Participant index (default: 0)"
+    )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Include mouse/viewport noise events"
+    )
     args = parser.parse_args()
 
     with open(args.export_json) as f:
@@ -71,8 +72,10 @@ def main():
     print(f"  Recommendations: {conf.get('num_recommendations', '?')}")
     for i, m in enumerate(models):
         print(
-            f"  Model {chr(65 + i)}: {m.get('name', '?')} | steering={m.get('steering_mode', '?')} | "
-            f"sae={m.get('sae', '?')} | questionnaire={m.get('phase_questionnaire_file', 'none')}"
+            f"  Model {chr(65 + i)}: {m.get('name', '?')} | "
+            f"steering={m.get('steering_mode', '?')} | "
+            f"sae={m.get('sae', '?')} | "
+            f"questionnaire={m.get('phase_questionnaire_file', 'none')}"
         )
     print(f"  Final questionnaire: {conf.get('questionnaire_file', 'none')}")
     print()

@@ -24,10 +24,7 @@ import pytest
 
 from server.plugins.steering.routes.steering.actions import _compose_text_adjustments
 
-
-# ---------------------------------------------------------------------------
 # Seed helpers
-# ---------------------------------------------------------------------------
 
 
 def _seed(db, *, admin_password: str = "hashed-pw"):
@@ -95,9 +92,7 @@ def _login_session(client, email):
         sess["_fresh"] = True
 
 
-# ---------------------------------------------------------------------------
 # Pure unit: text composition modes (FR-09)
-# ---------------------------------------------------------------------------
 
 
 class TestComposeTextAdjustments:
@@ -149,9 +144,7 @@ class TestComposeTextAdjustments:
         assert result == {"b": 0.3}
 
 
-# ---------------------------------------------------------------------------
 # /reset (FR-12)
-# ---------------------------------------------------------------------------
 
 
 def test_reset_writes_one_audit_row_and_clears_session(app_ctx):
@@ -229,9 +222,7 @@ def test_reset_without_participation_returns_ok_and_writes_no_rows(app_ctx):
         assert SaeResetAction.query.count() == 0
 
 
-# ---------------------------------------------------------------------------
 # /parse-text-steering (FR-09 + NFR-12)
-# ---------------------------------------------------------------------------
 
 
 def test_parse_text_steering_rejects_oversize_query_with_400(app_ctx):
@@ -292,9 +283,7 @@ def test_parse_text_steering_no_match_returns_graceful_message(app_ctx, monkeypa
     assert "could not match" in body["message"].lower()
 
 
-# ---------------------------------------------------------------------------
 # CSV export (FR-17) + admin authentication
-# ---------------------------------------------------------------------------
 
 
 def test_export_csv_rejects_unauthenticated_callers(app_ctx):
@@ -358,9 +347,7 @@ def test_export_csv_unknown_guid_returns_404(app_ctx):
     assert response.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # Researcher routes: @login_required regression net
-# ---------------------------------------------------------------------------
 
 
 RESEARCHER_GET_ROUTES = [

@@ -1,3 +1,5 @@
+"""Tests for the platform-level database URL resolver."""
+
 from pathlib import Path
 
 

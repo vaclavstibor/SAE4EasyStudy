@@ -54,7 +54,8 @@ def log_approach_order_once(raw_order, models):
         return
     if Participation.query.filter(Participation.id == participation_id).first() is None:
         print(
-            f"[log_approach_order_once] participation_id={participation_id} gone; clearing stale session state."
+            f"[log_approach_order_once] participation_id={participation_id} gone; "
+            "clearing stale session state."
         )
         for key in ("participation_id", "approach_order", "approach_order_logged"):
             session.pop(key, None)
@@ -66,6 +67,7 @@ def log_approach_order_once(raw_order, models):
     session["approach_order_logged"] = True
     persist_approach_order_on_participation(raw_order, effective_names, model_names)
     from .audit import record_event
+
     record_event(
         "approach-order-assigned",
         participation_id=participation_id,
@@ -117,7 +119,8 @@ def ensure_participation_for_guid(guid: str, get_lang):
         if Participation.query.filter(Participation.id == existing_id).first():
             return
         print(
-            f"[ensure_participation_for_guid] Stale participation_id={existing_id} in session (row missing in DB); regenerating."
+            f"[ensure_participation_for_guid] Stale participation_id={existing_id} "
+            "in session (row missing in DB); regenerating."
         )
         for key in (
             "participation_id",

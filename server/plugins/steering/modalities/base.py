@@ -20,4 +20,3 @@ class SteeringModality:
 
     def apply(self, data: Dict[str, Any], *, conf: dict, active_model: dict) -> SteeringResult:
         raise NotImplementedError
-

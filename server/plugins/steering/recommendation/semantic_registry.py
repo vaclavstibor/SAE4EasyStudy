@@ -60,9 +60,7 @@ def load_semantic_clusters(model_id: str = None) -> dict:
     data_dir = os.path.join(os.path.dirname(__file__), "..", "data")
     path = os.path.join(data_dir, f"semantic_merged_{resolved}.json")
     if not os.path.exists(path):
-        raise RuntimeError(
-            f"Semantic clusters not found: {path}. Copy from labeling/artifacts/."
-        )
+        raise RuntimeError(f"Semantic clusters not found: {path}. Copy from labeling/artifacts/.")
 
     with open(path, "r", encoding="utf-8") as f:
         raw = json.load(f)

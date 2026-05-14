@@ -6,20 +6,19 @@ from flask import jsonify, request, session
 
 from server.platform.shared.common import load_user_study_config
 
-from ...plugin import bp
 from ...constants import (
     DEFAULT_STEERING_MODE,
     DEFAULT_TEXT_COMPOSITION_MODE,
-    DEFAULT_TOPK_SAE_MODEL_ID,
     SUPPORTED_TEXT_COMPOSITION_MODES,
     TEXT_STEERING_MAX_QUERY_CHARS,
 )
+from ...modalities.registry import get_modality_strategy
+from ...plugin import bp
 from ...recommendation.semantic_registry import load_semantic_clusters
 from ...service import audit
 from ...service.audit import AuditContractError
-from ...study_config import get_active_model_config, get_active_sae_model_id, normalize_study_config
 from ...service.iteration_controller import apply_feature_adjustment_iteration
-from ...modalities.registry import get_modality_strategy
+from ...study_config import get_active_model_config, get_active_sae_model_id, normalize_study_config
 
 
 @bp.route("/adjust-features", methods=["POST"])
@@ -61,7 +60,9 @@ def parse_text_steering():
     data = request.get_json(force=True) or {}
     query = (data.get("query") or "").strip()
     if not query:
-        return jsonify({"status": "error", "message": "Missing query", "features": [], "adjustments": {}}), 200
+        return jsonify(
+            {"status": "error", "message": "Missing query", "features": [], "adjustments": {}}
+        ), 200
     conf = normalize_study_config(load_user_study_config(session.get("user_study_id")))
     text_cfg = conf.get("text_steering") if isinstance(conf.get("text_steering"), dict) else {}
     max_chars = int(text_cfg.get("max_query_chars") or TEXT_STEERING_MAX_QUERY_CHARS)
@@ -80,7 +81,6 @@ def parse_text_steering():
         )
 
     active_model = get_active_model_config(conf)
-    active_sae_id = active_model.get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
     resolved = get_modality_strategy("text").apply(data, conf=conf, active_model=active_model)
 
     composition_mode = (
@@ -92,7 +92,9 @@ def parse_text_steering():
     if composition_mode not in SUPPORTED_TEXT_COMPOSITION_MODES:
         composition_mode = DEFAULT_TEXT_COMPOSITION_MODE
     previous = (session.get("last_text_steering") or {}).get("adjustments") or {}
-    composed_adjustments = _compose_text_adjustments(composition_mode, previous, resolved.adjustments)
+    composed_adjustments = _compose_text_adjustments(
+        composition_mode, previous, resolved.adjustments
+    )
 
     participation_id = session.get("participation_id")
     if participation_id:
@@ -120,7 +122,8 @@ def parse_text_steering():
         # NFR-12: ambiguous input degrades gracefully; UI shows a hint, audit row is written.
         response["status"] = "no-match"
         response["message"] = (
-            "We could not match your text to any feature. Try different wording, e.g. specific genres or themes."
+            "We could not match your text to any feature. "
+            "Try different wording, e.g. specific genres or themes."
         )
     return jsonify(response)
 
@@ -133,10 +136,7 @@ def apply_example_steering():
     derived = get_modality_strategy("examples").apply(data, conf=conf, active_model=active_model)
     participation_id = session.get("participation_id")
     if participation_id:
-        movies = [
-            {"movie_id": mid}
-            for mid in derived.metadata.get("example_movie_ids", [])
-        ]
+        movies = [{"movie_id": mid} for mid in derived.metadata.get("example_movie_ids", [])]
         audit.record_example_steering(
             participation_id=participation_id,
             approach_index=int(session.get("current_phase", 0)),
@@ -198,7 +198,14 @@ def search_features():
                     "match_rank": match_rank,
                 }
             )
-    results.sort(key=lambda row: (row["already_shown"], row["match_rank"], -row["movie_count"], len(row["label"])))
+    results.sort(
+        key=lambda row: (
+            row["already_shown"],
+            row["match_rank"],
+            -row["movie_count"],
+            len(row["label"]),
+        )
+    )
     participation_id = session.get("participation_id")
     if participation_id:
         active_model = get_active_model_config(conf)

@@ -11,7 +11,6 @@ from .sliders import SliderSteering
 from .text import TextSteering
 from .toggles import ToggleSteering
 
-
 _REGISTRY: Dict[str, SteeringModality] = {
     Modalities.SLIDERS: SliderSteering(),
     Modalities.TOGGLES: ToggleSteering(),
@@ -29,4 +28,3 @@ def get_modality_strategy(modality_id: str) -> SteeringModality:
 
 def registered_modalities() -> list:
     return sorted(_REGISTRY.keys())
-

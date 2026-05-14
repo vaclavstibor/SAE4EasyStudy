@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from ..approach_state import get_approach_id_map, get_approach_token_set, set_approach_token_set
 from ..constants import DEFAULT_TOPK_SAE_MODEL_ID, Modalities
 from ..recommendation.features import get_sae_features, personalized_features
-from ..approach_state import get_approach_id_map, get_approach_token_set, set_approach_token_set
 from ..recommendation.semantic_registry import is_near_duplicate_label, normalize_label
 from .base import SteeringModality, SteeringResult
-
 
 SLIDER_AMPLIFICATION = 2.0
 
 
 class SliderSteering(SteeringModality):
-    
     modality_id = Modalities.SLIDERS
 
     def apply(self, data: Dict[str, Any], *, conf: dict, active_model: dict) -> SteeringResult:
@@ -25,7 +23,9 @@ class SliderSteering(SteeringModality):
             for feature_id, value in raw_adjustments.items()
             if abs(float(value)) > 0.001
         }
-        return SteeringResult(features=[], adjustments=adjustments, metadata={"raw_adjustments": raw_adjustments})
+        return SteeringResult(
+            features=[], adjustments=adjustments, metadata={"raw_adjustments": raw_adjustments}
+        )
 
 
 def compute_updated_sliders(
@@ -93,7 +93,9 @@ def compute_updated_sliders(
     if len(selected) < num_sliders:
         append_from_pool(profile_pool, num_sliders, source="exploit", allow_shown=True)
 
-    shown_ids.update({str(feature.get("id")) for feature in selected if feature.get("id") is not None})
+    shown_ids.update(
+        {str(feature.get("id")) for feature in selected if feature.get("id") is not None}
+    )
     set_approach_token_set("shown_sliders_per_phase", phase_idx, shown_ids)
 
     print(

@@ -1,3 +1,10 @@
+"""SQLAlchemy models that back the typed audit pipeline for SAE steering studies.
+
+Every user action lands in one or more strongly-typed rows here plus a minimal
+``SaeSteeringEvent`` envelope for timeline ordering. See ``service/audit.py``
+for the single-writer service that populates these tables.
+"""
+
 from server.platform.persistence.db import db
 
 
@@ -105,9 +112,7 @@ class SaeSteeringEvent(db.Model):
             "participation_id",
             "created_at",
         ),
-        db.Index(
-            "ix_sae_steering_event_approach_iteration", "approach_run_id", "iteration"
-        ),
+        db.Index("ix_sae_steering_event_approach_iteration", "approach_run_id", "iteration"),
         db.Index("ix_sae_steering_event_type", "event_type"),
         db.Index("ix_sae_steering_event_source", "source"),
         db.Index(
@@ -116,9 +121,7 @@ class SaeSteeringEvent(db.Model):
             "approach_index",
             "iteration",
         ),
-        db.Index(
-            "ix_sae_steering_event_type_modality", "event_type", "modality"
-        ),
+        db.Index("ix_sae_steering_event_type_modality", "event_type", "modality"),
     )
 
 
@@ -155,9 +158,7 @@ class SaeRecommendationSet(db.Model):
             "approach_run_id",
             "iteration",
         ),
-        db.Index(
-            "ix_sae_recommendation_set_participation_id", "participation_id"
-        ),
+        db.Index("ix_sae_recommendation_set_participation_id", "participation_id"),
     )
 
 
@@ -230,9 +231,7 @@ class SaeMovieFeedback(db.Model):
     created_at = db.Column(db.DateTime, nullable=False)
 
     __table_args__ = (
-        db.Index(
-            "ix_sae_movie_feedback_approach_iteration", "approach_run_id", "iteration"
-        ),
+        db.Index("ix_sae_movie_feedback_approach_iteration", "approach_run_id", "iteration"),
         db.Index("ix_sae_movie_feedback_movie_id", "movie_id"),
         db.Index("ix_sae_movie_feedback_event_id", "event_id"),
     )
@@ -263,12 +262,8 @@ class SaeQuestionnaireResponse(db.Model):
     submitted_at = db.Column(db.DateTime, nullable=False)
 
     __table_args__ = (
-        db.Index(
-            "ix_sae_questionnaire_response_participation_id", "participation_id"
-        ),
-        db.Index(
-            "ix_sae_questionnaire_response_approach_run_id", "approach_run_id"
-        ),
+        db.Index("ix_sae_questionnaire_response_participation_id", "participation_id"),
+        db.Index("ix_sae_questionnaire_response_approach_run_id", "approach_run_id"),
     )
 
 
@@ -378,9 +373,7 @@ class SaeFeatureSearchHit(db.Model):
     rank = db.Column(db.Integer, nullable=False)
 
     __table_args__ = (
-        db.UniqueConstraint(
-            "search_id", "rank", name="uq_sae_feature_search_hit_search_rank"
-        ),
+        db.UniqueConstraint("search_id", "rank", name="uq_sae_feature_search_hit_search_rank"),
     )
 
 

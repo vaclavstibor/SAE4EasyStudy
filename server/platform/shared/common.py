@@ -1,3 +1,5 @@
+"""Shared helpers used by routes and plugins (paths, languages, study config)."""
+
 import functools
 import glob
 import json
