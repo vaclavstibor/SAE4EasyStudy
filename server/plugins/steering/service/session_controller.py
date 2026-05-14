@@ -120,9 +120,6 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
         enable_comparison = False
         active_model = models[current_phase] if current_phase < len(models) else models[0]
         session["active_model_config"] = active_model
-    model_a_name = models[0].get("name", "Model A") if len(models) > 0 else "Model A"
-    model_b_name = models[1].get("name", "Model B") if len(models) > 1 else "Model B"
-
     next_phase_name = ""
     if is_sequential and current_phase + 1 < len(models):
         next_phase_name = models[current_phase + 1].get("name", f"Model {chr(66 + current_phase)}")
@@ -305,7 +302,14 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
     )
 
     text_cfg = conf.get("text_steering") if isinstance(conf.get("text_steering"), dict) else {}
+    # ``last_text_steering`` is namespaced by ``<guid>:<phase>`` (set by
+    # /parse-text-steering). A stale entry from a different study or a
+    # previous phase MUST NOT surface here — otherwise the participant
+    # sees another study's last prompt in the "You said before" banner.
     last_text_steering = session.get("last_text_steering") or {}
+    expected_scope = f"{session.get('user_study_guid') or session.get('user_study_id') or ''}:{int(current_phase or 0)}"
+    if last_text_steering.get("scope") != expected_scope:
+        last_text_steering = {}
     previous_text_query = str(last_text_steering.get("query") or "").strip()
 
     return {
@@ -320,8 +324,6 @@ def build_steering_page_context(get_min_resolution_settings, phase_questionnaire
         "submit": tr("get_recommendations"),
         "enable_comparison": enable_comparison,
         "interaction_mode": interaction_mode,
-        "model_a_name": model_a_name,
-        "model_b_name": model_b_name,
         "initial_recs_a": initial_recs_a,
         "initial_recs_b": initial_recs_b,
         "initial_recs": initial_recs,

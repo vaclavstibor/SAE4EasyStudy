@@ -14,6 +14,8 @@ from ..approach_state import (
     set_approach_movie_set,
 )
 from ..constants import (
+    DEFAULT_CONSTRAINED_SUBSET_TAU,
+    DEFAULT_LATENT_PERTURBATION_ALPHA,
     DEFAULT_RERANKING_STRATEGY,
     DEFAULT_STEERING_MODE,
     DEFAULT_TOPK_SAE_MODEL_ID,
@@ -31,6 +33,7 @@ from ..recommendation.service import (
 )
 from ..study_config import (
     get_active_model_config,
+    get_audit_approach_indices,
     get_study_dataset_variant,
     normalize_steering_mode,
     normalize_study_config,
@@ -108,6 +111,23 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     )
     if reranking_strategy not in SUPPORTED_RERANKING_STRATEGIES:
         reranking_strategy = DEFAULT_RERANKING_STRATEGY
+    # Strategy-specific knobs live alongside the model definition (per-
+    # approach) and fall back to study-level then constant defaults.
+    # The reranker reads them only when its branch is active.
+    reranking_params = {
+        "latent_perturbation_alpha": float(
+            active_model_cfg.get(
+                "latent_perturbation_alpha",
+                conf.get("latent_perturbation_alpha", DEFAULT_LATENT_PERTURBATION_ALPHA),
+            )
+        ),
+        "constrained_subset_tau": float(
+            active_model_cfg.get(
+                "constrained_subset_tau",
+                conf.get("constrained_subset_tau", DEFAULT_CONSTRAINED_SUBSET_TAU),
+            )
+        ),
+    }
 
     if not preferences_approved:
         return preference_confirmation_error()
@@ -122,10 +142,16 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
         remember_shown_movies(0, shown_map.get("0", []))
 
     participation_id = session.get("participation_id")
+    is_reset_iteration = interaction_mode == "reset"
     previous_adjustments = (
-        {} if interaction_mode == "reset" else dict(session.get("cumulative_adjustments", {}))
+        {} if is_reset_iteration else dict(session.get("cumulative_adjustments", {}))
     )
-    user_touched = set(session.get("user_touched_features", []))
+    user_touched = (
+        set() if is_reset_iteration else set(session.get("user_touched_features", []))
+    )
+    if is_reset_iteration:
+        session.pop("last_text_steering", None)
+        session.pop("last_example_steering", None)
 
     previous_adjustments_before = dict(previous_adjustments)
     for key, val in (raw_adjustments or {}).items():
@@ -175,11 +201,21 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
     like_weight = float(
         active_model_cfg.get("selection_signal_weight", conf.get("selection_signal_weight", 0.5))
     )
-    if new_likes or removed_likes:
+    if is_reset_iteration:
+        # Drop the carried-over like signal so the next iteration recomputes
+        # recommendations from the original elicitation-derived ELSA seed only.
+        # The audit row below still captures this iteration's liked_movies
+        # from the request body.
         update_elsa_seed_with_likes(
-            current_liked, active_sae_id, like_weight=like_weight, like_cap=10
+            set(), active_sae_id, like_weight=like_weight, like_cap=10
         )
-    session["boosted_liked_ids"] = list(current_liked)
+        session["boosted_liked_ids"] = []
+    else:
+        if new_likes or removed_likes:
+            update_elsa_seed_with_likes(
+                current_liked, active_sae_id, like_weight=like_weight, like_cap=10
+            )
+        session["boosted_liked_ids"] = list(current_liked)
 
     loader = load_ml_dataset(ml_variant=get_study_dataset_variant(conf))
     seed_genres = set()
@@ -192,42 +228,51 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                     seed_genres.add(genre)
         except (KeyError, AttributeError):
             pass
-    for movie_id in current_liked:
-        try:
-            row = loader.movies_df_indexed.loc[int(movie_id)]
-            for genre in str(row.genres).split("|"):
-                genre = genre.strip()
-                if genre and genre != "(no genres listed)":
-                    seed_genres.add(genre)
-        except (KeyError, AttributeError):
-            pass
+    if not is_reset_iteration:
+        for movie_id in current_liked:
+            try:
+                row = loader.movies_df_indexed.loc[int(movie_id)]
+                for genre in str(row.genres).split("|"):
+                    genre = genre.strip()
+                    if genre and genre != "(no genres listed)":
+                        seed_genres.add(genre)
+            except (KeyError, AttributeError):
+                pass
     session["seed_genres"] = list(seed_genres)
 
     current_iteration = session.get("iteration", 1)
     if participation_id:
         active_phase = session.get("current_phase", 0)
-        audit.record_feature_adjustment(
-            participation_id=participation_id,
-            approach_index=int(active_phase),
-            raw_adjustments=raw_adjustments,
-            recommendation_adjustments=recommendation_adjustments,
-            previous_adjustments=previous_adjustments_before,
-            resulting_adjustments=previous_adjustments,
-            active_model=active_model_cfg,
-            iteration=current_iteration,
-            modality=normalize_steering_mode(steering_mode_for_iteration),
-            search_context=search_context,
-            control_state=control_state,
-            liked_movies=client_liked,
-            example_adjustments=example_adjustments,
-            example_metadata=example_metadata,
-            cluster_map=cluster_map,
-        )
+        # Side-by-side: one slider grid drives both columns, so the
+        # same adjustment row gets written for each approach run. The
+        # helper centralises the fan-out rule (see study_config.py).
+        for ai in get_audit_approach_indices(conf, active_phase):
+            audit.record_feature_adjustment(
+                participation_id=participation_id,
+                approach_index=int(ai),
+                raw_adjustments=raw_adjustments,
+                recommendation_adjustments=recommendation_adjustments,
+                previous_adjustments=previous_adjustments_before,
+                resulting_adjustments=previous_adjustments,
+                active_model=active_model_cfg,
+                iteration=current_iteration,
+                modality=normalize_steering_mode(steering_mode_for_iteration),
+                search_context=search_context,
+                control_state=control_state,
+                liked_movies=client_liked,
+                example_adjustments=example_adjustments,
+                example_metadata=example_metadata,
+                cluster_map=cluster_map,
+            )
 
     selected_movies = session.get("elicitation_selected_movies", [])
-    excluded_movie_ids = list(set(excluded_movies_from_text or []))
-    if excluded_movie_ids:
-        session["excluded_movies_from_text"] = excluded_movie_ids
+    if is_reset_iteration:
+        excluded_movie_ids = []
+        session.pop("excluded_movies_from_text", None)
+    else:
+        excluded_movie_ids = list(set(excluded_movies_from_text or []))
+        if excluded_movie_ids:
+            session["excluded_movies_from_text"] = excluded_movie_ids
 
     is_sequential = conf.get("comparison_mode", "side_by_side") == "sequential" and len(models) >= 2
     total_phases = len(models) if is_sequential else 1
@@ -260,6 +305,8 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
             model_config=active_model,
             k=num_recommendations,
             suppressed_genres=suppressed_genres,
+            reranking_strategy=reranking_strategy,
+            reranking_params=reranking_params,
         )
         recommendations, debug_insights = unwrap_recommendation_payload(payload)
         response_data["recommendations"] = recommendations
@@ -292,6 +339,8 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
             model_config=models[0],
             k=num_recommendations,
             suppressed_genres=suppressed_genres,
+            reranking_strategy=reranking_strategy,
+            reranking_params=reranking_params,
         )
         payload_b = generate_steered_recommendations_for_model(
             loader=loader,
@@ -306,6 +355,8 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
             model_config=models[1],
             k=num_recommendations,
             suppressed_genres=suppressed_genres,
+            reranking_strategy=reranking_strategy,
+            reranking_params=reranking_params,
         )
         recommendations_a, debug_a = unwrap_recommendation_payload(payload_a)
         recommendations_b, debug_b = unwrap_recommendation_payload(payload_b)
@@ -354,6 +405,8 @@ def apply_feature_adjustment_iteration(data: dict) -> dict:
                 model_config=models[0],
                 k=num_recommendations,
                 suppressed_genres=suppressed_genres,
+                reranking_strategy=reranking_strategy,
+                reranking_params=reranking_params,
             )
             recommendations, debug_insights = unwrap_recommendation_payload(recommendations_payload)
         else:

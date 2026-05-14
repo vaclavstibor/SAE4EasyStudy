@@ -805,6 +805,16 @@ def lookup_recommendation_set_id(
     return rec_set.id if rec_set else None
 
 
+#: Mapping from the *column* list_id used in side-by-side comparison mode
+#: to the approach_index that owns that column. Sequential studies use
+#: ``list_id="recs-single"`` and stay with the caller-provided
+#: ``approach_index`` (== current_phase).
+_COMPARISON_LIST_TO_APPROACH = {
+    "recs-model-a": 0,
+    "recs-model-b": 1,
+}
+
+
 def record_movie_feedback(
     data: dict,
     *,
@@ -814,15 +824,26 @@ def record_movie_feedback(
 ) -> SaeMovieFeedback:
     participation = _participation(participation_id)
     conf = _conf(participation)
-    approach_run = ensure_approach_run(participation.id, approach_index=approach_index, conf=conf)
     movie_id = data.get("movie_id")
     if movie_id is None:
         raise AuditContractError("Movie feedback missing movie_id")
-    loader = load_ml_dataset(ml_variant=get_study_dataset_variant(conf))
-    movie = _movie_snapshot(loader, movie_id)
     list_id = data.get("list_id")
     if not list_id:
         raise AuditContractError("Movie feedback missing list_id")
+    # Side-by-side studies keep ``current_phase`` at 0 for both columns
+    # because there is no phase boundary between them. The *column*
+    # determines the approach: ``recs-model-a`` → approach 0,
+    # ``recs-model-b`` → approach 1. Without this remap, a like on the
+    # right-hand column would look up SaeRecommendationSet
+    # (approach_index=0, list_id="recs-model-b") which does not exist
+    # (column B's rec set was written with approach_index=1) and the
+    # whole feedback row is dropped on the floor with a 400. The
+    # remap fixes a critical data-loss bug, see design-decisions §22.
+    if list_id in _COMPARISON_LIST_TO_APPROACH:
+        approach_index = _COMPARISON_LIST_TO_APPROACH[list_id]
+    approach_run = ensure_approach_run(participation.id, approach_index=approach_index, conf=conf)
+    loader = load_ml_dataset(ml_variant=get_study_dataset_variant(conf))
+    movie = _movie_snapshot(loader, movie_id)
     rec_set_id = lookup_recommendation_set_id(
         participation_id=participation.id,
         approach_index=approach_index,

@@ -260,6 +260,10 @@ def show_features():
     session["last_shown_movies_per_phase"] = {}
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
+    # Fresh study start — drop any text-steering payload from a previous
+    # study so the (guid, phase) scope guard doesn't have to do any work.
+    session.pop("last_text_steering", None)
+    session.pop("last_example_steering", None)
 
     conf = normalize_study_config(load_user_study_config(session.get("user_study_id")))
     get_effective_models(conf)
@@ -287,6 +291,11 @@ def _do_advance_phase(next_phase_idx):
     session["iteration_preferences_approved"] = False
     session["iteration_locked_final"] = False
     session.pop("excluded_movies_from_text", None)
+    # Belt-and-suspenders: the scope check in /parse-text-steering already
+    # filters by (guid, phase), so a stale entry here would be invisible.
+    # Drop it anyway so the session payload doesn't carry dead bytes
+    # forward across N phases.
+    session.pop("last_text_steering", None)
     if session.get("participation_id"):
         conf = normalize_study_config(load_user_study_config(session.get("user_study_id")))
         audit.ensure_approach_run(

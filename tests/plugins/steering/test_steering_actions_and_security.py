@@ -169,6 +169,10 @@ def test_reset_writes_one_audit_row_and_clears_session(app_ctx):
         sess["feature_adjustments"] = {"feat_1": 0.5}
         sess["user_touched_features"] = ["feat_1"]
         sess["last_text_steering"] = {"query": "old query", "adjustments": {"feat_1": 0.5}}
+        sess["last_example_steering"] = {"adjustments": {"feat_1": 0.4}}
+        sess["boosted_liked_ids"] = [11, 22, 33]
+        sess["persistent_liked_by_phase"] = {"0": [11, 22, 33]}
+        sess["elicitation_selected_movies"] = [101, 102]
 
     response = client.post(
         "/sae_steering/reset",
@@ -200,6 +204,11 @@ def test_reset_writes_one_audit_row_and_clears_session(app_ctx):
         assert sess["feature_adjustments"] == {}
         assert sess["user_touched_features"] == []
         assert sess["last_text_steering"] == {}
+        assert sess["last_example_steering"] == {}
+        assert sess["boosted_liked_ids"] == []
+        assert sess["persistent_liked_by_phase"]["0"] == []
+        # Preference-elicitation pool is intentionally never touched by /reset.
+        assert sess["elicitation_selected_movies"] == [101, 102]
 
 
 def test_reset_without_participation_returns_ok_and_writes_no_rows(app_ctx):
@@ -249,6 +258,358 @@ def test_parse_text_steering_rejects_oversize_query_with_400(app_ctx):
     assert body["status"] == "error"
     assert "max" in body["message"].lower()
     assert body["max_chars"] == 200
+
+
+class _StubResolvedSteering:
+    """Tiny stand-in for ``ResolvedSteering`` used by parse-text-steering tests.
+
+    We only need ``.adjustments`` (a dict of cluster_id -> weight) and
+    ``.features`` (a list of {"label", "weight"} dicts). The real
+    implementation lives in ``modalities/text.py`` and depends on
+    cluster embeddings + the SAE recommender, neither of which we want
+    to bootstrap in a session-scope regression test.
+    """
+
+    def __init__(self, adjustments=None, features=None, metadata=None):
+        self.adjustments = adjustments or {}
+        self.features = features or []
+        self.metadata = metadata or {}
+
+
+def _stub_text_modality(monkeypatch, adjustments=None, features=None):
+    """Replace the ``text`` modality strategy with a deterministic stub."""
+    payload = _StubResolvedSteering(adjustments=adjustments, features=features)
+
+    class _StubStrategy:
+        def apply(self, *_args, **_kwargs):
+            return payload
+
+    monkeypatch.setattr(
+        "server.plugins.steering.routes.steering.actions.get_modality_strategy",
+        lambda _name: _StubStrategy(),
+    )
+
+
+def test_parse_text_steering_stamps_scope_on_session_payload(app_ctx, monkeypatch):
+    """``last_text_steering`` MUST carry a ``scope`` tag = "<guid>:<phase>".
+
+    The scope is what prevents a prompt from one (study, phase) leaking
+    into another. Without it, a participant who finished study A in
+    the same browser session would see A's last prompt in B's UI.
+    """
+    app, db = app_ctx
+    app.config["WTF_CSRF_ENABLED"] = False
+    _, study, participation = _seed(db)
+    _stub_text_modality(monkeypatch, adjustments={"cluster_99": 0.5}, features=[])
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["participation_id"] = participation.id
+        sess["user_study_id"] = study.id
+        sess["user_study_guid"] = study.guid
+        sess["approach_order"] = [0, 1]
+        sess["current_phase"] = 0
+        sess["iteration"] = 1
+
+    response = client.post(
+        "/sae_steering/parse-text-steering",
+        data=json.dumps({"query": "dark fantasy"}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+
+    with client.session_transaction() as sess:
+        stored = sess["last_text_steering"]
+    assert stored["scope"] == f"{study.guid}:0"
+    assert stored["query"] == "dark fantasy"
+    assert stored["adjustments"] == {"cluster_99": 0.5}
+
+
+def test_parse_text_steering_ignores_previous_payload_from_other_study(app_ctx, monkeypatch):
+    """A stored prompt from study A must NOT feed composition in study B.
+
+    Regression for the leak the user reported: "You said before: 'Text
+    iter 3'" appearing in study B, where that prompt actually came from
+    study A in a previous browser session.
+    """
+    app, db = app_ctx
+    app.config["WTF_CSRF_ENABLED"] = False
+    _, study, participation = _seed(db)
+    _stub_text_modality(monkeypatch, adjustments={"cluster_b": 0.4})
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["participation_id"] = participation.id
+        sess["user_study_id"] = study.id
+        sess["user_study_guid"] = study.guid
+        sess["approach_order"] = [0, 1]
+        sess["current_phase"] = 0
+        sess["iteration"] = 1
+        # Stale payload from a different study GUID — must be ignored.
+        sess["last_text_steering"] = {
+            "scope": "OTHER-STUDY-GUID:0",
+            "query": "leftover from study A",
+            "adjustments": {"cluster_a": 0.7, "cluster_b": 0.7},
+        }
+
+    response = client.post(
+        "/sae_steering/parse-text-steering",
+        data=json.dumps({"query": "fresh prompt in study B"}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    body = response.get_json()
+    # cluster_a from the stale payload must NOT be merged in — even
+    # though the active composition mode ("replace" by default) would
+    # technically replace anyway, the test asserts that the *previous*
+    # dict used by composition was empty, not the stale one.
+    assert "cluster_a" not in body["adjustments"]
+    assert body["adjustments"] == {"cluster_b": 0.4}
+
+    with client.session_transaction() as sess:
+        stored = sess["last_text_steering"]
+    assert stored["scope"] == f"{study.guid}:0"
+    assert stored["query"] == "fresh prompt in study B"
+
+
+def test_parse_text_steering_ignores_previous_payload_from_other_phase(app_ctx, monkeypatch):
+    """Within one study, a phase-0 prompt must not feed phase-1 composition."""
+    app, db = app_ctx
+    app.config["WTF_CSRF_ENABLED"] = False
+    _, study, participation = _seed(db)
+    _stub_text_modality(monkeypatch, adjustments={"cluster_new": 0.3})
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["participation_id"] = participation.id
+        sess["user_study_id"] = study.id
+        sess["user_study_guid"] = study.guid
+        sess["approach_order"] = [0, 1]
+        sess["current_phase"] = 1  # participant is now in approach 2 of 2
+        sess["iteration"] = 1
+        sess["last_text_steering"] = {
+            "scope": f"{study.guid}:0",  # left over from phase 0
+            "query": "from earlier approach",
+            "adjustments": {"cluster_old": 0.9},
+        }
+
+    response = client.post(
+        "/sae_steering/parse-text-steering",
+        data=json.dumps({"query": "new approach"}),
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["adjustments"] == {"cluster_new": 0.3}
+
+    with client.session_transaction() as sess:
+        stored = sess["last_text_steering"]
+    assert stored["scope"] == f"{study.guid}:1"
+
+
+def test_record_movie_feedback_routes_column_b_to_approach_1(app_ctx):
+    """Side-by-side: a like on column B must land in approach_run 1.
+
+    Regression for the data-loss bug: previously
+    ``log_movie_feedback`` passed ``approach_index=current_phase=0``
+    for *every* click in side-by-side mode, so the audit lookup
+    ``(approach_index=0, list_id="recs-model-b")`` never matched the
+    stored rec set (which was written with ``approach_index=1``) and
+    every like on the right-hand column was discarded with a 400.
+    The fix derives ``approach_index`` from ``list_id`` for the two
+    canonical comparison list_ids — see design-decisions.md §22.
+    """
+    from datetime import datetime
+
+    app, db = app_ctx
+    app.config["WTF_CSRF_ENABLED"] = False
+    from server.platform.persistence.base_models import Participation, User, UserStudy
+    from server.plugins.steering.persistence.models import (
+        SaeApproachRun,
+        SaeMovieFeedback,
+        SaeRecommendationSet,
+        SaeStudyRun,
+    )
+    from server.plugins.steering.service import audit as audit_service
+
+    user = User(email="sbs@example.com", password="x", authenticated=True, admin=True)
+    settings = {
+        "dataset": "ml-32m-filtered",
+        "comparison_mode": "side_by_side",
+        "models": [
+            {
+                "id": "appr_a",
+                "name": "Approach A",
+                "base": "elsa",
+                "sae": "TopKSAE-1024",
+                "steering_mode": "sliders",
+                "enabled_modalities": ["sliders"],
+            },
+            {
+                "id": "appr_b",
+                "name": "Approach B",
+                "base": "elsa",
+                "sae": "TopKSAE-1024",
+                "steering_mode": "sliders",
+                "enabled_modalities": ["sliders"],
+            },
+        ],
+    }
+    study = UserStudy(
+        creator=user.email,
+        guid="study-sbs",
+        parent_plugin="sae_steering",
+        settings=json.dumps(settings),
+        time_created=datetime.utcnow(),
+        active=True,
+        initialized=True,
+    )
+    db.session.add_all([user, study])
+    db.session.flush()
+    participation = Participation(
+        participant_email="p@example.com",
+        user_study_id=study.id,
+        time_joined=datetime.utcnow(),
+        uuid="p-sbs",
+        language="en",
+    )
+    db.session.add(participation)
+    db.session.flush()
+    study_run = SaeStudyRun(
+        user_study_id=study.id,
+        participation_id=participation.id,
+        study_guid=study.guid,
+        config_snapshot=settings,
+        approach_order=[0, 1],
+        effective_order=["Approach A", "Approach B"],
+        started_at=datetime.utcnow(),
+        status="active",
+    )
+    db.session.add(study_run)
+    db.session.flush()
+    # Seed both approach runs and both recommendation sets so the
+    # lookup has something to find.
+    for ai, name in ((0, "Approach A"), (1, "Approach B")):
+        db.session.add(
+            SaeApproachRun(
+                study_run_id=study_run.id,
+                participation_id=participation.id,
+                approach_index=ai,
+                approach_id=f"appr_{'ab'[ai]}",
+                approach_name=name,
+                steering_mode="sliders",
+                enabled_modalities=["sliders"],
+                sae_model_id="TopKSAE-1024",
+                base_model_id="elsa",
+                started_at=datetime.utcnow(),
+                status="active",
+            )
+        )
+    db.session.flush()
+
+    approach_run_b = (
+        SaeApproachRun.query.filter_by(study_run_id=study_run.id, approach_index=1).first()
+    )
+    rec_set_b = SaeRecommendationSet(
+        study_run_id=study_run.id,
+        approach_run_id=approach_run_b.id,
+        participation_id=participation.id,
+        approach_index=1,
+        approach_name="Approach B",
+        iteration=1,
+        list_id="recs-model-b",
+        steering_mode="sliders",
+        generated_at=datetime.utcnow(),
+        debug_payload={},
+    )
+    db.session.add(rec_set_b)
+    db.session.commit()
+
+    feedback = audit_service.record_movie_feedback(
+        data={
+            "movie_id": 1,
+            "action": "like",
+            "rank": 3,
+            "list_id": "recs-model-b",
+        },
+        participation_id=participation.id,
+        approach_index=0,  # this is what current_phase would carry
+        iteration=1,
+    )
+    db.session.flush()
+    stored = SaeMovieFeedback.query.filter_by(id=feedback.id).first()
+    assert stored is not None
+    assert stored.approach_index == 1
+    assert stored.list_id == "recs-model-b"
+    assert stored.recommendation_set_id == rec_set_b.id
+
+
+def test_get_audit_approach_indices_fans_out_side_by_side():
+    """Helper that drives audit fan-out for shared steering events."""
+    from server.plugins.steering.study_config import get_audit_approach_indices
+
+    sequential_conf = {
+        "comparison_mode": "sequential",
+        "models": [
+            {"id": "a", "steering_mode": "sliders"},
+            {"id": "b", "steering_mode": "sliders"},
+            {"id": "c", "steering_mode": "sliders"},
+        ],
+    }
+    side_by_side_conf = {
+        "comparison_mode": "side_by_side",
+        "models": [
+            {"id": "a", "steering_mode": "sliders"},
+            {"id": "b", "steering_mode": "sliders"},
+        ],
+    }
+    single_conf = {"models": [{"id": "a", "steering_mode": "sliders"}]}
+
+    # Sequential: only the current phase gets the event.
+    assert get_audit_approach_indices(sequential_conf, 0) == [0]
+    assert get_audit_approach_indices(sequential_conf, 2) == [2]
+    # Side-by-side: both approaches receive a copy of the event.
+    assert get_audit_approach_indices(side_by_side_conf, 0) == [0, 1]
+    # Single-approach study: same as sequential.
+    assert get_audit_approach_indices(single_conf, 0) == [0]
+
+
+def test_parse_text_steering_composition_uses_previous_when_scope_matches(app_ctx, monkeypatch):
+    """When scope matches, ``add`` composition must see the prior dict."""
+    app, db = app_ctx
+    app.config["WTF_CSRF_ENABLED"] = False
+    _, study, participation = _seed(db)
+
+    # Override the active model so the composition mode for this study is "add".
+    settings = json.loads(study.settings)
+    settings["models"][0]["text_composition_mode"] = "add"
+    study.settings = json.dumps(settings)
+    db.session.commit()
+
+    _stub_text_modality(monkeypatch, adjustments={"cluster_z": 0.2})
+
+    client = app.test_client()
+    with client.session_transaction() as sess:
+        sess["participation_id"] = participation.id
+        sess["user_study_id"] = study.id
+        sess["user_study_guid"] = study.guid
+        sess["approach_order"] = [0, 1]
+        sess["current_phase"] = 0
+        sess["iteration"] = 2
+        sess["last_text_steering"] = {
+            "scope": f"{study.guid}:0",
+            "query": "iter 1 prompt",
+            "adjustments": {"cluster_y": 0.5},
+        }
+
+    response = client.post(
+        "/sae_steering/parse-text-steering",
+        data=json.dumps({"query": "iter 2 prompt"}),
+        content_type="application/json",
+    )
+    body = response.get_json()
+    # add mode + matching scope: previous cluster_y is preserved.
+    assert body["adjustments"] == {"cluster_y": 0.5, "cluster_z": 0.2}
 
 
 def test_parse_text_steering_no_match_returns_graceful_message(app_ctx, monkeypatch):

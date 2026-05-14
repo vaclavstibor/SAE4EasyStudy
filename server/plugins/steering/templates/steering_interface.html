@@ -939,11 +939,16 @@
         <div class="recommendations-section">
             <div class="recommendations-row {% if not enable_comparison %}single-model{% endif %}">
                 {% if enable_comparison %}
-                <!-- Model A (Left) -->
+                {# Side-by-side compares two sides of the same study, not two
+                   named approaches. The participant sees neutral "side A" /
+                   "side B" labels; the approach identity is a researcher-
+                   facing concern and is captured by the audit pipeline
+                   (SaeApproachRun.approach_name). See design-decisions §22. #}
+                <!-- Side A (Left) -->
                 <div class="model-recommendations" id="model-a-container">
                     <div class="model-header model-a">
                         <span class="badge bg-primary">A</span>
-                        {{ model_a_name|default('Model A') }}
+                        Recommendations side A
                     </div>
                     <div class="recommendations-scroll" id="recs-model-a">
                         <div class="empty-recs">
@@ -952,11 +957,11 @@
                     </div>
                 </div>
                 
-                <!-- Model B (Right) -->
+                <!-- Side B (Right) -->
                 <div class="model-recommendations" id="model-b-container">
                     <div class="model-header model-b">
                         <span class="badge bg-success">B</span>
-                        {{ model_b_name|default('Model B') }}
+                        Recommendations side B
                     </div>
                     <div class="recommendations-scroll" id="recs-model-b">
                         <div class="empty-recs">
@@ -1587,6 +1592,14 @@
             if (container) container.innerHTML = '';
             const noMatchBox = document.getElementById('text-steering-no-match');
             if (noMatchBox) noMatchBox.style.display = 'none';
+            const previouslyLikedIds = Object.keys(likedMovies);
+            previouslyLikedIds.forEach(movieId => {
+                delete likedMovies[movieId];
+                delete likedInIteration[movieId];
+            });
+            previouslyLikedIds.forEach(syncCardSelectionUI);
+            snapshotIterationFeedback();
+            renderActivityHistory();
             try {
                 await fetch(ROUTES.resetSteering, {
                     method: 'POST',
@@ -1597,7 +1610,7 @@
             } catch (error) {
                 console.error('reset failed', error);
             }
-            showToast('All controls were reset.');
+            showToast('All controls and movie selections were reset.');
         }
 
         // ------------------------------------------------------------------
@@ -1742,6 +1755,28 @@
                     if (searchInput) searchInput.value = '';
                     if (searchResults) searchResults.innerHTML = '';
                     if (searchStatus) searchStatus.textContent = '';
+
+                    // The text-steering surface is a *per-iteration* affordance:
+                    // the prompt that just produced the new recommendations is
+                    // already encoded into the adjustments (and into
+                    // session["last_text_steering"] for composition modes that
+                    // need it). Carrying the prompt text + detected chips into
+                    // the next iteration is visually misleading — the next
+                    // recommendations are not "because you said X" anymore,
+                    // they're whatever the participant decides to do next.
+                    // The server-side payload that drives composition is
+                    // untouched; only the visible surface is reset.
+                    const textInput = document.getElementById('text-input');
+                    if (textInput) {
+                        textInput.value = '';
+                        textInput.dispatchEvent(new Event('input'));
+                    }
+                    const detectedTagsContainer = document.getElementById('detected-tags-container');
+                    if (detectedTagsContainer) detectedTagsContainer.innerHTML = '';
+                    const previousTextQueryBox = document.getElementById('previous-text-query');
+                    if (previousTextQueryBox) previousTextQueryBox.style.display = 'none';
+                    const textNoMatchBox = document.getElementById('text-steering-no-match');
+                    if (textNoMatchBox) textNoMatchBox.style.display = 'none';
 
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {

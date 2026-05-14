@@ -6,9 +6,11 @@ from flask import jsonify, request, session
 
 from server.platform.shared.common import load_user_study_config
 
+from ...approach_state import set_approach_movie_set
 from ...constants import (
     DEFAULT_STEERING_MODE,
     DEFAULT_TEXT_COMPOSITION_MODE,
+    DEFAULT_TOPK_SAE_MODEL_ID,
     SUPPORTED_TEXT_COMPOSITION_MODES,
     TEXT_STEERING_MAX_QUERY_CHARS,
 )
@@ -17,8 +19,14 @@ from ...plugin import bp
 from ...recommendation.semantic_registry import load_semantic_clusters
 from ...service import audit
 from ...service.audit import AuditContractError
+from ...service.engine import update_elsa_seed_with_likes
 from ...service.iteration_controller import apply_feature_adjustment_iteration
-from ...study_config import get_active_model_config, get_active_sae_model_id, normalize_study_config
+from ...study_config import (
+    get_active_model_config,
+    get_active_sae_model_id,
+    get_audit_approach_indices,
+    normalize_study_config,
+)
 
 
 @bp.route("/adjust-features", methods=["POST"])
@@ -53,6 +61,34 @@ def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
     for key, value in (current or {}).items():
         merged[key] = round(max(-0.95, min(0.95, float(merged.get(key, 0.0)) + float(value))), 2)
     return merged
+
+
+def _text_steering_scope() -> str:
+    """Build the (study_guid, phase) scope key for ``last_text_steering``.
+
+    ``last_text_steering`` lives in the Flask session, which is a single
+    long-lived browser cookie shared across studies. Without a scope,
+    a participant who finished study A and then joined study B would
+    see A's most recent prompt re-displayed in B's UI, and the same
+    leak would happen across phases within one multi-approach study.
+    Both situations are violations of the per-phase audit contract.
+
+    The scope is "<guid>:<phase>". Reads/writes both go through this
+    helper so the rule is enforced in exactly one place.
+    """
+    guid = str(session.get("user_study_guid") or session.get("user_study_id") or "")
+    phase = int(session.get("current_phase", 0) or 0)
+    return f"{guid}:{phase}"
+
+
+def _read_scoped_text_steering() -> dict:
+    """Return the stored ``last_text_steering`` payload **only if** its
+    scope matches the current (guid, phase). Otherwise return ``{}``.
+    """
+    raw = session.get("last_text_steering") or {}
+    if not isinstance(raw, dict):
+        return {}
+    return raw if raw.get("scope") == _text_steering_scope() else {}
 
 
 @bp.route("/parse-text-steering", methods=["POST"])
@@ -91,23 +127,31 @@ def parse_text_steering():
     composition_mode = str(composition_mode).strip().lower()
     if composition_mode not in SUPPORTED_TEXT_COMPOSITION_MODES:
         composition_mode = DEFAULT_TEXT_COMPOSITION_MODE
-    previous = (session.get("last_text_steering") or {}).get("adjustments") or {}
+    previous = _read_scoped_text_steering().get("adjustments") or {}
     composed_adjustments = _compose_text_adjustments(
         composition_mode, previous, resolved.adjustments
     )
 
     participation_id = session.get("participation_id")
     if participation_id:
-        audit.record_text_steering(
-            query,
-            resolved,
-            participation_id=participation_id,
-            approach_index=int(session.get("current_phase", 0)),
-            active_model=active_model,
-            iteration=session.get("iteration", 1),
-            composition_mode=composition_mode,
-        )
-    session["last_text_steering"] = {"query": query, "adjustments": composed_adjustments}
+        # Side-by-side studies share one text input across both columns;
+        # the same prompt feeds both recommenders, so the audit row is
+        # written for each approach run. Helper centralises the rule.
+        for ai in get_audit_approach_indices(conf, session.get("current_phase", 0)):
+            audit.record_text_steering(
+                query,
+                resolved,
+                participation_id=participation_id,
+                approach_index=int(ai),
+                active_model=active_model,
+                iteration=session.get("iteration", 1),
+                composition_mode=composition_mode,
+            )
+    session["last_text_steering"] = {
+        "scope": _text_steering_scope(),
+        "query": query,
+        "adjustments": composed_adjustments,
+    }
     matched = len(resolved.adjustments or {})
     response = {
         "status": "ok",
@@ -137,15 +181,16 @@ def apply_example_steering():
     participation_id = session.get("participation_id")
     if participation_id:
         movies = [{"movie_id": mid} for mid in derived.metadata.get("example_movie_ids", [])]
-        audit.record_example_steering(
-            participation_id=participation_id,
-            approach_index=int(session.get("current_phase", 0)),
-            iteration=session.get("iteration", 1),
-            active_model=active_model,
-            movies=movies,
-            example_strength=derived.metadata.get("example_strength"),
-            example_top_k=derived.metadata.get("example_top_k"),
-        )
+        for ai in get_audit_approach_indices(conf, session.get("current_phase", 0)):
+            audit.record_example_steering(
+                participation_id=participation_id,
+                approach_index=int(ai),
+                iteration=session.get("iteration", 1),
+                active_model=active_model,
+                movies=movies,
+                example_strength=derived.metadata.get("example_strength"),
+                example_top_k=derived.metadata.get("example_top_k"),
+            )
     session["last_example_steering"] = {
         "example_movie_ids": derived.metadata.get("example_movie_ids", []),
         "adjustments": derived.adjustments,
@@ -296,9 +341,12 @@ def log_ui_event():
 def reset_steering():
     """Dedicated reset endpoint (FR-12).
 
-    Clears the in-session adjustment state and writes one SaeResetAction row +
-    one SaeSteeringEvent envelope. Returns the cleared state so the UI can mirror
-    it without round-tripping through /adjust-features.
+    Clears the in-session adjustment state AND the in-session liked-movie state
+    (the latter so the ELSA seed reverts to the original preference-elicitation
+    profile and the UI heart selection is wiped). Writes one SaeResetAction row
+    plus one SaeSteeringEvent envelope so the audit timeline records the reset.
+    The preference-elicitation pool itself (``elicitation_selected_movies``) is
+    never touched.
     """
     try:
         data = request.get_json(force=True) or {}
@@ -308,19 +356,33 @@ def reset_steering():
         active_model = get_active_model_config(conf)
         participation_id = session.get("participation_id")
         if participation_id:
-            audit.record_global_reset(
-                participation_id=participation_id,
-                approach_index=int(session.get("current_phase", 0)),
-                iteration=int(session.get("iteration", 1)),
-                trigger=trigger,
-                scope=scope,
-                active_model=active_model,
-            )
+            for ai in get_audit_approach_indices(conf, session.get("current_phase", 0)):
+                audit.record_global_reset(
+                    participation_id=participation_id,
+                    approach_index=int(ai),
+                    iteration=int(session.get("iteration", 1)),
+                    trigger=trigger,
+                    scope=scope,
+                    active_model=active_model,
+                )
         session["cumulative_adjustments"] = {}
         session["feature_adjustments"] = {}
         session["user_touched_features"] = []
         session["excluded_movies_from_text"] = []
         session["last_text_steering"] = {}
+        session["last_example_steering"] = {}
+        session["boosted_liked_ids"] = []
+        current_phase = int(session.get("current_phase", 0))
+        set_approach_movie_set("persistent_liked_by_phase", current_phase, set())
+        like_weight = float(
+            active_model.get(
+                "selection_signal_weight", (conf or {}).get("selection_signal_weight", 0.5)
+            )
+        )
+        active_sae_id = active_model.get("sae", DEFAULT_TOPK_SAE_MODEL_ID)
+        update_elsa_seed_with_likes(
+            set(), active_sae_id, like_weight=like_weight, like_cap=10
+        )
         return jsonify({"status": "ok", "scope": scope})
     except AuditContractError as exc:
         return jsonify({"status": "error", "message": str(exc)}), 400

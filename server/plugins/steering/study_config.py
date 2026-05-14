@@ -237,6 +237,12 @@ def normalize_study_config(conf):
     if len(models) <= 1:
         comparison_mode = "none"
     elif len(models) > 2:
+        # Side-by-side is a strict two-approach contract — there are
+        # exactly two recommendation columns, one shared slider grid,
+        # one shared text input. With three or more approaches the
+        # layout has nowhere to put approach 3+, so the study auto-
+        # falls back to sequential and the participant walks approaches
+        # one at a time. See design-decisions.md §22.
         comparison_mode = "sequential"
     elif comparison_mode not in {"side_by_side", "sequential"}:
         comparison_mode = "sequential"
@@ -281,6 +287,43 @@ def get_phase_questionnaire_filename(conf, phase_idx=None):
     conf = normalize_study_config(conf)
     model = get_active_model_config(conf, phase_idx)
     return model.get("phase_questionnaire_file") or conf.get("phase_questionnaire_file")
+
+
+def get_audit_approach_indices(conf, current_phase: int) -> list:
+    """Return the list of approach indices a single steering action affects.
+
+    *Sequential* study (or single-approach study): the action happened in
+    exactly one approach, so the list is ``[current_phase]``.
+
+    *Side-by-side* study: there is one shared slider grid + one shared
+    text input that drives **both** recommendation columns. From each
+    approach's perspective, the action did happen — they just happen
+    to share the same underlying delta. So the audit fans the same row
+    out to both ``SaeApproachRun`` rows. Without this fan-out, the
+    Modalities dashboard would show all steering events under approach 0
+    and approach 1 would look like an inert ghost (see design-decisions
+    §22).
+
+    The fan-out only applies to *shared* events (slider/toggle
+    adjustments, text prompts, example movies, global resets). *Movie
+    feedback* (likes / neutrals) is intrinsically per-column — the
+    participant clicked one card in one list — and is routed via
+    ``list_id`` instead, NOT through this helper.
+    """
+    conf = normalize_study_config(conf)
+    # ``get_effective_models`` would also work but reads the participant's
+    # randomised order from Flask session — and we do not need that here
+    # because the fan-out decision is purely structural (count + mode).
+    # Avoiding the session access keeps the helper testable from any
+    # context (including non-request tests).
+    models = list(conf.get("models", []))
+    if (
+        conf.get("comparison_mode") == "side_by_side"
+        and conf.get("enable_comparison")
+        and len(models) >= 2
+    ):
+        return [0, 1]
+    return [int(current_phase or 0)]
 
 
 def get_steering_subtitle(steering_mode: str) -> str:
