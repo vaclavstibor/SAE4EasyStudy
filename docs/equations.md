@@ -120,6 +120,15 @@ $$
 
 A subsequent slider refresh (`compute_updated_sliders`) hides clusters that have already been touched in this phase, so the participant always sees fresh content to steer with — touched clusters are not erased, only filtered out of the next pool. The cumulative map stays in `session["cumulative_adjustments"]`.
 
+### 2.1 Interaction-history mode (`cumulative` vs. `reset`)
+
+The study-level `interaction_mode` config key (default `cumulative`, surfaced in the admin UI as "Interaction History Mode") controls whether the per-iteration steering memory survives into the next iteration of the *same* approach:
+
+- **`cumulative`** — `previous_adjustments` is loaded from `session["cumulative_adjustments"]`, the new raw deltas are accumulated on top per the formulas in §2, and the touched-cluster set in `session["user_touched_features"]` grows monotonically until the approach ends. The like signal also persists: `update_elsa_seed_with_likes` is called with the participant's current liked set whenever it changes, so the ELSA seed (§7) is re-weighted accordingly.
+- **`reset`** — at the very top of `apply_feature_adjustment_iteration` the controller hard-clears the relevant session keys: `cumulative_adjustments`, `user_touched_features`, `last_text_steering`, `last_example_steering`, `excluded_movies_from_text`, and `boosted_liked_ids` all start the iteration empty, and `update_elsa_seed_with_likes` is then called with an empty liked set so the ELSA seed is rebuilt from `elicitation_selected_movies` alone. The current iteration's adjustments and liked set still flow into the typed-audit rows (`record_feature_adjustment` captures `liked_movies` directly from the request body), so the database always reflects what the participant did.
+
+Switching between approaches (`_do_advance_phase` in `routes/study.py`) wipes the same session keys regardless of the mode, so cross-approach pollution is impossible under either setting.
+
 ## 3. Toggles (FR-07)
 
 **Input.** UI sends `raw_adjustments[cluster_id] ∈ ℝ`, where only the **sign** is meaningful: positive → boost, negative → suppress, near-zero → unset.
@@ -282,13 +291,64 @@ $$
 
 ### 4.5 Top-K and composition across iterations
 
-The top `text_steering_top_k` clusters (config key, per-approach with study-level fallback; default `6`) by `|w(c)|` survive; the others are dropped. Their `(cluster_id, w(c))` map is the iteration's text adjustments.
+The top `text_steering_top_k` clusters (config key, per-approach with study-level fallback; default `6`) by `|w(c)|` survive; the others are dropped. Their `(cluster_id, w(c))` map is the iteration's text adjustments — call it $T_t$ at iteration $t$.
 
-Composition with the previous iteration's map is governed by the active approach's `text_composition_mode` (config key; `text_steering.composition_mode` is the study-level fallback). The three supported values are:
+Composition with the previous iteration's map $T_{t-1}$ is governed by the active approach's `text_composition_mode` (config key; `text_steering.composition_mode` is the study-level fallback). The three supported values:
 
-- **`replace`** (default) — iteration `t` overwrites iteration `t-1`.
-- **`add`** — sum per cluster, clipped to `[-0.95, 0.95]` *(clip is hardcoded)*.
-- **`intersect`** — keep only clusters present in both iterations; use iteration `t`'s weight.
+#### 4.5.1 `replace` (default)
+
+$$
+T_t^{\text{eff}} = T_t
+$$
+
+The current prompt's per-cluster weights replace any previous map entirely. Previous text adjustments are **discarded**, regardless of which clusters they targeted. This is the right default when each prompt expresses *a fresh request*. Example:
+
+- $T_{t-1}=\{c_{17}\!:\!+0.6,\; c_{42}\!:\!-0.4\}$ (last prompt: "more sci-fi, less romance")
+- $T_t=\{c_{42}\!:\!+0.5\}$ (this prompt: "more romance")
+- $T_t^{\text{eff}}=\{c_{42}\!:\!+0.5\}$ — sci-fi boost is gone, romance direction has flipped to positive.
+
+#### 4.5.2 `add`
+
+$$
+T_t^{\text{eff}}(c) \;=\; \mathrm{clip}\bigl(\;T_{t-1}(c) + T_t(c),\;-0.95,\;+0.95\bigr),\quad
+T_{t-1}(c)=0\ \text{if}\ c\notin T_{t-1}.
+$$
+
+Per-cluster weights from the two iterations are **summed**. Clusters that appear in only one of $T_{t-1}$, $T_t$ carry through (treating the missing side as $0$). The sum is clipped per cluster to $[-0.95, +0.95]$ so that repeated reinforcement cannot drive the weight unboundedly.
+
+Example with the same starting state:
+
+- $T_{t-1}=\{c_{17}\!:\!+0.6,\; c_{42}\!:\!-0.4\}$
+- $T_t=\{c_{42}\!:\!+0.5,\; c_{99}\!:\!+0.3\}$
+- $T_t^{\text{eff}}=\{c_{17}\!:\!+0.6,\; c_{42}\!:\!+0.1,\; c_{99}\!:\!+0.3\}$ — sci-fi boost is kept, romance flips from $-0.4$ to $+0.1$ (partial reversal), and a new cluster $c_{99}$ enters at $+0.3$.
+
+This is the right mode when prompts are *layered refinements* of an evolving query.
+
+#### 4.5.3 `intersect`
+
+$$
+T_t^{\text{eff}}(c) \;=\; T_t(c) \quad \text{for}\ c \in T_{t-1} \cap T_t.
+$$
+
+The intersection of the two prompt's cluster sets, valued by the **current** iteration's weights. Clusters that appear in only one prompt are dropped. With the example state:
+
+- $T_{t-1}=\{c_{17}\!:\!+0.6,\; c_{42}\!:\!-0.4\}$
+- $T_t=\{c_{42}\!:\!+0.5,\; c_{99}\!:\!+0.3\}$
+- $T_t^{\text{eff}}=\{c_{42}\!:\!+0.5\}$ — only the cluster both prompts agree on survives; new clusters and old clusters are both pruned.
+
+This is a *narrowing* mode: every prompt is a filter that can only remove clusters, never add them. Useful for diagnostic studies where the researcher wants to test how much expressiveness survives a constraint pipeline.
+
+#### 4.5.4 Why `replace` and `add` look similar in casual use
+
+When two consecutive prompts target the same single cluster with the same sign, `replace` and `add` produce **almost identical** $T^{\text{eff}}$ — `replace` writes $T_t(c)$, `add` writes $T_{t-1}(c) + T_t(c)$, but both maps drive the same single direction so the qualitative recommendation behaviour looks similar.
+
+The differences become visible when:
+
+- Prompts target **different clusters** — `add` keeps the old one, `replace` discards it.
+- Prompts have **opposite signs** for the same cluster — `add` (partially) cancels them out, `replace` jumps cleanly to the new direction.
+- Prompts are **repeated reinforcements** — `add` saturates at $\pm 0.95$ after enough iterations, `replace` always stays at the latest single-iteration magnitude.
+
+Reference implementation (one function, ten lines):
 
 ```44:56:server/plugins/steering/routes/steering/actions.py
 def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
@@ -307,6 +367,8 @@ def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
 ```
 
 **NFR-12 no-match.** If `total(c) ≤ 0` for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows "We could not match your text to any feature, try different wording."
+
+**Scope.** The "previous prompt" $T_{t-1}$ is namespaced by `(study_guid, phase_index)`. A prompt that was issued in approach A's phase 0 cannot accidentally compose with a prompt issued later in approach B's phase 1, even though both share a Flask session. See design-decisions §21 for the leakage fix.
 
 ## 5. Example-based steering (FR-08)
 
@@ -391,43 +453,13 @@ The top `example_selection_top_k` clusters (config key, per-approach with study-
 
 ## 6. Reset (FR-12)
 
-Reset is a degenerate modality: it has no weights of its own. `POST /reset` clears the in-session cumulative state and writes one `SaeResetAction` row plus a `SaeSteeringEvent` envelope so the timeline records when the participant chose to start over:
+Reset is a degenerate modality: it has no weights of its own. `POST /reset` clears the in-session steering state and the in-session liked movies state, then writes one `SaeResetAction` row plus a `SaeSteeringEvent` envelope so the timeline records when the participant chose to start over. The preference-elicitation pool `E_0` (the movies the participant picked before steering started) is **never** touched — only the post-elicitation memory:
 
 $$
-\Delta^{(t+1)}_n \;=\; 0 \quad \forall n,\qquad \text{session cleared}
+\Delta^{(t+1)}_n \;=\; 0 \quad \forall n,\qquad L^{(t+1)} \;=\; \varnothing,\qquad \hat{s}^{(t+1)} \;=\; \frac{1}{|E_0|}\sum_{m \in E_0} \text{emb}(m)
 $$
 
-```288:316:server/plugins/steering/routes/steering/actions.py
-@bp.route("/reset", methods=["POST"])
-def reset_steering():
-    """Dedicated reset endpoint (FR-12).
-
-    Clears the in-session adjustment state and writes one SaeResetAction row +
-    one SaeSteeringEvent envelope. Returns the cleared state so the UI can mirror
-    it without round-tripping through /adjust-features.
-    """
-    try:
-        data = request.get_json(force=True) or {}
-        scope = str(data.get("scope") or "all-features")
-        trigger = str(data.get("trigger") or "manual-ui-reset")
-        conf = normalize_study_config(load_user_study_config(session.get("user_study_id")))
-        active_model = get_active_model_config(conf)
-        participation_id = session.get("participation_id")
-        if participation_id:
-            audit.record_global_reset(
-                participation_id=participation_id,
-                approach_index=int(session.get("current_phase", 0)),
-                iteration=int(session.get("iteration", 1)),
-                trigger=trigger,
-                scope=scope,
-                active_model=active_model,
-            )
-        session["cumulative_adjustments"] = {}
-        session["feature_adjustments"] = {}
-        session["user_touched_features"] = []
-        session["excluded_movies_from_text"] = []
-        session["last_text_steering"] = {}
-```
+The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed (§7) reverts to the elicitation-only mean. The frontend mirrors this: `resetAllControls()` zeroes every slider's `featureAdjustments`, drops the detected-tags container, empties `likedMovies` and `likedInIteration`, and re-syncs every previously-highlighted recommendation card so the heart selection visually disappears. The audit row in the DB is the single source of truth that the reset happened — individual per-movie unlikes are deliberately not re-logged (see [`design-decisions.md`](design-decisions.md) §6).
 
 ## 7. ELSA seed re-weighting from likes
 
@@ -438,6 +470,8 @@ $$
 $$
 
 where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend `(1-λ)·\hat{s}_{old} + λ·…`. The seed is then consumed by the recommender as the query vector for the cosine-similarity CF term (see §1.2 and §8 below).
+
+When the study's `interaction_mode` (§2.1) is `reset`, the iteration controller calls `update_elsa_seed_with_likes(set(), …)` so `L` is forced empty and `\hat{s}` collapses to the pure elicitation mean — no like signal carries into the next iteration. `cumulative` mode passes the participant's actual liked set, which is the formula above.
 
 ```27:54:server/plugins/steering/service/engine.py
         id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
@@ -472,15 +506,147 @@ where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resol
 
 ## 8. Final ranking (pointer)
 
-The study-level `reranking_strategy` config key is an enum; the only value implemented in this build is `feature-conditioned` (the default). `latent-perturbation` and `constrained-opt` are reserved enum members for future research strategies — selecting them currently falls back to `feature-conditioned`. The math here is just the bookkeeping needed to read a participant's recommendation list:
+This section is now superseded by §10 below, which documents the full set of three reranking strategies. Read §10 for the math; this section remains as a stub for backwards-compatibility with older cross-references.
+
+## 9. Notation summary
+
+| Symbol | Shape | Meaning |
+|---|---|---|
+| $e_i$ | $\mathbb{R}^{d}$ | Row $i$ of `recommender.item_embeddings` — the ELSA dense embedding for item $i$. $d=$ CF embedding dim (typically 256). |
+| $\hat{s}$ | $\mathbb{R}^{d}$ | The user seed embedding (`session["elsa_seed"]`, see §7), L2-normalised. |
+| $f_i$ | $\mathbb{R}^{n}$ | Row $i$ of `recommender.item_features` — the SAE feature activations for item $i$. $n=$ SAE feature count (1024 for `TopKSAE-1024`). |
+| $a$ | $\mathbb{R}^{n}$ | The per-neuron *sae_profile* built from `feature_adjustments` after cluster→neuron expansion (§1). Sparse. |
+| $W_{\text{dec}}$ | $\mathbb{R}^{n \times d}$ | SAE decoder weight (`sae_model.decoder_w`), mapping feature space back to embedding space. |
+| $j_i$ | $\mathbb{R}_{\ge 0}$ | Genre Jaccard bonus for item $i$ (precomputed; §C). |
+| $w_{cf}, w_g$ | scalars | Blend weights from `build_blend_plan(feature_adjustments)`. Two regimes: `profile_prior` (no explicit steering) and `steering_primary` (any non-zero $a$). |
+
+## 10. Reranking strategies (`reranking_strategy` config key)
+
+The study-level config key `reranking_strategy` controls **how** the three building blocks (CF cosine, genre Jaccard, SAE matmul) are combined into the final per-item score. The constants module enumerates exactly three legal values:
+
+```52:57:server/plugins/steering/constants.py
+DEFAULT_RERANKING_STRATEGY = "feature-conditioned"
+SUPPORTED_RERANKING_STRATEGIES = {
+    "feature-conditioned",
+    "latent-perturbation",
+    "constrained-subset",
+}
+```
+
+The strategy is captured at approach-run creation (`SaeApproachRun.reranking_strategy`) and threaded through the recommender call:
+
+```117:127:server/plugins/steering/recommendation/service.py
+        rec_payload = recommender.get_recommendations(
+            feature_adjustments=neuron_adjustments,
+            n_items=max(k * 15, 300),
+            exclude_items=exclude_movie_ids,
+            allowed_ids=allowed_ids,
+            seed_embedding=elsa_seed,
+            genre_bonus=genre_bonus,
+            return_debug=True,
+            reranking_strategy=reranking_strategy,
+            reranking_params=reranking_params,
+        )
+```
+
+The three strategies all start from the same building blocks but differ in *where* the SAE signal enters.
+
+### 10.1 `feature-conditioned` (default — additive blend)
+
+This is the production default; it is what every existing pilot has used and what the dashboard analytics have been validated against. The SAE signal is added to the base CF + genre score with **adaptive** gain and clamp:
 
 $$
-\text{score}(i) \;=\; \underbrace{\cos(e_i, \hat{s}) \cdot w_{cf}}_{\text{CF}}
-\;+\; \underbrace{j_i \cdot w_{g}}_{\text{genre}}
-\;+\; \underbrace{\text{clip}\!\big(\gamma \cdot (f_i \cdot a),\; \pm c\big)}_{\text{SAE steering}}
+\text{cf}(i) = \cos(e_i, \hat{s}) \cdot w_{cf}, \qquad
+\text{genre}(i) = j_i \cdot w_g, \qquad
+\text{sae}(i) = f_i \cdot a
 $$
 
-with `e_i` the ELSA item embedding, `\hat{s}` from §7, `f_i` the item's SAE row, `a` the expanded per-neuron profile from §1, and `γ`, `c` chosen **adaptively per iteration** based on the candidate-set's IQR / percentile statistics (not config keys). The blend weights `w_{cf}`, `w_{g}` come from `build_blend_plan(feature_adjustments)` (also derived, not config-driven). The relevant code lives in `recommendation/sae_recommender.py:330-470`; consult that file directly if you need to extend the ranking step.
+$$
+\text{score}(i) \;=\; \underbrace{\text{cf}(i) + \text{genre}(i)}_{\text{base}(i)}
+\;+\; \underbrace{\mathrm{clip}\!\big(\gamma \cdot \text{sae}(i),\; -c,\; +c\big)}_{\text{steering}(i)}
+\;+\; \underbrace{w_{\text{prior}} \cdot \tilde{\text{base}}(i)}_{\text{tiebreak}}
+$$
+
+with three regimes for $(\gamma, c)$:
+
+- **No adjustments** ($\lVert a \rVert = 0$): $\gamma = 0$, steering term vanishes, ranking is pure CF + genre.
+- **Strong adjustments** (blend plan returns `steering_primary`, i.e. any $|a_n| > 10^{-6}$ on any neuron): $\gamma = 1$, $c = \max_i |\text{sae}(i)|$ over allowed items, $w_{\text{prior}}$ small.
+- **Moderate adjustments**, candidate set $\ge 10$ items: $\gamma = \mathrm{clip}\bigl(0.30 \cdot \tfrac{\text{IQR}(\text{base})}{\text{IQR}(\text{sae})},\; 0.03,\; 0.35\bigr)$, $c = \max(0.35 \cdot \text{span}(\text{base}),\; 0.05 \cdot \text{span}(\text{sae}))$.
+- **Moderate, candidate set < 10**: fixed $\gamma = 0.15$, $c = 2.0$.
+
+The adaptive $\gamma$ scales the SAE term to match the **dispersion** of the base score, so neither signal dominates by accident. Code: `sae_recommender.py:467-540`.
+
+### 10.2 `latent-perturbation` (rotate the seed; pure CF rank)
+
+Instead of *adding* an SAE-score term after the cosine, this strategy **moves the user-seed embedding** by an SAE-derived direction and then ranks with pure CF on the moved seed. Conceptually: "the user's steering is a refinement of *who they are*, not a post-hoc bump of *what they see*".
+
+Direction decoding:
+
+$$
+d \;=\; W_{\text{dec}}^{\top} \cdot a \;\in\; \mathbb{R}^{d}, \qquad
+\hat{d} \;=\; d / \lVert d \rVert
+$$
+
+Perturbed seed (with the original seed $\hat{s}$ already L2-normalised):
+
+$$
+\hat{s}' \;=\; \frac{\hat{s} + \alpha \cdot \hat{d}}{\bigl\lVert \hat{s} + \alpha \cdot \hat{d} \bigr\rVert}
+$$
+
+Final score:
+
+$$
+\text{score}(i) \;=\; \cos(e_i,\; \hat{s}') \cdot w_{cf} \;+\; j_i \cdot w_g
+$$
+
+**No additive steering term.** The debug payload reports `steering_score = 0` for every item; the visible influence shows up as a change in `cf_score`.
+
+Parameter: $\alpha \in [0, 1]$ (`latent_perturbation_alpha`, default `0.30`). Larger $\alpha$ means a more aggressive rotation. The value is intentionally capped well below `1.0` because the seed is normalised — pushing $\alpha \to 1$ moves the seed almost entirely onto the decoded direction, which often falls outside the CF-trained manifold and degenerates into noise.
+
+Code: `sae_recommender.py:434-449` (perturbation) and `_decode_sae_profile_to_embedding_space` helper.
+
+### 10.3 `constrained-subset` (hard τ-filter, CF rank inside)
+
+This strategy enforces a **hard membership constraint**: an item only enters the recommendation list if its SAE score is at least a fraction τ of the strongest positive SAE score in the candidate set. Within the surviving subset, ranking is by base CF + genre (no additive SAE term).
+
+Let $S = \{\text{sae}(i) : i \text{ allowed}\}$ and let $S^+ = \{s \in S : s > 0\}$. Define:
+
+$$
+\tau^\ast = \begin{cases} \tau \cdot \max(S^+) & \text{if } S^+ \neq \emptyset \\ 0 & \text{otherwise} \end{cases}
+$$
+
+Constraint mask:
+
+$$
+m_i \;=\; \mathbb{1}\bigl[\text{sae}(i) \;\ge\; \tau^\ast\bigr]
+$$
+
+Final score:
+
+$$
+\text{score}(i) \;=\; \begin{cases}
+\text{cf}(i) + \text{genre}(i) & \text{if } m_i = 1 \\
+-\infty & \text{otherwise}
+\end{cases}
+$$
+
+**Fallback.** If $\sum_i m_i = 0$ (e.g. the user has not adjusted anything, so every SAE score is $0$, or every item is genuinely below the bar), the filter is silently dropped and ranking falls back to pure base CF + genre. The recommender never returns an empty list because of this strategy.
+
+Parameter: $\tau \in [0, 1]$ (`constrained_subset_tau`, default `0.25`). Larger $\tau$ means a stricter filter — too high and the fallback kicks in often; too low and the strategy degenerates into "no filter, just CF rank".
+
+Code: `sae_recommender.py:466-479` and `sae_recommender.py:576-585`.
+
+### 10.4 Why all three strategies exist
+
+| Property | feature-conditioned | latent-perturbation | constrained-subset |
+|---|---|---|---|
+| Steering enters as | additive score term | seed rotation, then CF | hard filter, then CF |
+| Has $\gamma$ / clamp magic? | yes (adaptive) | no (single $\alpha$) | no (single $\tau$) |
+| Top-1 can be "off-target" | yes (steering can fail to clear base+clamp) | yes (rotation is gentle) | **no** — every returned item is on-target by construction |
+| Falls back when SAE signal is empty | yes (steering term → 0) | yes (no perturbation applied) | yes (mask is dropped if no positive SAE score) |
+| Suitable for ablation | baseline | "is the SAE signal information useful even without explicit boosting?" | "what is the upper bound of *guaranteed* steering, ignoring CF gradients?" |
+
+The production system stays on `feature-conditioned` because that is what has been piloted. The other two are available as research toggles and are persisted on every `SaeApproachRun` row so retrospective analysis can match strategy to outcome.
 
 ---
 
@@ -502,8 +668,10 @@ Every numeric constant that appears in a formula below is either a **config key*
 | `λ` (like weight for seed) | `selection_signal_weight` | `0.5` (or `0.25` with sliders/toggles/hybrid) | per-approach (study-level fallback) | `active_model` → `conf` |
 | `like_cap` | — | `10` | **hardcoded** at the call site | `iteration_controller.py` |
 | SAE checkpoint | `sae` | `DEFAULT_TOPK_SAE_MODEL_ID` | per-approach | `active_model` |
-| reranking strategy | `reranking_strategy` | `feature-conditioned` (the only one implemented) | study-level | `conf` |
-| `γ`, `c` (clamp) | adaptive | computed per iteration from candidate-set quantiles | **hardcoded** | `recommendation/sae_recommender.py` |
+| reranking strategy | `reranking_strategy` ∈ {`feature-conditioned`, `latent-perturbation`, `constrained-subset`} | `feature-conditioned` | study-level (per-approach override planned, not exposed in UI yet) | `conf` |
+| `α` (latent perturbation gain) | `latent_perturbation_alpha` | `0.30` | study-level (or per-approach via `models[*].latent_perturbation_alpha`) | `conf` |
+| `τ` (constrained subset threshold) | `constrained_subset_tau` | `0.25` | study-level (or per-approach via `models[*].constrained_subset_tau`) | `conf` |
+| `γ`, `c` (clamp; `feature-conditioned` only) | adaptive | computed per iteration from candidate-set quantiles | **hardcoded** | `recommendation/sae_recommender.py` |
 | token-match weights `2.5 / 1.25 / 0.75`, phrase bonus `3.0`, coverage term | — | as shown | **hardcoded** | `modalities/text.py` |
 | intensity ladder `{0.65, 1.0, 1.35}`, `_NEGATIVE_HINTS`, `_INTENSITY_*`, `_STOP_WORDS` | — | as shown | **hardcoded** | `modalities/text.py` |
 | weight bounds `[0.25, 0.95]`, `[0.1, 0.95]` (text); `[0, 0.95]` (examples); `[-0.95, 0.95]` (text `add` mode) | — | as shown | **hardcoded** | `modalities/text.py`, `modalities/examples.py`, `routes/steering/actions.py` |

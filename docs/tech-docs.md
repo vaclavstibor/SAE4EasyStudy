@@ -100,7 +100,7 @@ The steering plugin now writes only to typed audit tables described in §5.
 
 1. **Recruits participants** for recommendation-system user studies (Prolific-compatible).
 2. **Elicits initial preferences** via a movie picker (`/preference-elicitation`).
-3. **Runs N iterations** of the steering loop per approach. Each iteration: show recommendations → participant likes/dislikes movies → participant steers (sliders / toggles / text / examples / reset) → recompute the next iteration.
+3. **Runs N iterations** of the steering loop per approach. Each iteration: show recommendations → participant likes/dislikes movies → participant steers (sliders / toggles / text / examples / reset) → recompute the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md`](equations.md) §2.1. The audit tables always record every iteration's actions regardless of the mode.
 4. **Cycles through approaches** if the study compares multiple steering configurations (sequential mode).
 5. **Collects questionnaires** between approaches and at the end.
 6. **Records every action** as a typed audit row.
@@ -115,8 +115,9 @@ The steering plugin now writes only to typed audit tables described in §5.
 | Natural-language steering with composition modes | FR-09 | `modalities/text.py` + `routes/steering/actions.py::parse_text_steering` |
 | Example-based steering (use liked movies as steering seed) | FR-08 | `modalities/examples.py` |
 | Dedicated `/reset` endpoint | FR-12 | `routes/steering/actions.py::reset_steering` |
-| Configurable reranking strategy | FR-10 | `service/iteration_controller.py` |
-| Feature search inside the steering UI | FR-13 | `routes/steering/actions.py::search_features` |
+| Configurable reranking strategy (three strategies) | FR-10 | `service/iteration_controller.py`, `recommendation/sae_recommender.py` |
+| Per-session iteration history panel | FR-13 | `templates/steering_interface.html::renderActivityHistory` (client-side, scoped to one session) |
+| Feature search inside the steering UI | thesis-added | `routes/steering/actions.py::search_features` |
 | Researcher dashboard per approach | FR-16 | `results/analytics.py` |
 | ZIP CSV export of every typed table | FR-17 | `routes/results/views.py::export_csv_data` |
 | Per-participant journey timeline | FR-15 | `routes/results/journey.py` |
@@ -192,6 +193,15 @@ There is intentionally no `migrations/` directory.
 ### 4.2 Plugin contract
 
 Every plugin exposes a `StudyPluginContract` from its package via `get_plugin()`. The contract carries a metadata block and a Flask blueprint, and is registered by `server.platform.runtime.plugin_registry.load_canonical_plugin_contracts`.
+
+`PluginMetadata` fields:
+
+| Field | Type | Default | Purpose |
+| --- | --- | --- | --- |
+| `name` | `str` | required | Blueprint name and URL prefix (`/<name>/...`). |
+| `version` | `str` | required | Free-form version string surfaced to admins. |
+| `description` | `str` | required | One-line description shown on `/administration`. |
+| `hidden_from_admin` | `bool` | `False` | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see [`design-decisions.md`](design-decisions.md) §17. |
 
 Each plugin **must** implement five EasyStudy endpoints on its blueprint:
 
@@ -341,7 +351,7 @@ One row per approach per participant. Created lazily on the first per-approach a
 | `sae_model_id` | string | snapshot |
 | `base_model_id` | string | snapshot |
 | `composition_mode` | string | `replace` / `add` / `intersect` (FR-09) |
-| `reranking_strategy` | string | currently always `feature-conditioned` (FR-10) |
+| `reranking_strategy` | string | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See [`equations.md`](equations.md) §10. |
 | `started_at` | datetime | |
 | `completed_at` | datetime nullable | |
 | `status` | string | `active` / `completed` |
@@ -376,7 +386,7 @@ Every user action writes one typed row **and** one envelope row. The typed row c
 | `sae_reset_action` | `/reset` | `trigger`, `scope` (`all-features` / `single-feature:<id>`), `iteration` |
 | `sae_recommendation_set` (+ `_item`) | iteration controller, after refresh | parent: `approach_index`, `iteration`, `list_id`, `steering_mode`, `debug_payload`. Child: `movie_id`, `title`, `genres`, `rank`, `score`, `cf_score`, `genre_score`, `steering_score`, `raw_payload`. |
 | `sae_movie_feedback` | `/log-movie-feedback` | `movie_id`, `title`, `genres`, `action` (`like`/`dislike`/`neutral`), `event_id` (FK to `sae_steering_event`, NOT NULL, CASCADE), `recommendation_set_id` (NOT NULL, CASCADE), `rank`, `list_id`, `iteration` |
-| `sae_questionnaire_response` | `/finish-iteration-questionnaire`, `/finish-final-questionnaire` | `response_type` (`approach-questionnaire`/`final`), `questionnaire_file`, `answers` (JSON) |
+| `sae_questionnaire_response` | `/finish-iteration-questionnaire`, `/finish-final-questionnaire` | `response_type` (`approach-questionnaire`/`final`), `questionnaire_file`, `answers` (JSON), `attention_check_passed` (Boolean, NULL when the questionnaire declares no spec — see §5.4 and [design-decisions.md §18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) |
 | `sae_elicitation_pick` | `/preference-elicitation` | `movie_id`, `action` (`select`/`deselect`), `participation_id`, `user_study_id` |
 
 #### Cascades
@@ -418,13 +428,34 @@ A registry (`modalities/registry.py`) maps `modality_id → class`. Adding a new
 `service/iteration_controller.py::apply_feature_adjustment_iteration(data)` drives one iteration end-to-end:
 
 1. **Resolve the active approach and study config.** Loads from session + `normalize_study_config`.
-2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Currently only `feature-conditioned` is implemented; `latent-perturbation` and `constrained-opt` are validated and accepted as forward-compatible enum values.
+2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See [`equations.md`](equations.md) §10 for the math of each strategy.
 3. **Compose the cluster-level adjustments.** Combines slider/toggle inputs with the active text-steering map and the active example-steering map. Empty modalities contribute zero.
 4. **Expand clusters → neurons.** Each cluster's `δ_c` is broadcast to its member neurons; overlapping clusters sum additively. See [`equations.md`](equations.md) §2.
-5. **Apply the SAE shift to the recommender.** Calls into `recommendation/sae_recommender.py` with the per-neuron shift map.
+5. **Apply the SAE shift to the recommender.** Calls into `recommendation/sae_recommender.py` with the per-neuron shift map and the strategy choice. The recommender branches internally on the strategy:
+    - `feature-conditioned`: additive blend with adaptive γ and clamping.
+    - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by `α · direction`, then rank with pure CF (no additive SAE term).
+    - `constrained-subset`: hard-mask candidates whose SAE score is below `τ · max-positive-SAE`, then rank survivors by base CF + genre.
 6. **Refresh the candidate list.** Generates `4 * k` candidates, blends `cf_score` with the SAE-derived `f_i` using `α = selection_signal_weight`, keeps the top `k`.
-7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster delta becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items.
+7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster delta becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions §22.
 8. **Return** the new `recommendations`, `current_features`, `reranking_strategy` (so the UI can mirror it for debugging), and the iteration counter.
+
+#### Feature pool lifecycle across iterations
+
+A subtle point that often surprises developers: the 16 cluster sliders the participant sees on iteration 1 are **not** automatically replaced by `select_slider_features` on iteration 2. The slider feature pool follows a deliberate persistence + refresh cycle:
+
+| Stage | Function | Trigger | Effect on the pool |
+|---|---|---|---|
+| First page load | `session_controller.build_steering_page_context` | After preference elicitation finishes | Calls `select_slider_features(...)` with `feature_selection_algorithm` (`personalized_grouped_topk` or `global_label_topk`), writes the result to `session["current_features"]`. |
+| "Get Recommendations" press (any iteration) | `iteration_controller.apply_feature_adjustment_iteration` → `modalities/sliders.py::compute_updated_sliders` | Every iteration | Looks at `session["current_features"]`, the per-approach `last_shown_movies_per_phase`, the participant's *touched* clusters, and the cumulative shown/steered bookkeeping. Produces a candidate `updated_features` list. |
+| Re-publish to the UI | Same call site | Only when `updated_features != session["current_features"]` | Rewrites `session["current_features"]`, ships `data.updated_features` in the response; the frontend calls `rebuildSliderGrid` which re-renders the DOM while preserving values for clusters that survive. |
+
+Crucially, `compute_updated_sliders` does **not** re-run `select_slider_features` between iterations — the initial choice of *algorithm* (personalised vs global) only affects how the first 16 clusters were picked. After that, the same 16 clusters stick around until `compute_updated_sliders` decides to swap one out, and that swap decision is driven by:
+
+1. **Personalised pool refresh** — `personalized_features(...)` is recomputed from `last_shown_movies_per_phase[current_phase]`. So as the participant likes movies in later iterations (which feeds back into the next iteration's shown-movies seed), the personalised candidate pool slowly drifts toward their evolving taste. The participant's *current* slider grid only changes if this drift surfaces a cluster that ranks above one of the already-shown sliders.
+2. **Touched / steered bookkeeping** — sliders the participant has explicitly adjusted are "pinned": they never get evicted in favour of a freshly discovered cluster. This is intentional UX — the participant should not lose their work.
+3. **Global pool fallback** — if the personalised refresh produces fewer than `num_sliders` candidates (e.g. the participant has not liked enough new movies to reshape the pool), the gap is filled from the global label-topk pool. This ensures the grid never shrinks below the configured size.
+
+Likes during iterations therefore **change the slider pool only indirectly**, via the personalised candidate refresh. They do **not** trigger a re-call of `select_slider_features` with the elicitation algorithm. The participant's selection of `feature_selection_algorithm` is effectively a *seed* for the slider pool; subsequent iterations refine it incrementally.
 
 ### 6.3 Reset (FR-12)
 
@@ -432,10 +463,11 @@ Reset is a **dedicated** endpoint at `POST /sae_steering/reset` (no longer smugg
 
 1. Writes one `SaeSteeringEvent(event_type='global-reset')` envelope.
 2. Writes one `SaeResetAction(trigger, scope)` row.
-3. Clears `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering` from the session.
-4. Returns `{"status": "ok", "scope": scope}`.
+3. Clears the in-session steering memory (`cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`) AND the in-session liked-movie state (`boosted_liked_ids` is emptied and the current phase's entry in `persistent_liked_by_phase` is reset to `[]`).
+4. Calls `update_elsa_seed_with_likes(set(), …)` so the ELSA seed reverts to the pure preference-elicitation profile — no like-weighting carries over.
+5. Returns `{"status": "ok", "scope": scope}`.
 
-The UI's "Reset all controls" button POSTs `{"scope": "all-features", "trigger": "manual-ui-reset"}`. Researcher analytics counts these rows directly.
+The preference-elicitation pool (`session["elicitation_selected_movies"]`) is intentionally left untouched: a reset is "start the steering loop fresh," not "redo the pre-study movie picker." The UI's "Reset all controls" button POSTs `{"scope": "all-features", "trigger": "manual-ui-reset"}` and mirrors the same state locally — sliders, text-steering tags, and the heart selection on every recommendation card are wiped client-side so the visual matches the server state. Researcher analytics counts the audit rows directly.
 
 ### 6.4 Text steering with composition (FR-09)
 
@@ -501,7 +533,7 @@ If a route would write a row that violates the contract (missing participation, 
 The dashboard is split into five tabs:
 
 1. **Overview** — per-approach behavioural metrics and a *Selected Movie Ranks* chart. Each approach gets one series; the x-axis is the recommendation list rank and the y-axis is the count of *like* events at that rank. Tighter-to-the-top distributions are the visible signal that steering pulled the participant's preferred movies higher.
-2. **Modalities** — per-modality observations. For sliders: the top 15 most-moved clusters per approach by mean absolute delta (horizontal bar chart, one chart per approach). For text: the top 50 *(prompt → cluster)* pairs with mean signed weight and observation count. New modalities only need a single helper in `analytics.py` and an additional card in the template.
+2. **Modalities** — per-approach observations, driven by `conf['models'][i]['enabled_modalities']`. The Overview "Modality usage by approach" cards summarize each approach's enabled modalities with raw counts (`adjustments`, `distinct_clusters`, `prompts`, `cluster_mappings`, `reset_count`, …). The Modalities tab renders one section per approach: a horizontal-bar feature-movement chart when `sliders` / `toggles` are enabled (placeholder cluster labels filtered out), a prompt→cluster table when `text` is enabled. The contract — which modalities are shown — is read from the study config, NOT inferred from audit-table contents (see [design-decisions.md §20](design-decisions.md#20-the-modalities-dashboard-is-driven-by-enabled_modalities-not-by-audit-table-contents)). Adding a new modality requires (a) one entry in `_MODALITY_LABELS`, (b) one `_<name>_metrics(run_ids)` helper in `_approach_modality_breakdown`, (c) optionally one chart-card branch in the frontend `renderModalitiesTab`.
 3. **Questionnaires** — see §8.2.
 4. **Participants** — Prolific PID + study/session ids, completion URL, approach order, questionnaire response count, link to the journey view.
 5. **Journey** — per-participant timeline reconstructed entirely from typed tables.
@@ -509,11 +541,11 @@ The dashboard is split into five tabs:
 | Card | Source query |
 | --- | --- |
 | Participants total / completed / in progress | `participation` rows filtered by `user_study_id` |
-| Mean iterations used per approach | `AVG(sae_approach_run.iterations_used)` grouped by `approach_index` |
+| Mean iterations used per approach | `AVG(sae_approach_run.iterations_used)` grouped by `approach_id` (see [design-decisions.md §19](design-decisions.md#19-cross-participant-analytics-group-by-approach_id-never-by-approach_index)) |
 | Mean abs adjustment per approach | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `approach_run_id` |
 | Mean non-zero adjustments per approach | `COUNT(sae_feature_adjustment) / COUNT(sae_approach_run)` |
 | Mean slider changes per approach | `AVG(sae_approach_run.total_slider_changes)` |
-| Liked-movie rank distribution | `sae_movie_feedback` where `action='like'` grouped by `approach_index, rank` |
+| Selected movie rank distribution | `sae_movie_feedback` where `action='like'`, joined to `sae_approach_run`, grouped by `approach_id, rank` |
 | Slider movement by cluster | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `cluster_label` |
 | Text prompt → cluster mapping | `sae_text_steering_query` joined with `sae_text_steering_match`, grouped by `(query_text, cluster_id)` |
 | Modality usage | `COUNT(sae_steering_event)` grouped by `modality` |
@@ -530,6 +562,22 @@ The Questionnaires tab is *modular*: it never hard-codes specific question ids. 
 - **text** — anything longer; the first 10 samples are surfaced
 
 Each kind drives a sensible aggregation (mean/min/max + count distribution for likert/numeric, frequency table for categorical, samples for text). Adding a new questionnaire is a no-code operation: drop an HTML file in `server/static/questionnairs/`, point an approach (or the final questionnaire) at it from the create UI, and the monitor will pick it up automatically. `server/static/questionnairs/sae_sample_questionnaire.html` is a copy-paste starting point that exercises every kind.
+
+#### 8.2.1 Attention-check spec
+
+A questionnaire HTML file declares its attention-check answer key as an inline JSON block. `server/plugins/steering/results/attention_checks.py` parses it and `audit.record_questionnaire_response` evaluates it once on submit, storing the verdict on `SaeQuestionnaireResponse.attention_check_passed`.
+
+```html
+<script type="application/json" data-attention-checks>
+{
+  "p_attention_check": { "expected": "7" },
+  "f_attention_check": { "expected_one_of": ["same"] },
+  "some_numeric_check": { "expected_range": [2, 4] }
+}
+</script>
+```
+
+Three condition keys are supported per field: `expected` (exact string equality against `str(answer)`), `expected_one_of` (membership in a list), and `expected_range` (inclusive numeric range `[lo, hi]`). A submission passes iff **every** declared field passes; missing fields fail. A questionnaire that ships no spec records `NULL` and does not contribute to the participants-table ratio. See [design-decisions.md §18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time) for the rationale and the per-study admin threshold.
 
 ### 8.3 Per-participant journey
 
@@ -597,7 +645,7 @@ The reset script requires `--yes` (set by the wrapper) so it cannot run by accid
 ### 9.2 Tests
 
 ```bash
-./scripts/test.sh                  # 43 tests across platform/ and plugins/
+./scripts/test.sh                  # 74 tests across platform/ and plugins/ (~17 s)
 ./scripts/test.sh -x --tb=short    # stop at first failure
 ```
 
@@ -610,7 +658,7 @@ docker compose up --build
 The compose file mounts:
 
 - `server/instance/` for the SQLite dev DB,
-- `cache/` for dataset pickles and SAE models,
+- `server/cache/` for dataset pickles and SAE models,
 - `static/datasets/` for raw MovieLens CSVs.
 
 The image entrypoint runs `scripts/init-db.sh` then starts gunicorn.
@@ -651,7 +699,7 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ## 10. Testing Strategy
 
-`tests/` lives at the repository root and is the canonical pytest root. The suite (43 tests) runs in about 12 seconds.
+`tests/` lives at the repository root and is the canonical pytest root. The suite (74 tests) runs in about 17 seconds.
 
 ### 10.1 Platform tests (`tests/platform/`)
 
@@ -665,11 +713,12 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 | File | Coverage |
 | --- | --- |
-| `test_sae_audit.py` | Typed-write contracts. `ensure_study_run` / `ensure_approach_run` idempotency. `record_text_steering` writes typed query + matches. `enabled_modalities` is authoritative over `steering_mode`. Selection-signal-weight defaults. `record_event('feature-search', ...)` types `source` and `search_query` columns. `/finish-user-study` redirects to the configured final questionnaire. `/complete-study` records the final response and completes the run. |
-| `test_approach_order_and_results.py` | Randomized approach order is persisted to `SaeStudyRun.effective_order` and replayed deterministically. |
-| `test_initialization.py` | `long_initialization` happy path: dataset caches + SAE clusters load without errors. |
-| `test_blending.py` | Cluster→neuron expansion and overlap behaviour. |
-| `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the `[-0.95, +0.95]` clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. |
+| `test_sae_audit.py` | Typed-write contracts. `ensure_study_run` / `ensure_approach_run` idempotency. `record_text_steering` writes typed query + matches. `enabled_modalities` is authoritative over `steering_mode`. Selection-signal-weight defaults. `record_event('feature-search', ...)` types `source` and `search_query` columns. `/finish-user-study` redirects to the configured final questionnaire. `/complete-study` records the final response and completes the run. Plus `record_questionnaire_response` stores `attention_check_passed` (see design-decisions §18). |
+| `test_approach_order_and_results.py` | Randomized approach order is persisted to `SaeStudyRun.effective_order` and replayed deterministically. Cross-participant analytics group by `approach_id`, never by `approach_index` (regression for the bug fixed in design-decisions §19). Modality breakdown is driven by `enabled_modalities` (design-decisions §20). |
+| `test_initialization.py` | `long_initialization` happy path: dataset caches + SAE clusters load without errors. Every entry in `CANONICAL_PLUGIN_MODULES` loads and registers at least one route. `emptytemplate` and `vae` are absent from `/loaded-plugins` (design-decisions §17). |
+| `test_blending.py` | Cluster→neuron expansion and overlap. Plus per-strategy regression: `feature-conditioned` is the default; `latent-perturbation` rotates the user seed by `α·decoded_direction` and drops the additive SAE term; `constrained-subset` filters items by `sae ≥ τ·max_positive_sae` then ranks by base CF + genre, and falls back to base ranking when no item satisfies the constraint (see equations.md §10 and design-decisions §23). |
+| `test_attention_checks.py` | Evaluator semantics for `expected` / `expected_one_of` / `expected_range`, malformed JSON resilience, and the spec/answer contract of every bundled questionnaire (so editing one of those HTML files without re-running tests fails loudly). See design-decisions §18. |
+| `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the `[-0.95, +0.95]` clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. (6) Text-steering scope guard: payload is stamped with `<guid>:<phase>` and ignored if scope mismatches (other study / other phase); composition uses the previous payload only when scope matches (design-decisions §21). (7) Side-by-side audit semantics: `get_audit_approach_indices` fans out to `[0, 1]` for side-by-side, otherwise `[current_phase]`; `record_movie_feedback` re-maps `list_id="recs-model-b"` → `approach_index=1` (Bug B1 regression, design-decisions §22). |
 
 ### 10.3 EasyStudy plugin tests (`tests/plugins/fastcompare/`)
 
@@ -681,19 +730,20 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ### 11.1 Limitations
 
-1. **One reranking strategy is implemented.** `feature-conditioned` is the production path. `latent-perturbation` and `constrained-opt` are validated as enum values but the iteration controller does not have implementations. See [`equations.md`](equations.md) §4.
-2. **Lexical text steering.** The text resolver is bag-of-words + intensity hints (see [`equations.md`](equations.md) §1). Full sentence-transformer text steering is a research TODO.
-3. **Single dataset.** MovieLens-32M-Filtered (8328 movies) is the only supported dataset. Adding a dataset is documented in [`formative-examples.md`](formative-examples.md) §3.
-4. **No real-time presence.** The framework does not show which other participants are currently in the study. Out of scope for the thesis.
-5. **No Alembic migration baseline.** This is a deliberate trade-off: the cost of one Alembic noise step at every dev iteration outweighed the rare schema-evolution cost during the thesis. Production schema changes happen out of band. See [`design-decisions.md`](design-decisions.md) §3.
+1. **Lexical text steering.** The text resolver is bag-of-words + intensity hints (see [`equations.md`](equations.md) §4). Full sentence-transformer text steering is research-track future work; the proposal's FR-09 reference to `sentence-transformers` is therefore documented but not exercised in this build.
+2. **Single dataset.** MovieLens-32M-Filtered (8328 movies) is the only supported dataset. Adding a dataset is documented in [`formative-examples.md`](formative-examples.md) §3.
+3. **No real-time presence.** The framework does not show which other participants are currently in the study. Out of scope for the thesis.
+4. **No Alembic migration baseline.** This is a deliberate trade-off: the cost of one Alembic noise step at every dev iteration outweighed the rare schema-evolution cost during the thesis. Production schema changes happen out of band. See [`design-decisions.md`](design-decisions.md) §3.
+5. **FR-16 sub-items not surfaced as standalone dashboard widgets.** The proposal's FR-16 list mentions "steering direction ratios (boost / suppress / neutral)" and "participant demographics breakdown" as separate cards. In this build the data is recorded (sign of `SaeFeatureAdjustment.delta` for direction, `Participation.age_group` / `gender` / `education` for demographics) and exposed verbatim in the CSV export (§8.4), but no dedicated dashboard card aggregates them — researchers can compute these in R / pandas from the CSV bundle. The Overview + Modalities cards focus on the behavioural signal that requires per-approach context (rank distributions, per-modality counts, prompt→cluster mappings), which is where the thesis contribution adds value over a generic study dashboard.
+6. **FR-13 iteration history is client-side and unbounded.** The proposal mentions a "last 10 iterations" cap. The actual UI panel (`renderActivityHistory` in `steering_interface.html`) renders one collapsible section per iteration the participant has lived through in the current session. The practical cap is `num_iterations` per approach (researcher-configured, typically 3); there is no hard "last-10" eviction because no piloted configuration approaches that bound. The audit tables retain the full history regardless.
 
 ### 11.2 Future work
 
-1. **Latent-perturbation reranking.** Re-score candidates by perturbing their item embeddings inside the SAE latent space, then projecting back. The enum slot is reserved.
-2. **Constrained-optimization reranking.** Solve a small QP per iteration: maximize relevance subject to per-cluster steering constraints.
-3. **Sentence-transformer text steering.** Replace the lexical resolver with a semantic-similarity scorer; keep the segmentation + intensity logic.
-4. **Multi-dataset support.** Generalize `data_loading` to dispatch on `ml_variant` so multiple datasets can co-exist in one deployment.
-5. **Redis-backed sessions for >100 concurrent participants.** The wiring is already swappable; only the operations setup is missing.
+1. **Sentence-transformer text steering.** Replace the lexical resolver with a semantic-similarity scorer; keep the segmentation + intensity logic.
+2. **Multi-dataset support.** Generalize `data_loading` to dispatch on `ml_variant` so multiple datasets can co-exist in one deployment.
+3. **Redis-backed sessions for >100 concurrent participants.** The wiring is already swappable; only the operations setup is missing (NFR-02).
+4. **Demographics + direction-ratio dashboard cards.** Wire the existing `Participation` demographic fields and the `SaeFeatureAdjustment.delta` sign histogram into dedicated Overview cards so the dashboard fully matches FR-16 sub-items (1.5).
+5. **Per-iteration strategy switch and per-approach strategy override in the admin UI.** The recommender already accepts a per-call `reranking_strategy`; exposing it per approach would enable within-study A/B/C comparisons of the three strategies (design-decisions §23).
 
 ---
 

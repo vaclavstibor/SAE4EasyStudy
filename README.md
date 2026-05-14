@@ -13,18 +13,22 @@ The repository delivers a study-ready implementation of this idea: an EasyStudy-
 
 ## Study Links
 
-| Link | Description |
-|------|-------------|
+
+| Link                                 | Description                                            |
+| ------------------------------------ | ------------------------------------------------------ |
 | [EasyStudy Admin Panel](https://...) | Administrator panel for creating and managing studies. |
-| [Concrete Study](https://...) | Study join link as a participant. |
+| [Concrete Study](https://...)        | Study join link as a participant.                      |
+
 
 ## Repositories
 
-| Repo | Description |
-|------|-------------|
-| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** (this) | Research framework: platform, SAE Steering plugin, runtime, and docs. |
-| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework for recommender-system user studies that this project extends. |
-| **[OfflineEasyStudy](https://...)** | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details |
+
+| Repo                                                                      | Description                                                                                           |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** (this) | Research framework: platform, SAE Steering plugin, runtime, and docs.                                 |
+| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)**                   | Upstream framework for recommender-system user studies that this project extends.                     |
+| **[OfflineEasyStudy](https://...)**                                       | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details |
+
 
 ## Documentation
 
@@ -86,25 +90,27 @@ Tests and lint:
 The application expects two groups of assets to exist before the steering
 blueprint can serve recommendations:
 
-| Location | Files |
-|----------|-------|
-| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg` |
-| `server/plugins/steering/models/` | `TopKSAE-1024.ckpt` (or `.pt`) |
-| `server/plugins/steering/data/` | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
+
+| Location                                  | Files                                                                                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg`                                            |
+| `server/plugins/steering/models/`         | `TopKSAE-1024.ckpt` (or `.pt`)                                                                                                     |
+| `server/plugins/steering/data/`           | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
+
 
 The dataset directory must always be supplied manually. For the SAE plugin
 assets (checkpoint + the four data files) there are two supported flows:
 
 - **GitHub Releases bootstrap.** Set `SAE_BOOTSTRAP_MODEL=1` and
-  `SAE_MODEL_GITHUB_REPO=<owner>/<repo>`, plus `SAE_MODEL_RELEASE_TAG` (defaults
-  to `latest`) and `GITHUB_TOKEN` for private releases. The container entrypoint
-  invokes [`server/plugins/steering/bootstrap_model.py`](server/plugins/steering/bootstrap_model.py)
-  on startup and downloads every asset into the correct location. Optional
-  overrides — `SAE_MODEL_ASSET_NAME`, `SAE_RUNTIME_ASSET_NAME`,
-  `SAE_LABEL_ASSET_NAME` — let you pin specific asset filenames.
+`SAE_MODEL_GITHUB_REPO=<owner>/<repo>`, plus `SAE_MODEL_RELEASE_TAG` (defaults
+to `latest`) and `GITHUB_TOKEN` for private releases. The container entrypoint
+invokes `[server/plugins/steering/bootstrap_model.py](server/plugins/steering/bootstrap_model.py)`
+on startup and downloads every asset into the correct location. Optional
+overrides — `SAE_MODEL_ASSET_NAME`, `SAE_RUNTIME_ASSET_NAME`,
+`SAE_LABEL_ASSET_NAME` — let you pin specific asset filenames.
 - **Manual placement.** Place the files yourself under the paths in the table
-  above. The entrypoint validates their presence on startup and refuses to
-  launch if any are missing.
+above. The entrypoint validates their presence on startup and refuses to
+launch if any are missing.
 
 See [server/plugins/steering/data/README.md](server/plugins/steering/data/README.md)
 for the per-file inventory.
@@ -114,3 +120,4 @@ for the per-file inventory.
 - Peška, L. et al. Research on explainable and controllable recommender systems, GAČR 25-16785S (Charles University).
 - Dokoupil, P. et al. [EasyStudy](https://github.com/pdokoupil/EasyStudy) — upstream user-study framework for recommender systems.
 - [Project Proposal](proposal.tex) — original specification and motivation.
+

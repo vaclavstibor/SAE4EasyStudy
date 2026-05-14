@@ -10,6 +10,8 @@ This is the researcher-facing manual. For the participant perspective see [`user
 
 ## 2. Create a study
 
+The **Available templates** table lists the plugins you can pick as the parent for a new study. It is populated from `/loaded-plugins`, which filters the loaded plugin contracts down to those that (a) registered a `/<name>/create` endpoint and (b) did not opt out via `PluginMetadata.hidden_from_admin`. Two plugins are intentionally hidden: `empty_template` (developer scaffold — copy this when building a new plugin, see [`formative-examples.md`](formative-examples.md) §1) and `vae` (algorithm wrapper consumed by `fastcompare`, not a stand-alone study type). For design rationale see [`design-decisions.md`](design-decisions.md) §17.
+
 1. From `/administration`, click **Create new study** and pick **SAE Steering** as the parent plugin.
 2. You land on `/sae_steering/create`. Configure:
 
@@ -29,18 +31,23 @@ This is the researcher-facing manual. For the participant perspective see [`user
    - **Use selected movies as example-based steering** (FR-08). Drives the recommender from movies the participant already liked.
 
    **Reranking strategy** (FR-10)
-   - `feature-conditioned` is implemented. `latent-perturbation` and `constrained-opt` are reserved enum values and not enabled in this build. See [`design-decisions.md`](design-decisions.md) §8.
+   - `feature-conditioned` (default) — additive blend of CF + genre + adaptive γ · SAE score, with per-iteration clamping. This is the strategy every existing pilot used.
+   - `latent-perturbation` — decode the SAE adjustment vector back to ELSA embedding space and rotate the user seed by `α · direction`; rank with pure CF on the rotated seed (no additive SAE term). Defensible "steering = user-profile shift" alternative; default `α = 0.30`.
+   - `constrained-subset` — keep only candidates whose SAE score is at least `τ × max-positive-SAE`, then rank survivors by base CF + genre; falls back to base ranking if no item satisfies the constraint. Defensible "guaranteed on-target" alternative; default `τ = 0.25`.
+   - The choice is captured on every `SaeApproachRun` row (`reranking_strategy` column) so retrospective analyses can correctly attribute outcomes to the active strategy. See [`equations.md`](equations.md) §10 for the math and [`design-decisions.md`](design-decisions.md) §23 for the rationale.
 
    **Interaction history mode**
-   - `cumulative` (default) — adjustments persist across iterations.
-   - `reset-each-iteration` — adjustments start from zero each round.
+   - `cumulative` (default) — within one approach, both the slider/toggle/text adjustment map and the like-weighted ELSA seed are carried across iterations. Touched sliders are filtered out of the next pool, the cumulative offsets stack, and likes from earlier iterations keep nudging the base recommender's seed.
+   - `reset` — every iteration inside an approach is independent. At the start of iteration N+1 the iteration controller wipes `cumulative_adjustments`, `user_touched_features`, `boosted_liked_ids`, `last_text_steering`, `last_example_steering`, and `excluded_movies_from_text`, and refreshes the ELSA seed from the original preference-elicitation movies only (no like reweighting). Recommendations therefore recompute from the same baseline every round, while the typed-audit tables still record each iteration's adjustments, likes, recommendation sets, and resets.
+   - Both modes still wipe the per-approach state when moving on to the next approach, so cross-approach pollution never happens (`_do_advance_phase` in `routes/study.py`).
 
    **Recommendations per approach** and **max iterations**
    - Typical values: 10 recommendations × 3 iterations.
 
    **Comparison mode**
-   - `sequential` — each participant sees approaches in their assigned order.
-   - `side_by_side` — only used with exactly two approaches.
+   - `sequential` — each participant sees approaches one at a time, in their assigned (possibly randomised) order. There is exactly one recommendation column on screen; the `list_id` is always `recs-single`. Use this for any study with 1, 3, or more approaches.
+   - `side_by_side` — two recommendation columns rendered next to each other for the same participant in the same iteration; one shared slider grid, one shared text input, one set of buttons. **Use only with exactly two approaches.** Studies with 3+ approaches that select `side_by_side` are silently downgraded to `sequential` (the UI has no third column).
+   - Side-by-side records likes per column (`list_id="recs-model-a"` → approach 0; `list_id="recs-model-b"` → approach 1) and fans every shared steering action (slider move, text prompt, example pick, reset) out to both approach runs so the per-approach Modalities dashboard charts are symmetric. Phase-questionnaire wiring uses approach 0's `phase_questionnaire_file` only; for a between-approach comparison questionnaire, use the study-level `questionnaire_file` (final questionnaire). See [`design-decisions.md`](design-decisions.md) §22 for the full invariants and audit semantics.
 
    **Final questionnaire**
    - Upload a JSON questionnaire or use the bundled default.
@@ -73,12 +80,16 @@ The researcher dashboard is at `/sae_steering/results?guid=<study-guid>` (login 
 | Approach Overview table | Participants, mean iterations, mean abs adjustment, mean adjustment events, mean slider changes — one row per approach. |
 | Selected Movie Ranks by Approach | Histogram of *like* events bucketed by the rank in the recommendation list, one series per approach. Tighter-to-the-top distributions mean steering pulled preferred movies higher. |
 | Selection Dynamics | Per-approach likes / removals and the mean number of likes per participant. |
-| Structured Steering Events | Modality usage counts and integrity check (resets, text queries, example events, recommendation impressions, search-then-adjust). |
+| Modality Usage by Approach | One card per approach showing only the modalities that approach declared in `enabled_modalities`. Each card lists per-modality counts (sliders → adjustments / distinct named clusters / mean \|Δ\|, text → prompts / distinct prompts / prompt→cluster matches, etc.) plus a `steering_mode` pill. See [design-decisions.md §20](design-decisions.md#20-the-modalities-dashboard-is-driven-by-enabled_modalities-not-by-audit-table-contents) for the contract. |
 
 ### Modalities
 
-- **Slider movement by cluster** — top 15 most-moved clusters per approach (horizontal bar). Useful for "which controls do participants reach for?".
-- **Text prompt → cluster mappings** — top 50 *(prompt, cluster)* pairs with mean signed weight and number of observations. Useful for "did the NL parser route this prompt sensibly?".
+One section per approach. Each section renders only the cards that approach has enabled in `enabled_modalities`:
+
+- **Feature movement by cluster** — top 15 named clusters by mean absolute Δ (horizontal bar). Rendered for approaches with `sliders` or `toggles` enabled.
+- **Text prompt → cluster mappings** — top *(prompt, cluster)* pairs with mean signed weight and number of observations. Rendered for approaches with `text` enabled, scoped to that approach's submissions.
+
+Approaches that don't enable any chartable modality (e.g. an approach using only `reset` as a utility action) show a short note explaining which modalities they did declare instead of an empty chart. If the whole study has no steerable modality (e.g. a purely observational study), the tab shows a single empty state.
 
 ### Questionnaires
 
@@ -86,11 +97,13 @@ One section per uploaded questionnaire file (per-approach files and the final fi
 
 ### Participants
 
-One row per participation: Prolific PID + study/session ids, status, joined timestamp, duration, approach order, number of questionnaire submissions, completion URL, journey link. When a participant didn't come through Prolific the study/session cell shows an em-dash instead of empty placeholder text.
+One row per participation: Prolific PID + study/session ids, status, joined timestamp, duration, approach order, attention-check verdict, completion URL, journey link. When a participant didn't come through Prolific the study/session cell shows an em-dash instead of empty placeholder text.
+
+**Attention-check verdict.** Each row aggregates attention-check pass/fail across every questionnaire the participant submitted. The verdict is computed once at submit time from the JSON spec inside the questionnaire HTML (see [design-decisions.md §18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) and persisted as `SaeQuestionnaireResponse.attention_check_passed`. Use the **Attention-check threshold** input in the filter bar to set the minimum number of correct checks for a row to count as PASS; the threshold is per-study and remembered in your browser's `localStorage`. Submissions whose questionnaire file ships no spec show **no checks** and do not contribute to the ratio.
 
 ### Journey
 
-Click **View →** in the participants table to open the journey for one participation. The timeline is rendered directly from the typed tables (no JSON parsing). Each questionnaire submission is also listed with its file name and answer count; the full answers JSON is included in the journey response for inline inspection.
+Click **View →** in the participants table to open the journey for one participation. The timeline is rendered directly from the typed tables (no JSON parsing). Each questionnaire submission is listed with its file name, answer count and a per-submission PASS/FAIL badge (hover the FAIL badge to see which field was wrong); the full answers JSON is included in the journey response for inline inspection.
 
 ## 6. Export
 

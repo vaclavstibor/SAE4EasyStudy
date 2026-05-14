@@ -22,7 +22,7 @@ Every recipe is grounded in the real code. File paths are relative to repository
 
 The framework's plugin contract is documented in [`tech-docs.md`](tech-docs.md) §4.2. A plugin is any Python package under `server/plugins/` that exposes `get_plugin() -> StudyPluginContract` from its `__init__.py`.
 
-The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
+The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy and **intentionally hidden from the admin "Available templates" picker** via `PluginMetadata.hidden_from_admin=True` so researchers don't pick the scaffold by accident — see [`design-decisions.md`](design-decisions.md) §17). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
 
 ### 1.1 Directory layout
 
@@ -50,8 +50,6 @@ server/plugins/mystudy/
 ```python
 PLUGIN_NAME = "mystudy"
 PLUGIN_VERSION = "0.1.0"
-PLUGIN_AUTHOR = "Your Name"
-PLUGIN_AUTHOR_CONTACT = "you@example.org"
 PLUGIN_DESCRIPTION = "One-line description that shows up on /administration."
 ```
 
@@ -65,8 +63,6 @@ from flask import Blueprint
 from server.platform.runtime import PluginMetadata, StudyPluginContract
 
 from .constants import (
-    PLUGIN_AUTHOR,
-    PLUGIN_AUTHOR_CONTACT,
     PLUGIN_DESCRIPTION,
     PLUGIN_NAME,
     PLUGIN_VERSION,
@@ -87,9 +83,8 @@ PLUGIN = StudyPluginContract(
     metadata=PluginMetadata(
         name=PLUGIN_NAME,
         version=PLUGIN_VERSION,
-        author=PLUGIN_AUTHOR,
-        author_contact=PLUGIN_AUTHOR_CONTACT,
         description=PLUGIN_DESCRIPTION,
+        # hidden_from_admin=True,  # uncomment for developer-only / wrapper plugins
     ),
     blueprint=bp,
     persistence_hooks={
@@ -427,43 +422,83 @@ def _mood_counts(approach_run_ids):
 
 ## 5. Add a new reranking strategy
 
-`SaeApproachRun.reranking_strategy` is already a snapshot column with three accepted enum values: `feature-conditioned` (implemented), `latent-perturbation` (reserved), `constrained-opt` (reserved). See [`design-decisions.md`](design-decisions.md) §8.
+`SaeApproachRun.reranking_strategy` is already a snapshot column. `SUPPORTED_RERANKING_STRATEGIES` in `server/plugins/steering/constants.py` lists the three strategies that ship today, all implemented: `feature-conditioned` (default), `latent-perturbation`, `constrained-subset`. See [`design-decisions.md`](design-decisions.md) §23 for the rationale and [`equations.md`](equations.md) §10 for the math of each.
 
-Implementing `latent-perturbation`:
+Branching now happens inside `recommendation/sae_recommender.py::get_recommendations` (one `if / elif / elif`), not in the iteration controller — the controller just threads the strategy + params through. Adding a fourth strategy (call it `my-strategy`) is therefore three changes:
 
-### 5.1 Branch in the iteration controller
+### 5.1 Whitelist the enum value
+
+```python
+# server/plugins/steering/constants.py
+SUPPORTED_RERANKING_STRATEGIES = {
+    "feature-conditioned",
+    "latent-perturbation",
+    "constrained-subset",
+    "my-strategy",          # <-- new
+}
+DEFAULT_MY_STRATEGY_KNOB = 0.5    # if your strategy has tunable params
+```
+
+`normalize_study_config` in `study_config.py` validates the value against this set; anything outside falls back to the default. No schema change is needed because the column is already a free-form string.
+
+### 5.2 Implement the branch in the recommender
+
+```python
+# server/plugins/steering/recommendation/sae_recommender.py
+def get_recommendations(self, *, feature_adjustments, ..., reranking_strategy, reranking_params):
+    ...
+    if reranking_strategy == "feature-conditioned":
+        scores = self._feature_conditioned_blend(...)
+    elif reranking_strategy == "latent-perturbation":
+        scores = self._latent_perturbation(...)
+    elif reranking_strategy == "constrained-subset":
+        scores = self._constrained_subset(...)
+    elif reranking_strategy == "my-strategy":
+        scores = self._my_strategy(
+            knob=reranking_params.get("my_knob", DEFAULT_MY_STRATEGY_KNOB),
+            ...,
+        )
+    else:
+        scores = self._feature_conditioned_blend(...)    # safe fallback
+```
+
+The three existing branches are short reference implementations; copy whichever is closest to your math.
+
+### 5.3 Thread the new param through `iteration_controller.py` (only if you added one)
 
 ```python
 # server/plugins/steering/service/iteration_controller.py
-def apply_feature_adjustment_iteration(data):
-    ...
-    strategy = conf.get("reranking_strategy", "feature-conditioned")
-
-    if strategy == "feature-conditioned":
-        candidates = _rerank_feature_conditioned(...)
-    elif strategy == "latent-perturbation":
-        candidates = _rerank_latent_perturbation(...)
-    else:
-        raise NotImplementedError(f"Reranking strategy {strategy!r} is not implemented")
-    ...
+reranking_params = {
+    "alpha": conf.get("latent_perturbation_alpha", DEFAULT_LATENT_PERTURBATION_ALPHA),
+    "tau":   conf.get("constrained_subset_tau",   DEFAULT_CONSTRAINED_SUBSET_TAU),
+    "my_knob": conf.get("my_knob", DEFAULT_MY_STRATEGY_KNOB),    # <-- new
+}
 ```
 
-### 5.2 Implement the new helper
+### 5.4 Document the math in `equations.md`
+
+The full scoring section for the three current strategies lives in [`equations.md`](equations.md) §10. Add §10.4 for `my-strategy` with the same `direction → final score → fallback behaviour` shape; cross-reference from this recipe.
+
+### 5.5 Expose the strategy in the admin UI
+
+Add a `<option>` to the `reranking-strategy` `<select>` in `server/plugins/steering/templates/sae_steering_create.html` with a one-sentence description. Optionally add a numeric `<input>` for the new tunable param, gated by JS on the dropdown value (the existing α / τ inputs are the pattern).
+
+### 5.6 Add a regression test
+
+Mirror the existing tests in `tests/plugins/steering/test_blending.py`:
 
 ```python
-def _rerank_latent_perturbation(*, base_candidates, neuron_shifts, recommender, k):
-    # Perturb each candidate's item embedding in SAE latent space, project back,
-    # rescore against the user seed, keep top-k. The math goes in equations.md §4.
-    ...
+def test_my_strategy_does_what_it_says(...):
+    recommender = _recommender_with_decoder(...)
+    payload = recommender.get_recommendations(
+        feature_adjustments={"5": 1.0},
+        n_items=3,
+        ...
+        reranking_strategy="my-strategy",
+        reranking_params={"my_knob": 0.5},
+    )
+    assert ...    # whatever your strategy's invariant is
 ```
-
-### 5.3 No schema change
-
-Because `reranking_strategy` is already an enum column, no DB change is needed. The CSV export, the dashboard, and the per-approach snapshot work unchanged.
-
-### 5.4 Add the math to `equations.md`
-
-The scoring formula lives in [`equations.md`](equations.md) §4. Each new strategy should add a subsection there.
 
 ---
 
@@ -627,7 +662,7 @@ The full test suite is documented in [`tech-docs.md`](tech-docs.md) §10. Key co
 Run the suite locally:
 
 ```bash
-./scripts/test.sh                  # full suite (~12 s, 43 tests today)
+./scripts/test.sh                  # full suite (~17 s, 74 tests today)
 ./scripts/test.sh -k mood          # only the new tests
 ./scripts/test.sh -x --tb=short    # stop at first failure with concise traceback
 ```

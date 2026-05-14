@@ -1,21 +1,33 @@
 #!/usr/bin/env python3
-"""
-One-time integration script: set up TopKSAE-1024 model artifacts for the steering plugin.
+"""Author-side artifact preparation for the steering plugin.
 
-Run on the machine where checkpoints and dataset are available:
+Companion to :mod:`server.plugins.steering.bootstrap_model`:
 
-    cd EasyStudy
-    python server/plugins/steering/integrate_model_artifacts.py \
-        --sae-ckpt  train/checkpoints/ml-32m-filtered/TopKSAE-1024-4d51a427.ckpt \
-        --elsa-ckpt train/checkpoints/ml-32m-filtered/ELSA-512-c2005bb7.ckpt \
-        --dataset-dir data_preparation/filters/recsys26/ml-32m-filtered \
-        --labeling-run labeling/artifacts/20260416-023922
+* this script (author-side) reads training checkpoints + labeling artifacts
+  from a sibling training repo and writes the canonical files into the
+  plugin's ``models/`` and ``data/`` folders that ship with the release
+  bundle;
+* ``bootstrap_model.py`` (user-side) downloads the resulting bundle from
+  GitHub Releases when the plugin starts for the first time.
 
-Produces inside server/plugins/steering/:
+Run from the repo root on a machine that has access to the training
+checkpoints and the source dataset:
+
+    python server/plugins/steering/service/integration.py \
+        --sae-ckpt  ../EasyStudy-Training/train/checkpoints/ml-32m-filtered/TopKSAE-1024-4d51a427.ckpt \
+        --elsa-ckpt ../EasyStudy-Training/train/checkpoints/ml-32m-filtered/ELSA-512-c2005bb7.ckpt \
+        --dataset-dir ../EasyStudy-Training/data_preparation/filters/recsys26/ml-32m-filtered \
+        --labeling-run ../EasyStudy-Training/labeling/artifacts/20260416-023922
+
+Produces inside ``server/plugins/steering/``:
+
     models/TopKSAE-1024.ckpt
     data/item_embeddings.pt
     data/llm_labels_TopKSAE-1024_llm.json
     data/semantic_merged_TopKSAE-1024.json
+
+(The ``item_sae_features_TopKSAE-1024.pt`` cache auto-computes on the next
+server start; you do not need to ship it.)
 """
 
 import argparse
