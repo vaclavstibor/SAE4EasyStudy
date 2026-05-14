@@ -17,23 +17,3 @@ db-init:
 
 compose-up:
     docker compose up --build
-server_dir := "server"
-
-check:
-    cd {{server_dir}} && python3 -m py_compile app.py common.py models.py
-
-test:
-    cd {{server_dir}} && python3 -m pytest
-
-lint:
-    cd {{server_dir}} && python3 -m ruff check .
-server_dir := "server"
-
-check:
-    cd {{server_dir}} && python3 -m py_compile app.py common.py models.py
-
-test:
-    cd {{server_dir}} && python3 -m pytest
-
-lint:
-    cd {{server_dir}} && python3 -m ruff check .
