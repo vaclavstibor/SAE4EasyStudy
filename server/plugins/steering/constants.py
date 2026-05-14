@@ -8,8 +8,6 @@ except ImportError:
 
 PLUGIN_NAME = "sae_steering"
 PLUGIN_VERSION = "0.1.0"
-PLUGIN_AUTHOR = "Research Team"
-PLUGIN_AUTHOR_CONTACT = "research@example.com"
 PLUGIN_DESCRIPTION = "SAE-based interpretable and steerable neural recommendations"
 
 DEFAULT_STEERING_MODE = "sliders"
@@ -53,8 +51,32 @@ SUPPORTED_TEXT_COMPOSITION_MODES = {"replace", "add", "intersect"}
 
 DEFAULT_RERANKING_STRATEGY = "feature-conditioned"
 SUPPORTED_RERANKING_STRATEGIES = {
+    # Adaptive additive blend (the current default). Adds a clamped
+    # γ · sae_scores term on top of CF + genre. See sae_recommender.py
+    # and docs/equations.md §10.
     "feature-conditioned",
+    # Latent-space perturbation. Builds a SAE-derived direction in
+    # ELSA's item-embedding space, adds α · direction to the user
+    # seed, then ranks with pure CF (no additive SAE term). See
+    # docs/equations.md §10.2.
+    "latent-perturbation",
+    # Hard-constraint filter. Keeps only candidates whose SAE score
+    # is at least τ × max(positive sae score), then ranks the
+    # surviving subset by base CF + genre. See docs/equations.md §10.3.
+    "constrained-subset",
 }
+
+#: Default α used by the ``latent-perturbation`` strategy. The seed
+#: gain ``α · direction`` is small on purpose — strong perturbations
+#: easily push the seed off the CF-trained manifold and produce
+#: nonsense. Researchers can override via ``conf['latent_perturbation_alpha']``.
+DEFAULT_LATENT_PERTURBATION_ALPHA = 0.30
+
+#: Default τ used by the ``constrained-subset`` strategy. Items whose
+#: ``sae_score >= τ · max_positive_sae_score`` survive the filter and
+#: are ranked by base CF + genre. Setting τ=0 effectively disables the
+#: hard constraint (any item with non-negative SAE score passes).
+DEFAULT_CONSTRAINED_SUBSET_TAU = 0.25
 
 
 def get_default_models():

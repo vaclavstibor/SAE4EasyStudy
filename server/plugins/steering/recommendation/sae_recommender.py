@@ -21,12 +21,24 @@ try:
         find_local_model_path,
         format_missing_model_message,
     )
+    from ..constants import (
+        DEFAULT_CONSTRAINED_SUBSET_TAU,
+        DEFAULT_LATENT_PERTURBATION_ALPHA,
+        DEFAULT_RERANKING_STRATEGY,
+        SUPPORTED_RERANKING_STRATEGIES,
+    )
 except ImportError:
     from blending import build_blend_plan
     from model_store import (
         DEFAULT_TOPK_SAE_MODEL_ID,
         find_local_model_path,
         format_missing_model_message,
+    )
+    from server.plugins.steering.constants import (
+        DEFAULT_CONSTRAINED_SUBSET_TAU,
+        DEFAULT_LATENT_PERTURBATION_ALPHA,
+        DEFAULT_RERANKING_STRATEGY,
+        SUPPORTED_RERANKING_STRATEGIES,
     )
 
 
@@ -328,6 +340,29 @@ class SAERecommender:
 
         return {"top_up": top_up, "top_down": top_down}
 
+    def _decode_sae_profile_to_embedding_space(
+        self, sae_profile: torch.Tensor
+    ) -> Optional[torch.Tensor]:
+        """Decode a SAE feature-space vector back into ELSA embedding space.
+
+        Uses the SAE decoder weight (``embedding_dim × input_dim`` in the
+        TopKSAE module, where ``embedding_dim`` is the SAE feature count
+        and ``input_dim`` is the CF embedding dim). The result is a
+        vector in the same space as ``self.item_embeddings`` rows, ready
+        to be added (after normalisation) to the user-seed embedding.
+
+        Returns ``None`` when the SAE model is not loaded — the caller
+        treats that as "fall back to no perturbation".
+        """
+        if self.sae_model is None:
+            return None
+        try:
+            decoder_w = self.sae_model.decoder_w
+        except AttributeError:
+            return None
+        with torch.no_grad():
+            return torch.matmul(sae_profile.to(decoder_w.device), decoder_w)
+
     def get_recommendations(
         self,
         feature_adjustments: Dict[int, float],
@@ -336,21 +371,47 @@ class SAERecommender:
         allowed_ids: Optional[set] = None,
         seed_embedding: Optional[np.ndarray] = None,
         genre_bonus: Optional[np.ndarray] = None,
+        reranking_strategy: Optional[str] = None,
+        reranking_params: Optional[Dict[str, float]] = None,
         **_kwargs,
     ) -> Union[List[Dict], Dict]:
-        """Rank items using hybrid scoring.
+        """Rank items using one of three reranking strategies.
 
-        Three signals are blended:
+        All strategies start from the same three building blocks:
+
         1. **ELSA collaborative filtering** — cosine similarity between
-           each item's dense ELSA embedding and the *seed_embedding*
-           (mean of elicitation/liked movies).  This is the main
-           "find similar movies" signal.
-        2. **Genre overlap** — a pre-computed per-item bonus from the
-           caller (Jaccard similarity to the seed movies' genre set).
-        3. **SAE steering** — ``item_sae_features @ adjustments``.
-           Only non-zero when the user moves sliders or likes movies.
+           each item's ELSA embedding and the *seed_embedding* (mean of
+           elicitation / liked movies).
+        2. **Genre overlap** — Jaccard similarity to the seed movies'
+           genre set (pre-computed by the caller).
+        3. **SAE steering signal** — ``item_sae_features @ sae_profile``
+           where ``sae_profile`` is the user's adjustment vector in
+           the neuron-feature space.
+
+        The three strategies differ in *how* the SAE signal is combined
+        with CF + genre. See docs/equations.md §10 for the math:
+
+        - ``feature-conditioned`` (default, the historical behavior):
+          additive blend with adaptive γ and per-iteration clamping.
+        - ``latent-perturbation``: decode the SAE adjustment vector
+          back into ELSA embedding space, add ``α · direction`` to
+          the user seed, then rank with **pure CF** (no additive SAE
+          term). Smaller, smoother edits — the steering acts as a
+          rotation of the user profile, not as a post-hoc score bump.
+        - ``constrained-subset``: keep only candidates whose SAE
+          score crosses ``τ · max_positive_sae_score``, then rank the
+          surviving subset by base CF + genre. Hard guarantee: every
+          item in the output **satisfies** the user's positive cluster
+          intent (subject to the threshold τ).
         """
         self.load()
+
+        strategy = str(reranking_strategy or DEFAULT_RERANKING_STRATEGY).strip().lower()
+        if strategy not in SUPPORTED_RERANKING_STRATEGIES:
+            strategy = DEFAULT_RERANKING_STRATEGY
+        params = reranking_params or {}
+        latent_alpha = float(params.get("latent_perturbation_alpha", DEFAULT_LATENT_PERTURBATION_ALPHA))
+        constrained_tau = float(params.get("constrained_subset_tau", DEFAULT_CONSTRAINED_SUBSET_TAU))
 
         if self.item_features is None:
             return []
@@ -362,8 +423,22 @@ class SAERecommender:
         n_features = self.item_features.shape[1]
         blend_plan = build_blend_plan(feature_adjustments)
 
+        # --- SAE adjustment vector (built up-front; needed by every strategy) ---
+        sae_profile = torch.zeros(n_features, device=device)
+        has_adjustments = False
+        for nid, val in feature_adjustments.items():
+            nid = int(nid)
+            if 0 <= nid < n_features and abs(float(val)) > 1e-6:
+                sae_profile[nid] = float(val)
+                has_adjustments = True
+
         # --- 1. ELSA collaborative-filtering score (cosine similarity) ---
+        # For latent-perturbation the seed embedding is rotated by
+        # ``α · decoder(sae_profile)`` *before* the cosine — see §10.2.
         cf_scores = torch.zeros(n_items_total, device=device)
+        item_norms = None
+        latent_direction_norm = None
+        seed_perturbed = False
         if seed_embedding is not None and self.item_embeddings is not None:
             seed_t = torch.tensor(
                 seed_embedding,
@@ -372,6 +447,18 @@ class SAERecommender:
             )
             item_norms = F.normalize(self.item_embeddings.to(device), dim=1)
             seed_norm = F.normalize(seed_t.unsqueeze(0), dim=1).squeeze(0)
+
+            if strategy == "latent-perturbation" and has_adjustments:
+                direction = self._decode_sae_profile_to_embedding_space(sae_profile)
+                if direction is not None:
+                    direction_t = direction.to(device=device, dtype=seed_norm.dtype)
+                    norm = torch.norm(direction_t)
+                    if float(norm.item()) > 1e-6:
+                        latent_direction_norm = direction_t / norm
+                        perturbed = seed_norm + latent_alpha * latent_direction_norm
+                        seed_norm = F.normalize(perturbed.unsqueeze(0), dim=1).squeeze(0)
+                        seed_perturbed = True
+
             cf_scores = torch.matmul(item_norms, seed_norm) * blend_plan.cf_weight
 
         # --- 2. Genre overlap bonus ---
@@ -386,30 +473,50 @@ class SAERecommender:
                 * blend_plan.genre_weight
             )
 
-        # --- 3. SAE steering score (from sliders / like boosts) ---
-        sae_profile = torch.zeros(n_features, device=device)
-        has_adjustments = False
-        for nid, val in feature_adjustments.items():
-            nid = int(nid)
-            if 0 <= nid < n_features and abs(float(val)) > 1e-6:
-                sae_profile[nid] = float(val)
-                has_adjustments = True
+        # --- 3. SAE steering score ---
+        # ``sae_scores`` is computed in all strategies, but only added to
+        # the final score for ``feature-conditioned``. ``constrained-
+        # subset`` uses it as a mask. ``latent-perturbation`` ignores it
+        # entirely — the steering has already moved the seed.
+        sae_scores = (
+            torch.matmul(self.item_features, sae_profile)
+            if has_adjustments
+            else torch.zeros(n_items_total, device=device)
+        )
 
         base_scores = cf_scores + genre_scores
         steering_scores = torch.zeros(n_items_total, device=device)
         prior_tiebreak_scores = torch.zeros(n_items_total, device=device)
         adaptive_gamma = 0.0
         clamp_value = 0.0
-        if has_adjustments:
-            sae_scores = torch.matmul(self.item_features, sae_profile)
+        constraint_mask: Optional[torch.Tensor] = None
 
-            allowed_mask_tmp = torch.tensor(
-                [mid in allowed_set for mid in self.item_ids],
-                device=device,
-                dtype=torch.bool,
-            )
-            candidate_sae = sae_scores[allowed_mask_tmp]
+        allowed_mask_tmp = torch.tensor(
+            [mid in allowed_set for mid in self.item_ids],
+            device=device,
+            dtype=torch.bool,
+        )
+        candidate_sae = sae_scores[allowed_mask_tmp]
 
+        if has_adjustments and strategy == "constrained-subset":
+            # Threshold = τ × (max positive sae score over allowed items).
+            # If no item has a positive sae score, the mask is empty and
+            # we fall back to base ranking (handled below).
+            if int(candidate_sae.numel()) > 0:
+                positive_sae = candidate_sae[candidate_sae > 0]
+                if int(positive_sae.numel()) > 0:
+                    threshold = max(constrained_tau * float(torch.max(positive_sae).item()), 0.0)
+                else:
+                    threshold = 0.0
+                constraint_mask = sae_scores >= threshold
+            steering_scores = torch.zeros(n_items_total, device=device)
+            adaptive_gamma = 0.0
+            clamp_value = float(constrained_tau)
+        elif has_adjustments and strategy == "latent-perturbation":
+            steering_scores = torch.zeros(n_items_total, device=device)
+            adaptive_gamma = float(latent_alpha) if seed_perturbed else 0.0
+            clamp_value = 0.0
+        elif has_adjustments and strategy == "feature-conditioned":
             if blend_plan.strategy == "steering_primary":
                 steering_scores = sae_scores
                 if blend_plan.prior_tiebreak_weight > 0 and int(allowed_mask_tmp.sum().item()) > 0:
@@ -466,6 +573,17 @@ class SAERecommender:
 
         scores = base_scores + steering_scores + prior_tiebreak_scores
 
+        # Constrained-subset strategy: hard-mask candidates that don't
+        # cross the SAE-score threshold. If the mask is empty (no
+        # positive SAE adjustments OR no item satisfies τ), we silently
+        # fall back to base ranking instead of returning an empty list
+        # — a user who toggled a slider expecting "more X" should still
+        # get *some* recommendations even when the SAE signal is weak.
+        if constraint_mask is not None:
+            survivors = constraint_mask & allowed_mask_tmp
+            if int(survivors.sum().item()) >= 1:
+                scores = torch.where(survivors, scores, torch.full_like(scores, float("-inf")))
+
         # Mask disallowed items with -inf so they never appear in top-k
         allowed_mask = torch.tensor(
             [mid in allowed_set for mid in self.item_ids],
@@ -485,6 +603,13 @@ class SAERecommender:
             idx = idx_t.item()
             item_id = self.item_ids[idx]
             if item_id in exclude_set:
+                valid_mask[idx] = False
+                continue
+            # Items disallowed by the allowed_ids filter OR masked out by
+            # the constrained-subset strategy carry score = -inf. Including
+            # them in the response would re-introduce items the caller
+            # explicitly asked to be filtered out (constrained-subset bug).
+            if not torch.isfinite(scores[idx]):
                 valid_mask[idx] = False
                 continue
             results.append(
@@ -535,6 +660,7 @@ class SAERecommender:
             "results": results,
             "debug": {
                 "blend_strategy": blend_plan.strategy,
+                "reranking_strategy": strategy,
                 "cf_weight": round(float(blend_plan.cf_weight), 4),
                 "genre_weight": round(float(blend_plan.genre_weight), 4),
                 "prior_tiebreak_weight": round(float(blend_plan.prior_tiebreak_weight), 4),
@@ -542,6 +668,9 @@ class SAERecommender:
                 "steering_clamp": round(float(clamp_value), 4),
                 "steering_ratio": round(float(ratio), 4),
                 "influence_level": influence_level,
+                "latent_perturbation_alpha": round(float(latent_alpha), 4) if strategy == "latent-perturbation" else None,
+                "constrained_subset_tau": round(float(constrained_tau), 4) if strategy == "constrained-subset" else None,
+                "constrained_subset_survivors": int(constraint_mask.sum().item()) if constraint_mask is not None else None,
                 "top_up": movers.get("top_up", []),
                 "top_down": movers.get("top_down", []),
             },

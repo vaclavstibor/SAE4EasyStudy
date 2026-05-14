@@ -210,17 +210,24 @@
                         <div class="col-md-6">
                             <label for="reranking-strategy" class="form-label">Reranking strategy</label>
                             <select class="form-select" id="reranking-strategy">
-                                <option value="feature-conditioned" selected>Feature-conditioned</option>
+                                <option value="feature-conditioned" selected>Feature-conditioned (additive blend, default)</option>
+                                <option value="latent-perturbation">Latent perturbation (perturb seed; pure CF rank)</option>
+                                <option value="constrained-subset">Constrained subset (hard τ-filter, CF rank inside)</option>
                             </select>
-                            <div class="form-text">Algorithm used to combine SAE feature steering with the base recommender. Additional strategies (latent perturbation, constrained optimization) are research TODOs.</div>
+                            <div class="form-text">
+                                How SAE feature steering is combined with the base recommender. See <code>docs/equations.md §10</code>.
+                                <strong>Feature-conditioned</strong> adds an adaptive γ·SAE score on top of CF (current production default).
+                                <strong>Latent perturbation</strong> decodes the SAE adjustment vector back to embedding space and adds α·direction to the user seed; ranking is pure CF on the rotated seed.
+                                <strong>Constrained subset</strong> keeps only items whose SAE score ≥ τ × max-positive-SAE, then ranks the survivors by base CF (falls back to base ranking if no item satisfies the constraint).
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label for="interaction-mode" class="form-label">Interaction History Mode</label>
                             <select class="form-select" id="interaction-mode">
-                                <option value="cumulative" selected>Cumulative (adjustments stack)</option>
-                                <option value="reset">Reset each iteration (fresh start)</option>
+                                <option value="cumulative" selected>Cumulative</option>
+                                <option value="reset">Reset each iteration</option>
                             </select>
-                            <div class="form-text">Cumulative is recommended for the current flow.</div>
+                            <div class="form-text">Whether per-iteration steering signals (slider / toggle / text adjustments <em>and</em> liked-movie weighting of the ELSA seed) persist across iterations within an approach. In <strong>Reset</strong> mode every iteration starts from the original preference-elicitation profile; the audit database still records each iteration's actions. Reset between approaches is automatic in both modes.</div>
                         </div>
                     </div>
                     <div class="row g-3 mt-1">

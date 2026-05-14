@@ -79,6 +79,8 @@ def generate_steered_recommendations_for_model(
     model_config,
     k=20,
     suppressed_genres=None,
+    reranking_strategy=None,
+    reranking_params=None,
 ):
     from .sae_recommender import get_sae_recommender
 
@@ -122,6 +124,8 @@ def generate_steered_recommendations_for_model(
             seed_embedding=elsa_seed,
             genre_bonus=genre_bonus,
             return_debug=True,
+            reranking_strategy=reranking_strategy,
+            reranking_params=reranking_params,
         )
         raw_recommendations = (
             rec_payload.get("results", []) if isinstance(rec_payload, dict) else rec_payload
