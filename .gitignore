@@ -26,74 +26,16 @@ server/cache/
 server/static/datasets/ml-32m-filtered/
 !server/static/datasets/ml-32m-filtered/.gitkeep
 
+# Steering plugin data
+server/plugins/steering/data/
+!server/plugins/steering/data/README.md
+
 # Temporarily ignore local offline folder
 OfflineEasyStudies
 
+# Other
 .cursor/
-notes.txt
-proposal_instruction.txt
 proposal.tex
-__pycache__
-*.pyc
-*.pckl
-*.csv
-*.npy
-flask_session
-*.sqlite
-img
-cache
-__MACOSX
-.venv
-db.sqlite
-.ipynb_checkpoints/
-
-# Models
-*.pt
-*ckpt
-*.sha256
-*.xz
-
-# Proposal and specification
-texs/
-
-# Research
-research/
-labeling/
-data_preparation/
-.cache/
-/overleaf/
-
-# Notes from meetings
-notes/
-
-# Root files
-/.secrets.toml
-/PROJECT_SUMMARY.txt
-/QUICKSTART.txt
-/README_with_architecture.md
-/RESEARCH_CONTRIBUTION.md
-/run.md
-/sae_steering_architecture.txt
-/SHOWCASE_WALKTHROUGH.md
-/todo.md
-/TRAINING_PIPELINE.md
-/tutorial.txt
-
-# Local-only datasets and browser assets
-/server/.playwright-browsers/
-/server/static/datasets/kaggle-tmdb/
-/server/static/datasets/ml-latest/
-
-# Legacy study_framework paths
-study_framework/server/.venv39/
-study_framework/.pytest_cache/
-study_framework/server/.pytest_cache/
-study_framework/.ruff_cache/
-study_framework/server/.ruff_cache/
-study_framework/**/__pycache__/
-study_framework/server/instance/
-study_framework/instance/
-study_framework/cache/
-study_framework/server/cache/
-study_framework/server/static/datasets/ml-32m-filtered/
-!study_framework/server/static/datasets/ml-32m-filtered/.gitkeep
+proposal_instruction.txt
+notes.txt
+prolific_description.md
