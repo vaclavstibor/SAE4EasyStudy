@@ -71,6 +71,27 @@
         .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
         .card { border: 1px solid var(--border-color); border-radius: 8px; background: #fff; padding: 20px; }
         .insight-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .kv-grid { display: grid; grid-template-columns: 1fr auto; row-gap: 6px; column-gap: 16px; align-items: baseline; }
+        .kv-grid .kv-key { color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+        .kv-grid .kv-val { font-variant-numeric: tabular-nums; font-size: 13px; font-weight: 500; color: var(--text-primary); text-align: right; }
+        .kv-grid .kv-key.muted, .kv-grid .kv-val.muted { color: var(--text-muted); }
+        .modality-card { display: flex; flex-direction: column; gap: 12px; }
+        .modality-card-header { display: flex; align-items: center; gap: 8px; }
+        .modality-card-header .insight-title { margin-bottom: 0; line-height: 1.2; }
+        .modality-card-meta { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-top: -4px; }
+        .modality-block { border-top: 1px solid var(--border-color); padding-top: 10px; }
+        .modality-block:first-of-type { border-top: none; padding-top: 0; }
+        .modality-block-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+        .modality-mode-pill {
+            display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px;
+            background: var(--bg-subtle); color: var(--text-secondary);
+            font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px;
+            line-height: 1.4;
+            border: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+        .section-header h2 { display: inline-flex; align-items: center; gap: 8px; }
+        .section-header h2 .modality-mode-pill { font-size: 11px; margin-left: 0; }
         .mono { font-family: "IBM Plex Mono", "SF Mono", monospace; font-size: 12px; }
         .table-wrap { border: 1px solid var(--border-color); border-radius: 8px; overflow: auto; }
         .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -98,6 +119,8 @@
         .badge-warning { background: #fff3e0; color: var(--accent-warning); }
         .badge-neutral { background: var(--bg-subtle); color: var(--text-secondary); }
         .badge-kind { background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .badge-pass { background: #e0f3e6; color: var(--accent-positive); }
+        .badge-fail { background: #fdecec; color: var(--accent-negative, #c0392b); }
         .copy-btn {
             background: transparent; border: 1px solid var(--border-color);
             border-radius: 4px; padding: 1px 6px; cursor: pointer; font-size: 11px; color: var(--text-secondary);
@@ -198,7 +221,7 @@
                 </div>
                 <div class="chart-grid">
                     <div class="chart-card">
-                        <div class="chart-title">Liked-movie rank distribution</div>
+                        <div class="chart-title">Selected movie rank distribution</div>
                         <div class="chart-sub">Counts of likes by rank (lower rank = higher in the list), one series per approach.</div>
                         <div class="chart-wrap"><canvas id="rankDistChart"></canvas></div>
                     </div>
@@ -225,61 +248,19 @@
 
             <div class="section">
                 <div class="section-header">
-                    <h2>Structured Steering Events</h2>
-                    <p>Counts of modality usage and SAE-specific events from the typed audit pipeline.</p>
+                    <h2>Modality Usage by Approach</h2>
+                    <p>One card per approach. Each approach only shows the modalities it had enabled (per <code>enabled_modalities</code> in the study config). Counts come from the typed audit tables and reflect only what participants actually did with each modality.</p>
                 </div>
-                <div class="card-grid">
-                    <div class="card">
-                        <div class="insight-title">Modality usage</div>
-                        <div id="modality-usage"></div>
-                    </div>
-                    <div class="card">
-                        <div class="insight-title">Interaction integrity</div>
-                        <div id="event-integrity"></div>
-                    </div>
-                </div>
+                <div id="modality-breakdown-cards" class="card-grid"></div>
             </div>
         </div>
 
         <!-- ========================= MODALITIES TAB ========================= -->
         <div class="tab-panel" id="tab-modalities">
-            <div class="section">
-                <div class="section-header">
-                    <h2>Slider Movement by Cluster</h2>
-                    <p>Mean absolute movement for the 20 most-moved clusters in each approach (slider modality).</p>
-                </div>
-                <div class="chart-grid">
-                    <div class="chart-card">
-                        <div class="chart-title">Approach A</div>
-                        <div class="chart-wrap"><canvas id="sliderApproachAChart"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <div class="chart-title">Approach B</div>
-                        <div class="chart-wrap"><canvas id="sliderApproachBChart"></canvas></div>
-                    </div>
-                </div>
+            <div id="modalities-empty-state" class="section" style="display:none;">
+                <div class="empty-state">No steerable modalities are enabled in this study's configuration.</div>
             </div>
-
-            <div class="section">
-                <div class="section-header">
-                    <h2>Text Prompt → Cluster Mappings</h2>
-                    <p>Which clusters did participants’ text prompts map to? Top 50 prompt-cluster pairs sorted by occurrence.</p>
-                </div>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Prompt</th>
-                                <th>Cluster</th>
-                                <th>Cluster ID</th>
-                                <th>Mean weight (signed)</th>
-                                <th>n</th>
-                            </tr>
-                        </thead>
-                        <tbody id="text-mappings-table"></tbody>
-                    </table>
-                </div>
-            </div>
+            <div id="modalities-sections"></div>
         </div>
 
         <!-- ========================= QUESTIONNAIRES TAB ========================= -->
@@ -311,18 +292,21 @@
                     <label>Search:
                         <input type="search" id="filter-search" placeholder="PID, UUID, language...">
                     </label>
+                    <label title="Minimum number of correctly answered attention checks for a participant to count as PASS. Defaults to the highest total observed (i.e. every questionnaire must pass).">
+                        Attention-check threshold:
+                        <input type="number" id="attn-threshold" min="0" step="1" style="width:64px;">
+                    </label>
                 </div>
                 <div class="table-wrap">
                     <table class="data-table" id="participants-table">
                         <thead>
                             <tr>
                                 <th>Prolific PID</th>
-                                <th>Study / Session</th>
                                 <th>Status</th>
                                 <th>Joined</th>
                                 <th>Duration</th>
                                 <th>Approach order</th>
-                                <th>Questionnaires</th>
+                                <th title="Per-participant attention-check tally across every submitted questionnaire that declared an attention-check spec.">Attention checks</th>
                                 <th>Completion URL</th>
                                 <th>Journey</th>
                             </tr>
@@ -358,6 +342,7 @@
     <script>
         const FETCH_URL = "{{ fetch_results_url }}";
         const JOURNEY_URL_BASE = "{{ journey_url_base }}";
+        const STUDY_GUID = "{{ guid }}";
         const APPROACH_PALETTE = ["#4a6fa5", "#2d7d46", "#c23c3c", "#7f5aa2"];
 
         let resultsData = null;
@@ -385,14 +370,14 @@
             if (s === "in_progress") return '<span class="badge badge-warning">in progress</span>';
             return `<span class="badge badge-neutral">${s || "-"}</span>`;
         }
-        function shortApproach(name) {
-            if (!name) return "";
-            return String(name).replace(/^Approach\s+/i, "").replace(/Explicit Feedback/i, "Feedback");
+        function approachLabel(name) {
+            if (!name) return "?";
+            return String(name);
         }
         function formatApproachOrder(row) {
             const effective = Array.isArray(row.effective_order) ? row.effective_order : null;
             if (effective && effective.length) {
-                return effective.map((n, i) => `P${i + 1}: ${shortApproach(n)}`).join(" → ");
+                return effective.map((n, i) => `P${i + 1}: ${approachLabel(n)}`).join(" → ");
             }
             return "-";
         }
@@ -409,13 +394,17 @@
             try {
                 const response = await fetch(FETCH_URL);
                 resultsData = await response.json();
+                // Surface slider_movement under approaches.* too so the
+                // Modalities tab can find it next to modality_breakdown.
+                if (resultsData?.modalities?.slider_movement && resultsData.approaches) {
+                    resultsData.approaches.slider_movement = resultsData.modalities.slider_movement;
+                }
                 renderTopStats(resultsData);
                 renderApproachOverview(resultsData);
                 renderSelectionDynamics(resultsData);
-                renderStructuredEvents(resultsData);
+                renderModalityBreakdownCards(resultsData);
                 renderRankDistribution(resultsData);
-                renderSliderMovement(resultsData);
-                renderTextMappings(resultsData);
+                renderModalitiesTab(resultsData);
                 renderQuestionnaireMonitor(resultsData);
                 renderParticipantsTable(resultsData);
                 renderJourneyPicker(resultsData);
@@ -472,27 +461,54 @@
                 </tr>
             `).join("");
         }
-        function renderStructuredEvents(data) {
-            const modalityUsage = data.modalities?.modality_usage || {};
-            const usageEntries = Object.entries(modalityUsage);
-            document.getElementById("modality-usage").innerHTML = usageEntries.length
-                ? usageEntries.map(([m, c]) => `<div><strong>${m}</strong>: ${c}</div>`).join("")
-                : '<div class="text-muted">No modality events yet.</div>';
-            const ev = data.structured_events || {};
-            document.getElementById("event-integrity").innerHTML = `
-                <div><strong>Global resets</strong>: ${ev.reset_count ?? 0}</div>
-                <div><strong>Text queries</strong>: ${ev.text_queries_count ?? 0}</div>
-                <div><strong>Example events</strong>: ${ev.example_event_count ?? 0}</div>
-                <div><strong>Recommendation impressions</strong>: ${ev.recommendation_impressions ?? 0}</div>
-                <div><strong>Searched then adjusted</strong>: ${ev.searched_then_adjusted_count ?? 0}</div>
-            `;
+        // ---------- modality breakdown (Overview + Modalities tab) ----------
+        function fmtMetricValue(value, fmtKind) {
+            if (value === null || value === undefined) return "—";
+            if (fmtKind === "decimal") return Number(value).toFixed(3);
+            return Number(value).toLocaleString();
+        }
+        function renderModalityBreakdownCards(data) {
+            const container = document.getElementById("modality-breakdown-cards");
+            const breakdown = data.approaches?.modality_breakdown || {};
+            const entries = Object.entries(breakdown);
+            if (!entries.length) {
+                container.innerHTML = '<div class="empty-state">No approaches configured for this study.</div>';
+                return;
+            }
+            container.innerHTML = entries.map(([, approach]) => {
+                const modalities = Object.entries(approach.modalities || {});
+                const modalityBlocks = modalities.length
+                    ? modalities.map(([key, mod]) => `
+                        <div class="modality-block">
+                            <div class="modality-block-title">${mod.label || key}</div>
+                            <div class="kv-grid">
+                                ${(mod.metrics || []).map(m => `
+                                    <div class="kv-key${(m.value === 0 || m.value === null) ? ' muted' : ''}">${m.label}</div>
+                                    <div class="kv-val${(m.value === 0 || m.value === null) ? ' muted' : ''}">${fmtMetricValue(m.value, m.fmt)}</div>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `).join("")
+                    : '<div class="text-muted" style="font-size:12px;">No steerable modalities enabled.</div>';
+                return `
+                    <div class="card modality-card">
+                        <div class="modality-card-header">
+                            <div class="insight-title">${approach.label}</div>
+                            ${approach.steering_mode ? `<span class="modality-mode-pill">${approach.steering_mode}</span>` : ""}
+                        </div>
+                        <div class="modality-card-meta">${approach.participations || 0} participant${approach.participations === 1 ? "" : "s"}</div>
+                        ${modalityBlocks}
+                    </div>
+                `;
+            }).join("");
         }
 
         // ---------- new charts ----------
         function renderRankDistribution(data) {
             destroyChart("rankDistChart");
             const dist = data.approaches?.rank_distribution || {};
-            const approachRows = Object.entries(dist).sort((a, b) => Number(a[0]) - Number(b[0]));
+            // Server returns entries in config order; keep that order.
+            const approachRows = Object.entries(dist);
             if (!approachRows.length) return;
             const allRanks = Array.from(new Set(
                 approachRows.flatMap(([, v]) => Object.keys(v.rank_counts || {}))
@@ -513,17 +529,128 @@
                 },
             });
         }
-        function renderSliderMovement(data) {
-            const slider = data.modalities?.slider_movement || {};
-            const entries = Object.entries(slider).sort((a, b) => Number(a[0]) - Number(b[0]));
-            ["sliderApproachAChart", "sliderApproachBChart"].forEach(id => destroyChart(id));
-            entries.slice(0, 2).forEach(([, bucket], idx) => {
-                const canvasId = idx === 0 ? "sliderApproachAChart" : "sliderApproachBChart";
-                const clusters = (bucket.clusters || []).slice(0, 15);
+        // ---------- Modalities tab: one section per approach ----------
+        function escapeHtml(value) {
+            const div = document.createElement("div");
+            div.textContent = value == null ? "" : String(value);
+            return div.innerHTML;
+        }
+        function renderModalitiesTab(data) {
+            const container = document.getElementById("modalities-sections");
+            const emptyEl = document.getElementById("modalities-empty-state");
+            // Destroy every chart we might have made on the previous render.
+            Object.keys(chartInstances)
+                .filter(id => id.startsWith("modSliderChart_") || id.startsWith("modTextChart_"))
+                .forEach(destroyChart);
+
+            const breakdown = data.approaches?.modality_breakdown || {};
+            const sliderData = data.approaches?.slider_movement || data.modalities?.slider_movement || {};
+            const textMappings = data.modalities?.text_prompt_mappings || [];
+            const entries = Object.entries(breakdown);
+
+            const hasAnySteerable = entries.some(([, approach]) =>
+                (approach.modalities_enabled || []).some(m => ["sliders", "toggles", "text"].includes(m))
+            );
+            emptyEl.style.display = hasAnySteerable ? "none" : "";
+            if (!hasAnySteerable) {
+                container.innerHTML = "";
+                return;
+            }
+
+            // Group text mappings per approach for the per-approach table.
+            const textByApproach = {};
+            textMappings.forEach(row => {
+                const id = row.approach_id || "unknown";
+                (textByApproach[id] = textByApproach[id] || []).push(row);
+            });
+
+            const sectionsHtml = entries.map(([approachId, approach], idx) => {
+                const enabled = approach.modalities_enabled || [];
+                const palette = APPROACH_PALETTE[idx % APPROACH_PALETTE.length];
+
+                const slotHtml = [];
+                if (enabled.includes("sliders") || enabled.includes("toggles")) {
+                    const bucket = sliderData[approachId] || { clusters: [] };
+                    const clusterCount = (bucket.clusters || []).length;
+                    const canvasId = `modSliderChart_${approachId}`;
+                    slotHtml.push(`
+                        <div class="chart-card">
+                            <div class="chart-title">Feature movement by cluster</div>
+                            <div class="chart-sub">Mean absolute Δ on the top 15 named clusters.</div>
+                            <div class="chart-wrap">
+                                ${clusterCount
+                                    ? `<canvas id="${canvasId}"></canvas>`
+                                    : '<div class="empty-state">No named-cluster adjustments yet.</div>'
+                                }
+                            </div>
+                        </div>
+                    `);
+                }
+                if (enabled.includes("text")) {
+                    const rows = textByApproach[approachId] || [];
+                    slotHtml.push(`
+                        <div class="chart-card">
+                            <div class="chart-title">Text prompt → cluster mappings</div>
+                            <div class="chart-sub">Top prompt-cluster pairs ranked by occurrence. Mean weight is signed (positive boosts the cluster).</div>
+                            <div class="table-wrap">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Prompt</th>
+                                            <th>Cluster</th>
+                                            <th>Cluster ID</th>
+                                            <th>Mean weight</th>
+                                            <th>n</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rows.length
+                                        ? rows.map(r => `
+                                            <tr>
+                                                <td>${escapeHtml(r.query_text)}</td>
+                                                <td>${escapeHtml(r.cluster_label)}</td>
+                                                <td class="mono">${escapeHtml(r.cluster_id)}</td>
+                                                <td>${fmt(r.mean_weight, 3)}</td>
+                                                <td>${r.n ?? 0}</td>
+                                            </tr>
+                                        `).join("")
+                                        : '<tr><td colspan="5" class="empty-state">No text-steering events yet.</td></tr>'
+                                    }</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `);
+                }
+                if (!slotHtml.length) {
+                    slotHtml.push(`
+                        <div class="chart-card">
+                            <div class="empty-state">This approach has no steerable modalities (only ${enabled.map(e => `<code>${e}</code>`).join(", ") || "none"} enabled).</div>
+                        </div>
+                    `);
+                }
+
+                return `
+                    <div class="section">
+                        <div class="section-header">
+                            <h2>${escapeHtml(approach.label)} ${approach.steering_mode ? `<span class="modality-mode-pill">${escapeHtml(approach.steering_mode)}</span>` : ""}</h2>
+                            <p>Enabled modalities: ${enabled.length ? enabled.map(e => `<code>${escapeHtml(e)}</code>`).join(", ") : "<em>none</em>"}.</p>
+                        </div>
+                        <div class="chart-grid">${slotHtml.join("")}</div>
+                    </div>
+                `;
+            }).join("");
+            container.innerHTML = sectionsHtml;
+
+            // Now that DOM exists, instantiate Chart.js for each slider canvas.
+            entries.forEach(([approachId, approach], idx) => {
+                const enabled = approach.modalities_enabled || [];
+                if (!enabled.includes("sliders") && !enabled.includes("toggles")) return;
+                const bucket = sliderData[approachId];
+                const clusters = (bucket?.clusters || []).slice(0, 15);
                 if (!clusters.length) return;
-                const titleEl = document.querySelector(`#${canvasId}`).closest(".chart-card").querySelector(".chart-title");
-                if (titleEl) titleEl.textContent = bucket.label || `Approach ${idx + 1}`;
-                chartInstances[canvasId] = new Chart(document.getElementById(canvasId), {
+                const canvasId = `modSliderChart_${approachId}`;
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                chartInstances[canvasId] = new Chart(canvas, {
                     type: "bar",
                     data: {
                         labels: clusters.map(c => c.cluster_label),
@@ -544,24 +671,6 @@
                 });
             });
         }
-        function renderTextMappings(data) {
-            const body = document.getElementById("text-mappings-table");
-            const rows = data.modalities?.text_prompt_mappings || [];
-            if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="5" class="empty-state">No text-steering events yet.</td></tr>';
-                return;
-            }
-            body.innerHTML = rows.map(row => `
-                <tr>
-                    <td>${row.query_text || "-"}</td>
-                    <td>${row.cluster_label || "-"}</td>
-                    <td class="mono">${row.cluster_id || "-"}</td>
-                    <td>${fmt(row.mean_weight, 3)}</td>
-                    <td>${row.n ?? 0}</td>
-                </tr>
-            `).join("");
-        }
-
         // ---------- questionnaire monitor ----------
         function renderQuestionnaireMonitor(data) {
             const container = document.getElementById("questionnaire-monitor");
@@ -572,9 +681,9 @@
                 return;
             }
             container.innerHTML = entries.map(([fileKey, group]) => {
-                const approachLabel = group.approach_indices && group.approach_indices.length
-                    ? `Approach indices: ${group.approach_indices.map(i => `#${i + 1}`).join(", ")}`
-                    : "";
+                const approachLabel = group.approach_index != null
+                    ? `Approach #${Number(group.approach_index) + 1}${group.approach_name ? ` — ${group.approach_name}` : ""}`
+                    : (group.response_type === "final" ? "Final questionnaire" : "");
                 const responseTypeBadge = group.response_type
                     ? `<span class="badge badge-kind">${group.response_type}</span>`
                     : "";
@@ -631,13 +740,43 @@
         }
 
         // ---------- participants ----------
+        function maxAttentionTotal(rows) {
+            return rows.reduce((m, r) => Math.max(m, Number(r.attention_checks?.total || 0)), 0);
+        }
+        function attentionThresholdKey() {
+            return `attn_threshold:${STUDY_GUID || ""}`;
+        }
+        function loadAttentionThreshold(rows) {
+            const stored = window.localStorage.getItem(attentionThresholdKey());
+            const fromStorage = stored !== null ? parseInt(stored, 10) : NaN;
+            return Number.isFinite(fromStorage) ? fromStorage : maxAttentionTotal(rows);
+        }
+        function saveAttentionThreshold(value) {
+            window.localStorage.setItem(attentionThresholdKey(), String(value));
+        }
+        function attentionCheckCell(row, threshold) {
+            const passed = Number(row.attention_checks?.passed || 0);
+            const total = Number(row.attention_checks?.total || 0);
+            if (total === 0) {
+                return '<span class="mono" style="color:var(--text-muted);font-size:11px">no checks</span>';
+            }
+            const ok = passed >= threshold;
+            return `<span class="badge ${ok ? 'badge-pass' : 'badge-fail'}">${ok ? 'PASS' : 'FAIL'} ${passed}/${total}</span>`;
+        }
         function renderParticipantsTable(data) {
             const tbody = document.getElementById("participants-tbody");
             const rows = data.participants_table || [];
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No participations yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No participations yet.</td></tr>';
                 return;
             }
+            const thresholdInput = document.getElementById("attn-threshold");
+            const observedMax = maxAttentionTotal(rows);
+            thresholdInput.max = String(observedMax);
+            if (!thresholdInput.value) {
+                thresholdInput.value = String(loadAttentionThreshold(rows));
+            }
+            const threshold = parseInt(thresholdInput.value, 10) || 0;
             const statusFilter = document.getElementById("filter-status").value;
             const searchFilter = (document.getElementById("filter-search").value || "").toLowerCase();
             tbody.innerHTML = rows.filter(r => {
@@ -658,20 +797,14 @@
                 const pidCell = r.prolific?.pid
                     ? `<span class="pid-cell">${pidValue}<button class="copy-btn" onclick="copyToClipboard('${r.prolific.pid}', this)">copy</button></span>`
                     : `<span class="pid-cell mono">${pidValue}</span>`;
-                const study = r.prolific?.study_id;
-                const session = r.prolific?.session_id;
-                const studyCell = (study || session)
-                    ? `<div class="mono" style="font-size:11px">study: ${study || "-"}<br>sess: ${session || "-"}</div>`
-                    : '<span class="mono" style="font-size:11px;color:var(--text-muted)">—</span>';
                 return `
                     <tr>
                         <td>${pidCell}</td>
-                        <td>${studyCell}</td>
                         <td>${statusBadge(r.status)}</td>
                         <td>${fmtDate(r.time_joined)}</td>
                         <td>${fmtDuration(r.duration_sec)}</td>
                         <td class="mono">${formatApproachOrder(r)}</td>
-                        <td>${r.questionnaire_responses ?? 0}</td>
+                        <td>${attentionCheckCell(r, threshold)}</td>
                         <td>${completionCell}</td>
                         <td><button class="btn-link" onclick="openJourney(${r.participation_id})">View →</button></td>
                     </tr>
@@ -680,6 +813,10 @@
         }
         document.getElementById("filter-status").addEventListener("change", () => renderParticipantsTable(resultsData));
         document.getElementById("filter-search").addEventListener("input", () => renderParticipantsTable(resultsData));
+        document.getElementById("attn-threshold").addEventListener("change", (e) => {
+            saveAttentionThreshold(parseInt(e.target.value, 10) || 0);
+            renderParticipantsTable(resultsData);
+        });
 
         // ---------- journey ----------
         function renderJourneyPicker(data) {
@@ -725,7 +862,7 @@
                 `Approach ${Number(p.approach_index) + 1} (${approachLabelOf(p)}): ${p.likes} likes, ${p.slider_adjustments} adjustments, ${p.iterations.length} iterations`
             ).join("; ");
             const orderLine = effective.length
-                ? `Approach order: ${effective.map((n, i) => `A${i + 1}: ${shortApproach(n)}`).join(" → ")}.`
+                ? `Approach order: ${effective.map((n, i) => `A${i + 1}: ${approachLabel(n)}`).join(" → ")}.`
                 : "";
             const conclusion = approaches.length
                 ? `Participant completed ${approaches.length} approach(es) over ${fmtDuration(summary.duration_sec)}. ${orderLine} ${approachesText}.`
@@ -745,7 +882,18 @@
                 const answerCount = Object.keys(r.answers || {}).length;
                 const file = r.questionnaire_file || r.response_type || "(unnamed)";
                 const approachInfo = r.approach_index != null ? ` (approach #${r.approach_index + 1})` : "";
-                return `<li><span class="mono">${file}</span>${approachInfo} — ${answerCount} answers</li>`;
+                let attnBadge = "";
+                if (r.attention_check_passed === true) {
+                    attnBadge = ' <span class="badge badge-pass" title="Attention check passed">PASS</span>';
+                } else if (r.attention_check_passed === false) {
+                    const detailItems = (r.attention_check_details || [])
+                        .map(d => `${d.field}: expected ${JSON.stringify(d.expected)}, got ${JSON.stringify(d.got)}`);
+                    const detailAttr = detailItems.length
+                        ? ` title="${detailItems.join(' · ').replace(/"/g, '&quot;')}"`
+                        : '';
+                    attnBadge = ` <span class="badge badge-fail"${detailAttr}>FAIL</span>`;
+                }
+                return `<li><span class="mono">${file}</span>${approachInfo} — ${answerCount} answers${attnBadge}</li>`;
             }).join("");
 
             container.innerHTML = `
