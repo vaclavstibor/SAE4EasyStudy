@@ -1,74 +1,69 @@
-# Study Framework
+# SAE-Based Interpretable Neural Steering for Recommendation Systems
 
-Plugin-first modular monolith for EasyStudy-style experiments.
+**Author**: Bc. Václav Stibor  
+**Supervisor**: Mgr. Ladislav Peška, Ph.D.  
+**Institution**: Department of Software Engineering, Faculty of Mathematics and Physics, Charles University  
+**Course**: Research Project (NPRG070)
 
-The repository now has one canonical runtime story:
+## About
 
-- run from the repository root,
-- load the app through `server.platform.app:create_app()`,
-- treat `server/platform/` as the framework kernel,
-- treat `server/plugins/steering/` as the canonical SAE study plugin.
+Neural recommender systems achieve strong predictive accuracy, but their internal reasoning stays opaque and users have little control over *how* recommendations are produced. This project introduces a **steerable recommender** that uses **Sparse Autoencoder (SAE)** features as user-facing controls, letting participants directly adjust interpretable concepts instead of treating the model as a black box.
 
-## Project structure
+The repository delivers a study-ready implementation of this idea: an EasyStudy-based platform, the SAE Steering plugin with multiple steering modalities (sliders, toggles, text, examples), a typed audit pipeline, a researcher dashboard, and CSV export. It supports controlled user studies on a MovieLens-derived catalog comparing baseline recommendations against steered variants.
+
+## Study Links
+
+| Link | Description |
+|------|-------------|
+| [EasyStudy Admin Panel](https://...) | Administrator panel for creating and managing studies. |
+| [Concrete Study](https://...) | Study join link as a participant. |
+
+## Repositories
+
+| Repo | Description |
+|------|-------------|
+| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** (this) | Research framework: platform, SAE Steering plugin, runtime, and docs. |
+| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework for recommender-system user studies that this project extends. |
+| **[OfflineEasyStudy](https://...)** | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details |
+
+## Documentation
+
+- [Technical Documentation](docs/tech-docs.md) — architecture, plugin contract, database, audit pipeline, analytics, runtime, deployment, testing, and other technical details.
+- [Design Decisions](docs/design-decisions.md) — rationale behind the main architectural and implementation decisions.
+- [Formative Examples](docs/formative-examples.md) — worked recipes for extending the framework with new plugins, modalities, datasets, and analytics.
+- [Equations](docs/equations.md) — math behind steering and reranking.
+- [Admin Manual](docs/admin-manual.md) — researcher workflow and operations guide.
+- [User Manual](docs/user-manual.md) — participant-facing walkthrough.
+
+## Project Structure
 
 ```text
-
-├── Dockerfile
-├── docker-compose.yml
-├── TEMP_REFACTOR_NOTES.md
-├── pyproject.toml
-├── justfile
-├── docker/
-├── deployment/
-├── docs/
-├── scripts/
-├── tests/
-└── server/
-    ├── docker-entrypoint.sh
-    ├── platform/
-    │   ├── participant_flow/
-    │   └── web/
-    └── plugins/
-        ├── steering/
-        ├── fastcompare/
-        └── empty_template/
+Dockerfile              # container build
+docker-compose.yml      # local orchestration
+pyproject.toml          # Python tooling
+justfile                # task runner
+docs/                   # project documentation
+docker/                 # Docker config and examples
+deployment/             # deployment notes and env examples
+scripts/                # dev, test, lint, and DB helpers
+tests/                  # canonical test suite
+server/
+  platform/             # framework kernel (Flask, persistence, participant flow)
+  plugins/
+    steering/           # SAE Steering plugin (thesis contribution)
+    fastcompare/        # upstream EasyStudy plugin (kept verbatim)
+    empty_template/     # minimal plugin skeleton
 ```
 
-## Manual local asset placement
+## Development
 
-| Location | Files |
-|----------|--------|
-| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg` |
-| `server/plugins/steering/models/` | `TopKSAE-1024.ckpt` or `TopKSAE-1024.pt` |
-| `server/plugins/steering/data/` | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
-
-Where to obtain assets (bootstrap, legacy repo paths): see `server/plugins/steering/data/README.md`.
-
-## Run with Docker
-
-From repository root:
+Run with Docker:
 
 ```bash
 docker compose up --build
 ```
 
-The canonical container path uses:
-
-- `Dockerfile`
-- `docker-compose.yml`
-- `server/docker-entrypoint.sh`
-- `server/scripts/init_db.py`
-
-Defaults assume manual assets (`DATASET_BOOTSTRAP=0`, `SAE_BOOTSTRAP_MODEL=0`).
-See `docker/compose.env.example` and `deployment/app.env.example` for the small
-set of supported overrides.
-
-The persistent cache volume must target `server/cache`, because dataset/model
-cache paths are resolved relative to the `server/` package root.
-
-## Run locally without Docker
-
-Python `3.9` is the supported baseline.
+Or locally (Python 3.9 baseline):
 
 ```bash
 python3.9 -m venv server/.venv39
@@ -79,57 +74,43 @@ python3.9 -m venv server/.venv39
 
 Then open `http://localhost:5000`.
 
-## Tests and lint
-
-The canonical test collection path is the root `tests/` tree.
+Tests and lint:
 
 ```bash
-./scripts/test.sh
-./scripts/lint.sh
+./scripts/test.sh       # or: just test
+./scripts/lint.sh       # or: just lint
 ```
 
-You can also use:
+## Runtime Assets
 
-```bash
-just test
-just lint
-just run
-```
+The application expects two groups of assets to exist before the steering
+blueprint can serve recommendations:
 
-## Database
+| Location | Files |
+|----------|-------|
+| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg` |
+| `server/plugins/steering/models/` | `TopKSAE-1024.ckpt` (or `.pt`) |
+| `server/plugins/steering/data/` | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
 
-The schema is defined by SQLAlchemy models only; there is no migration system.
+The dataset directory must always be supplied manually. For the SAE plugin
+assets (checkpoint + the four data files) there are two supported flows:
 
-- `server/platform/persistence/base_models.py` and each plugin's
-  `persistence/models.py` are the single source of truth for the schema.
-- `server/platform/app.py` runs `db.create_all()` on every boot.
-- `./scripts/init-db.sh` -> `server/scripts/init_db.py` is a thin idempotent wrapper.
-- `./scripts/reset-db.sh` -> `server/scripts/reset_db.py --yes` drops and recreates the schema
-  (use whenever a model is reshaped in dev).
+- **GitHub Releases bootstrap.** Set `SAE_BOOTSTRAP_MODEL=1` and
+  `SAE_MODEL_GITHUB_REPO=<owner>/<repo>`, plus `SAE_MODEL_RELEASE_TAG` (defaults
+  to `latest`) and `GITHUB_TOKEN` for private releases. The container entrypoint
+  invokes [`server/plugins/steering/bootstrap_model.py`](server/plugins/steering/bootstrap_model.py)
+  on startup and downloads every asset into the correct location. Optional
+  overrides — `SAE_MODEL_ASSET_NAME`, `SAE_RUNTIME_ASSET_NAME`,
+  `SAE_LABEL_ASSET_NAME` — let you pin specific asset filenames.
+- **Manual placement.** Place the files yourself under the paths in the table
+  above. The entrypoint validates their presence on startup and refuses to
+  launch if any are missing.
 
-## Temporary Refactor Notes
+See [server/plugins/steering/data/README.md](server/plugins/steering/data/README.md)
+for the per-file inventory.
 
-See `TEMP_REFACTOR_NOTES.md` for the structured summary of the platform/plugin refactor,
-shared flow restoration, and removal of legacy compatibility layers.
+## References
 
-## Documentation
-
-Full documentation lives under `docs/`:
-
-- [`docs/tech-docs.md`](docs/tech-docs.md) - canonical technical reference (architecture, plugin contract, database, audit pipeline, analytics, runtime, deployment, testing).
-- [`docs/design-decisions.md`](docs/design-decisions.md) - the *why* document: binding architectural decisions with rationale.
-- [`docs/formative-examples.md`](docs/formative-examples.md) - worked recipes with code snippets (add a plugin, modality, dataset, audit table, reranking strategy).
-- [`docs/equations.md`](docs/equations.md) - math reference for scoring functions.
-- [`docs/admin-manual.md`](docs/admin-manual.md) - researcher manual.
-- [`docs/user-manual.md`](docs/user-manual.md) - participant manual.
-
-## Plugin notes
-
-- New study work should target `server/plugins/steering/`.
-- `server/plugins/fastcompare/` and `server/plugins/empty_template/` are
-  EasyStudy-native plugin-first skeletons preserved verbatim for upstream parity.
-- Shared participant-flow pages/assets live in `server/platform/participant_flow/`.
-- Platform-owned admin/auth templates live in `server/platform/web/templates/`.
-- EasyStudy cross-plugin primitives stay in `server/plugins/utils/`. Avoid adding
-  *new* shared logic there; reach for `server/platform/shared/` for non-EasyStudy
-  helpers.
+- Peška, L. et al. Research on explainable and controllable recommender systems, GAČR 25-16785S (Charles University).
+- Dokoupil, P. et al. [EasyStudy](https://github.com/pdokoupil/EasyStudy) — upstream user-study framework for recommender systems.
+- [Project Proposal](proposal.tex) — original specification and motivation.
