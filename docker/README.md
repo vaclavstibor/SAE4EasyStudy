@@ -21,14 +21,17 @@ This directory documents the canonical local container runtime.
 The cache mount must point to `/app/server/cache`, because the current cache path
 resolution is rooted under the `server/` package.
 
-For the SAE plugin, only the two JSON metadata files are available in the older
-local repo copy:
+The steering plugin expects the following assets under
+`server/plugins/steering/`:
 
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/llm_labels_TopKSAE-1024_llm.json`
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/semantic_merged_TopKSAE-1024.json`
+- `models/TopKSAE-1024.ckpt` — SAE checkpoint
+- `data/item_sae_features_TopKSAE-1024.pt` — runtime activations
+- `data/llm_labels_TopKSAE-1024_llm.json` — neuron label cache
+- `data/semantic_merged_TopKSAE-1024.json` — semantic cluster index
 
-The checkpoint and `.pt` tensor files must come from the release/bootstrap flow
-or from an existing prepared asset directory.
+Provide them either through the GitHub Releases bootstrap flow
+(`SAE_BOOTSTRAP_MODEL=1`, see [README.md](../README.md)) or by placing the
+files manually under those paths before starting the container.
 
 ## Local use
 

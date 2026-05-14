@@ -28,11 +28,16 @@ Production or staging deployments still need these assets available:
 - steering data files: `server/plugins/steering/data/`
 
 If those are not baked into the image, mount them before starting the app.
+Production deployments typically mount all three directories from a persistent
+volume.
 
-Only these two steering JSON files are available in the older local repo copy:
+Provide the four steering assets via the GitHub Releases bootstrap flow
+(`SAE_BOOTSTRAP_MODEL=1`, see [README.md](../README.md)) or by placing them
+manually under `server/plugins/steering/{models,data}/`:
 
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/llm_labels_TopKSAE-1024_llm.json`
-- `/Users/vaclav.stibor/Downloads/SAE4EasyStudyRecSys26-main/server/plugins/sae_steering/data/semantic_merged_TopKSAE-1024.json`
+- `models/TopKSAE-1024.ckpt` — SAE checkpoint
+- `data/item_sae_features_TopKSAE-1024.pt` — runtime activations
+- `data/llm_labels_TopKSAE-1024_llm.json` — neuron label cache
+- `data/semantic_merged_TopKSAE-1024.json` — semantic cluster index
 
-The checkpoint and `.pt` runtime tensors must be provided from the release or an
-already prepared local asset folder.
+For Railway-hosted deployments see [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md).
