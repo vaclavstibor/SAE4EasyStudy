@@ -13,32 +13,32 @@
 
 ### Architecture and data model
 
-1. [Architecture](#4-architecture)
+4. [Architecture](#4-architecture)
   Module map, plugin contract, and architectural rules.
-2. [Database Schema](#5-database-schema)
+5. [Database Schema](#5-database-schema)
   Platform tables vs steering plugin typed audit tables.
 
 ### Core mechanics
 
-1. [Steering Modalities and the Iteration Loop](#6-steering-modalities-and-the-iteration-loop)
+6. [Steering Modalities and the Iteration Loop](#6-steering-modalities-and-the-iteration-loop)
   How the steering loop composes inputs and refreshes recommendations.
-2. [Audit Pipeline](#7-audit-pipeline)
+7. [Audit Pipeline](#7-audit-pipeline)
   Single-writer audit service and typed write contracts.
-3. [Analytics and Exports](#8-analytics-and-exports)
+8. [Analytics and Exports](#8-analytics-and-exports)
   Dashboard payload, journey view, CSV/JSON exports.
 
 ### Operations
 
-1. [Runtime and Deployment](#9-runtime-and-deployment)
+9. [Runtime and Deployment](#9-runtime-and-deployment)
   Assets, Docker/Railway, env vars, backups.
-2. [Testing Strategy](#10-testing-strategy)
+10. [Testing Strategy](#10-testing-strategy)
   What tests exist and what they guard.
 
 ### Closing
 
-1. [Limitations and Future Work](#11-limitations-and-future-work)
+11. [Limitations and Future Work](#11-limitations-and-future-work)
   Research-scoped decisions and next steps.
-2. [Appendix: where to find things](#appendix-where-to-find-things)
+12. [Appendix: where to find things](#appendix-where-to-find-things)
   Quick index of code locations.
 
 ## 1. Abstract
@@ -112,7 +112,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 1. **Recruits participants** for recommendation-system user studies (Prolific-compatible).
 2. **Elicits initial preferences** via a preference elicitation page (`/preference-elicitation`).
-3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see `[equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
+3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
 4. **Cycles through approaches** if the study compares multiple steering configurations (sequential mode).
 5. **Collects questionnaires** between approaches and at the end.
 6. **Records every action** as a typed audit row.
@@ -160,7 +160,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 ### 3.4 FR-03: Dataset selection and offline pipeline note
 
-FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in `[formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
+FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
 
 There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by (us) the research group. It is maintained in a private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository for data; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
 
@@ -171,7 +171,7 @@ There is also an internal offline preprocessing / training / labeling pipeline (
 - `./scripts/init-db.sh` is the explicit, idempotent wrapper.
 - `./scripts/reset-db.sh` is the destructive `drop_all()` + `create_all()` wrapper.
 
-There is no migration framework. See `[design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
+There is no migration framework. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth--no-migration-framework) for the rationale.
 
 ### 3.6 System view (C4 level 1 + 2)
 
@@ -303,7 +303,7 @@ Every plugin exposes a `StudyPluginContract` from its package via `get_plugin()`
 | `name`              | `str`  | required | Blueprint name and URL prefix (`/<name>/...`).                                                                                                                                                                                                                                                                                                                                                     |
 | `version`           | `str`  | required | Free-form version string surfaced to admins.                                                                                                                                                                                                                                                                                                                                                       |
 | `description`       | `str`  | required | One-line description shown on `/administration`.                                                                                                                                                                                                                                                                                                                                                   |
-| `hidden_from_admin` | `bool` | `False`  | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see `[design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahiddenfromadmin). |
+| `hidden_from_admin` | `bool` | `False`  | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see [`design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahidden_from_admin). |
 
 
 Each plugin **must** implement five EasyStudy endpoints on its blueprint:
@@ -459,7 +459,7 @@ One row per approach per participant. Created lazily on the first per-approach a
 | `sae_model_id`         | string                     | snapshot                                                                                                                                                                                         |
 | `base_model_id`        | string                     | snapshot                                                                                                                                                                                         |
 | `composition_mode`     | string                     | `replace` / `add` / `intersect` (FR-09)                                                                                                                                                          |
-| `reranking_strategy`   | string                     | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key). |
+| `reranking_strategy`   | string                     | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See [`equations.md` Section 10](equations.md#10-reranking-strategies-reranking_strategy-config-key). |
 | `started_at`           | datetime                   |                                                                                                                                                                                                  |
 | `completed_at`         | datetime nullable          |                                                                                                                                                                                                  |
 | `status`               | string                     | `active` / `completed`                                                                                                                                                                           |
@@ -532,25 +532,25 @@ The four concrete modalities live under `server/plugins/steering/modalities/`:
 | ---------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `sliders`  | `SliderSteering`  | Continuous per-cluster weights from a slider grid.                                                                                                           |
 | `toggles`  | `ToggleSteering`  | Discrete `+w / 0 / -w` per cluster, configurable `toggle_weight`.                                                                                            |
-| `text`     | `TextSteering`    | NL prompt, segment split, cluster scoring, then `top-K`. See `[equations.md` Section 1](equations.md#1-common-framework).                                    |
-| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies, cluster scoring, then `top-K`. See `[equations.md` Section 5](equations.md#5-example-based-steering-fr-08). |
+| `text`     | `TextSteering`    | NL prompt, segment split, cluster scoring, then `top-K`. See [`equations.md` Section 1](equations.md#1-common-framework).                                    |
+| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies, cluster scoring, then `top-K`. See [`equations.md` Section 5](equations.md#5-example-based-steering-fr-08). |
 
 
-A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a new modality is documented in `[formative-examples.md` Section 2](formative-examples.md#2-add-a-new-steering-modality).
+A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a new modality is documented in [`formative-examples.md` Section 2](formative-examples.md#2-add-a-new-steering-modality).
 
 ### 6.2 Iteration controller
 
 `service/iteration_controller.py::apply_feature_adjustment_iteration(data)` drives one iteration end-to-end:
 
 1. **Resolve the active approach and study config.** Loads from session + `normalize_study_config`.
-2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math of each strategy.
+2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See [`equations.md` Section 10](equations.md#10-reranking-strategies-reranking_strategy-config-key) for the math of each strategy.
 3. **Compose the cluster-level adjustments.** Combines slider/toggle inputs with the active text-steering map and the active example-steering map. Empty modalities contribute zero.
-4. **Expand clusters to neurons.** Each cluster's $\delta_c$ is broadcast to its member neurons; overlapping clusters sum additively. See `[equations.md` Section 2](equations.md#2-sliders-fr-0506).
+4. **Expand clusters to neurons.** Each cluster's $\delta_c$ is broadcast to its member neurons; overlapping clusters sum additively. See [`equations.md` Section 2](equations.md#2-sliders-fr-0506).
 5. **Apply the SAE shift to the recommender.** Calls into `recommendation/sae_recommender.py` with the per-neuron shift map and the strategy choice. The recommender branches internally on the strategy:
   - `feature-conditioned`: additive blend with adaptive $\gamma$ and clamping.
     - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by $\alpha \cdot direction$, then rank with pure CF (no additive SAE term).
     - `constrained-subset`: hard-mask candidates whose SAE score is below $\tau \cdot max\text{-}positive\text{-}SAE$, then rank survivors by base CF + genre.
-6. **Refresh the candidate list.** Calls `recommender.get_recommendations(..., n_items=max(k \cdot 15, 300), ...)` so the recommender ranks a wide candidate pool, blends `cf_score` with the SAE-derived $f_i$ using an *adaptive* gain $\gamma$ and clamp $c$ (see `[equations.md` Section 10.1](equations.md#101-feature-conditioned-default--additive-blend) for the formulas), then trims to the top $k$ requested by the iteration controller. The `selection_signal_weight` config key is unrelated to this blending: it weights liked movies inside the ELSA seed update (see `[equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes)).
+6. **Refresh the candidate list.** Calls `recommender.get_recommendations(..., n_items=max(k \cdot 15, 300), ...)` so the recommender ranks a wide candidate pool, blends `cf_score` with the SAE-derived $f_i$ using an *adaptive* gain $\gamma$ and clamp $c$ (see [`equations.md` Section 10.1](equations.md#101-feature-conditioned-default--additive-blend) for the formulas), then trims to the top $k$ requested by the iteration controller. The `selection_signal_weight` config key is unrelated to this blending: it weights liked movies inside the ELSA seed update (see [`equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes)).
 7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster adjustment becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions Section 22.
 8. **Return** the new `recommendations`, `current_features`, `reranking_strategy` (so the UI can mirror it for debugging), and the iteration counter.
 
@@ -600,7 +600,7 @@ The preference-elicitation pool (`session["elicitation_selected_movies"]`) is in
 
 If the resolver matches zero clusters (NFR-12 ambiguous-input case), the endpoint returns HTTP 200 with `status="no-match"` and a friendly hint. A `SaeTextSteeringQuery` row is still written (zero matches), so this case is analyzable offline.
 
-See `[equations.md` Section 1](equations.md#1-common-framework) for the scoring math.
+See [`equations.md` Section 1](equations.md#1-common-framework) for the scoring math.
 
 ---
 
@@ -866,7 +866,7 @@ to `pip_requirements.txt`, and (c) provisioning a Redis instance.
 provides it automatically; for other hosts use Caddy or nginx).
 - When a model changes in a way that requires reshaping existing tables, run
 `./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
-Alembic baseline by design — see `[design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
+Alembic baseline by design — see [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth--no-migration-framework).
 
 ### 9.7 Backups
 
@@ -930,8 +930,8 @@ These smoke tests guard the upstream parity: both plugins are part of `CANONICAL
 
 ### 11.1 Limitations
 
-1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see `[equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. We are actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol for another paper.
-2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in `[formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
+1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. We are actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol for another paper.
+2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
 3. **FR-16 dashboard focuses on per-approach behavioural signal; remaining aggregates are computed from exports.** The dashboard is intentionally scoped to metrics that require per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings). Other aggregates (e.g. a sign histogram over `SaeFeatureAdjustment.delta`) are straightforward to compute from the FR-17 CSV bundle and are typically handled in the paper / analysis notebook rather than in the deployment UI. Participant demographics are treated as optional: in Prolific-based runs, demographics are typically available from Prolific and do not need to be re-collected in the app.
 4. **FR-13 iteration history is bounded by study configuration.** The history panel is client-side and shows one section per iteration the participant went through in the current session. In practice the bound is the configured `num_iterations` per approach (typically 3); there is no additional hard “last 10” eviction because the study config already constrains the count and the audit tables keep the full record regardless.
 

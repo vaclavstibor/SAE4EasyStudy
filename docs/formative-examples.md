@@ -2,7 +2,7 @@
 
 This page is the *how-to* companion to [`tech-docs.md`](tech-docs.md) and [`design-decisions.md`](design-decisions.md). It collects worked recipes for the things future contributors will most often want to do.
 
-Every recipe is grounded in the real code. File paths are relative to repository root. Where a recipe references a binding decision, it links back to `[design-decisions.md](design-decisions.md)`.
+Every recipe is grounded in the real code. File paths are relative to repository root. Where a recipe references a binding decision, it links back to [`design-decisions.md`](design-decisions.md).
 
 
 ## Contents
@@ -45,9 +45,9 @@ Every recipe is grounded in the real code. File paths are relative to repository
 
 ## 1. Add a new plugin
 
-The framework's plugin contract is documented in `[tech-docs.md` Section 4.2](tech-docs.md#42-plugin-contract). A plugin is any Python package under `server/plugins/` that exposes `get_plugin() -> StudyPluginContract` from its `__init__.py`.
+The framework's plugin contract is documented in [`tech-docs.md` Section 4.2](tech-docs.md#42-plugin-contract). A plugin is any Python package under `server/plugins/` that exposes `get_plugin() -> StudyPluginContract` from its `__init__.py`.
 
-The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy and **intentionally hidden from the admin "Available templates" picker** via `PluginMetadata.hidden_from_admin=True` so researchers don't pick the scaffold by accident — see `[design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahiddenfromadmin)). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
+The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy and **intentionally hidden from the admin "Available templates" picker** via `PluginMetadata.hidden_from_admin=True` so researchers don't pick the scaffold by accident — see [`design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahidden_from_admin)). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
 
 ### 1.1 Directory layout
 
@@ -194,7 +194,7 @@ Models in a new plugin require the schema to be (re-)materialised:
 ./scripts/reset-db.sh
 ```
 
-See `[design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the no-migrations rationale.
+See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth--no-migration-framework) for the no-migrations rationale.
 
 ---
 
@@ -327,7 +327,7 @@ SUPPORTED_DATASET_VARIANTS = {
 }
 ```
 
-The `_resolve_safe_cache_path(ml_variant)` helper (see `[design-decisions.md` Section 11](design-decisions.md#11-pickle-paths-are-constrained-to-the-projects-cache-root)) validates the variant against `^[A-Za-z0-9._-]+$` and resolves the cache directory under `server/cache/utils/<variant>/`, so the new variant is automatically sandboxed.
+The `_resolve_safe_cache_path(ml_variant)` helper (see [`design-decisions.md` Section 11](design-decisions.md#11-pickle-paths-are-constrained-to-the-projects-cache-root)) validates the variant against `^[A-Za-z0-9._-]+$` and resolves the cache directory under `server/cache/utils/<variant>/`, so the new variant is automatically sandboxed.
 
 ### 3.3 Surface it in the create UI
 
@@ -337,7 +337,7 @@ The `sae_steering_create.html` page reads `SUPPORTED_DATASET_VARIANTS` for the d
 
 ## 4. Add a new typed audit table
 
-The audit pipeline is documented in `[tech-docs.md` Section 7](tech-docs.md#7-audit-pipeline). Adding a fact requires exactly three changes.
+The audit pipeline is documented in [`tech-docs.md` Section 7](tech-docs.md#7-audit-pipeline). Adding a fact requires exactly three changes.
 
 ### 4.1 Declare the model
 
@@ -377,7 +377,7 @@ class SaeMoodLog(db.Model):
     )
 ```
 
-The four FKs (`study_run_id`, `approach_run_id`, `participation_id`, `event_id`) and `CASCADE` on `participation.id` are the binding contract — see `[tech-docs.md` Section 5.2](tech-docs.md#52-sae-steering-tables-plugin-owned) cascades.
+The four FKs (`study_run_id`, `approach_run_id`, `participation_id`, `event_id`) and `CASCADE` on `participation.id` are the binding contract — see [`tech-docs.md` Section 5.2](tech-docs.md#52-sae-steering-tables-plugin-owned) cascades.
 
 ### 4.2 Add the single-writer function
 
@@ -419,7 +419,7 @@ def record_mood_steering(
     return row
 ```
 
-Architectural rule #1 (see `[tech-docs.md` Section 4.4](tech-docs.md#44-architectural-rules)): **only** `audit.record_`* writes to typed tables. Routes call this; no other module inserts `SaeMoodLog` rows.
+Architectural rule #1 (see [`tech-docs.md` Section 4.4](tech-docs.md#44-architectural-rules)): **only** `audit.record_`* writes to typed tables. Routes call this; no other module inserts `SaeMoodLog` rows.
 
 ### 4.3 Rebuild the DB
 
@@ -449,7 +449,7 @@ def _mood_counts(approach_run_ids):
 
 ## 5. Add a new reranking strategy
 
-`SaeApproachRun.reranking_strategy` is already a snapshot column. `SUPPORTED_RERANKING_STRATEGIES` in `server/plugins/steering/constants.py` lists the three strategies that ship today, all implemented: `feature-conditioned` (default), `latent-perturbation`, `constrained-subset`. See `[design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-rerankingstrategy-config-key) for the rationale and `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math of each.
+`SaeApproachRun.reranking_strategy` is already a snapshot column. `SUPPORTED_RERANKING_STRATEGIES` in `server/plugins/steering/constants.py` lists the three strategies that ship today, all implemented: `feature-conditioned` (default), `latent-perturbation`, `constrained-subset`. See [`design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-reranking_strategy-config-key) for the rationale and [`equations.md` Section 10](equations.md#10-reranking-strategies-reranking_strategy-config-key) for the math of each.
 
 Branching now happens inside `recommendation/sae_recommender.py::get_recommendations` (one `if / elif / elif`), not in the iteration controller — the controller just threads the strategy + params through. Adding a fourth strategy (call it `my-strategy`) is therefore three changes:
 
@@ -504,7 +504,7 @@ reranking_params = {
 
 ### 5.4 Document the math in `equations.md`
 
-The full scoring section for the three current strategies lives in `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key). Add Section 10.4 for `my-strategy` with the same `direction`, `final score`, and `fallback behaviour` shape; cross-reference from this recipe.
+The full scoring section for the three current strategies lives in [`equations.md` Section 10](equations.md#10-reranking-strategies-reranking_strategy-config-key). Add Section 10.4 for `my-strategy` with the same `direction`, `final score`, and `fallback behaviour` shape; cross-reference from this recipe.
 
 ### 5.5 Expose the strategy in the admin UI
 
@@ -664,7 +664,7 @@ The full answers JSON is already in `sae_questionnaire_response.csv` (column `an
 
 ## 10. Testing patterns
 
-The full test suite is documented in `[tech-docs.md` Section 10](tech-docs.md#10-testing-strategy). Key conventions:
+The full test suite is documented in [`tech-docs.md` Section 10](tech-docs.md#10-testing-strategy). Key conventions:
 
 - **Unit test pure functions directly.** E.g. `_compose_text_adjustments` is tested without any DB fixture in `test_steering_actions_and_security.py::TestComposeTextAdjustments`.
 - **Integration tests use `app_ctx`.** The fixture in `tests/conftest.py` gives you a freshly-created app + DB. Seed the data with `_seed_participation` (see `tests/plugins/steering/test_sae_audit.py`).

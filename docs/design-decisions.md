@@ -163,7 +163,7 @@ Each section follows the same shape: **Decision, Context, Alternatives considere
 
 ## 8. Reranking strategy as a typed enum (FR-10) — schema and dispatch contract
 
-**Decision.** `study_config.reranking_strategy` is a typed enum (`SUPPORTED_RERANKING_STRATEGIES` in `constants.py`) and is snapshotted onto `SaeApproachRun.reranking_strategy` so historical study runs always carry the strategy that was active when they ran. Validation happens at config-normalisation time; unknown values fall back to the default. The dispatch lives inside `recommendation/sae_recommender.py::get_recommendations` so call sites stay uniform regardless of which strategy is active. The mathematical content of each strategy is in [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key); the implementation rationale for the *set* of strategies is in Section 23 below.
+**Decision.** `study_config.reranking_strategy` is a typed enum (`SUPPORTED_RERANKING_STRATEGIES` in `constants.py`) and is snapshotted onto `SaeApproachRun.reranking_strategy` so historical study runs always carry the strategy that was active when they ran. Validation happens at config-normalisation time; unknown values fall back to the default. The dispatch lives inside `recommendation/sae_recommender.py::get_recommendations` so call sites stay uniform regardless of which strategy is active. The mathematical content of each strategy is in [`equations.md` Section 10](equations.md#10-reranking-strategies-reranking_strategy-config-key); the implementation rationale for the *set* of strategies is in Section 23 below.
 
 **Consequences.**
 

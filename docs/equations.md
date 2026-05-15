@@ -12,7 +12,7 @@ This page is the math reference for the SAE Steering plugin. Each modality follo
 **See also.**
 
 - [`tech-docs.md` Section 6](tech-docs.md#6-steering-modalities-and-the-iteration-loop) — the iteration loop that consumes these weights.
-- [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09), [Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully), [Section 8](design-decisions.md#8-reranking-strategy-as-a-typed-enum-fr-10-schema-and-dispatch-contract) — rationale for composition modes, the no-match fallback, and the reranking enum.
+- [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09), [Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully), [Section 8](design-decisions.md#8-reranking-strategy-as-a-typed-enum-fr-10--schema-and-dispatch-contract) — rationale for composition modes, the no-match fallback, and the reranking enum.
 - [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset), [Section 5](formative-examples.md#5-add-a-new-reranking-strategy) — how to add a new modality / a new reranking strategy.
 
 ## Contents
@@ -40,7 +40,7 @@ This page is the math reference for the SAE Steering plugin. Each modality follo
    How each strategy combines the three building blocks.
 9. [Notation summary](#9-notation-summary)  
    Symbol table used across equations.
-10. [Reranking strategies](#10-reranking-strategies-rerankingstrategy-config-key)  
+10. [Reranking strategies](#10-reranking-strategies-reranking_strategy-config-key)  
     `feature-conditioned`, `latent-perturbation`, `constrained-subset`.
 
 ### Reference
@@ -116,7 +116,7 @@ Implemented as a matrix-vector product over the whole catalogue:
         )
 ```
 
-The full final score (CF + genre + the strategy-specific SAE contribution + a small tiebreak term) is in [Section 8](#8-final-ranking--cross-strategy-summary) and [Section 10](#10-reranking-strategies-rerankingstrategy-config-key); the per-modality sections below cover only how each modality produces its slice of $\delta_c$.
+The full final score (CF + genre + the strategy-specific SAE contribution + a small tiebreak term) is in [Section 8](#8-final-ranking--cross-strategy-summary) and [Section 10](#10-reranking-strategies-reranking_strategy-config-key); the per-modality sections below cover only how each modality produces its slice of $\delta_c$.
 
 ## 2. Sliders (FR-05/06)
 
@@ -585,7 +585,7 @@ where $L^{\le K} = \mathrm{sorted}(L)[\,:K]$ and the cardinalities count only id
 | $\lambda$ | Per-like weight | `selection_signal_weight` (default `0.5`, or `0.25` if the approach uses sliders/toggles/hybrid) |
 | $K$ | `like_cap`, max likes counted | `10`, hardcoded at the call site in `iteration_controller.py` |
 
-The seed is **recomputed from the elicitation pool every iteration** — it is not a running blend $(1-\lambda) \hat{s}_\mathrm{old} + \lambda \cdot \dots$ The seed is then consumed by the recommender as the query vector for the CF term (see [Section 1.2](#12-how-the-expanded-vector-enters-ranking) and [Section 10](#10-reranking-strategies-rerankingstrategy-config-key)).
+The seed is **recomputed from the elicitation pool every iteration** — it is not a running blend $(1-\lambda) \hat{s}_\mathrm{old} + \lambda \cdot \dots$ The seed is then consumed by the recommender as the query vector for the CF term (see [Section 1.2](#12-how-the-expanded-vector-enters-ranking) and [Section 10](#10-reranking-strategies-reranking_strategy-config-key)).
 
 When `interaction_mode` is `reset` ([Section 2.1](#21-interaction-history-mode-cumulative-vs-reset)), the iteration controller calls `update_elsa_seed_with_likes(set(), …)` so $L$ is forced empty and $\hat{s}$ collapses to the pure elicitation mean — no like signal carries into the next iteration. In `cumulative` mode, the controller passes the participant's actual liked set, giving the formula above.
 
@@ -638,7 +638,7 @@ What changes is **how** the SAE signal enters the final score:
 | `latent-perturbation` | $\cos(e_i,\, \hat{s}') \cdot w_{\mathrm{cf}} + \mathrm{genre}(i)$, with $\hat{s}'$ from the rotated seed | seed rotation, then CF | no (fixed $\alpha$) |
 | `constrained-subset` | $\mathrm{cf}(i) + \mathrm{genre}(i)$ on items where $\mathrm{sae}(i) \ge \tau^\ast$; $-\infty$ otherwise (fallback to base if mask is empty) | hard filter, then CF | no (fixed $\tau$) |
 
-The full math for each strategy is in [Section 10](#10-reranking-strategies-rerankingstrategy-config-key); the rationale for the *set* of strategies is in [`design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-rerankingstrategy-config-key).
+The full math for each strategy is in [Section 10](#10-reranking-strategies-reranking_strategy-config-key); the rationale for the *set* of strategies is in [`design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-reranking_strategy-config-key).
 
 ## 9. Notation summary
 
