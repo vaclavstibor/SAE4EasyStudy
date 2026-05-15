@@ -1,0 +1,6 @@
+question_id,question_text,options,notes
+q1_overall,Overall, how understandable was the study interface?,1|2|3|4|5,1=not understandable at all; 5=very understandable
+q2_controls,How easy was it to use the steering controls (sliders/toggles/text if present)?,1|2|3|4|5,1=very difficult; 5=very easy
+q3_control,Did you feel in control of what recommendations you received?,1|2|3|4|5,1=not at all; 5=very much
+q4_trust,Did you trust that the system reacted to your actions as you intended?,1|2|3|4|5,1=not at all; 5=very much
+q5_would_use,Would you use such steering controls in a real recommendation system?,1|2|3|4|5,1=definitely not; 5=definitely yes
