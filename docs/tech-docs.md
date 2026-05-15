@@ -622,11 +622,22 @@ Column headers in each CSV match §5.2 exactly. Recommended pipeline for downstr
 
 ### 9.1 Local development
 
+One-time setup (Python 3.9 baseline):
+
+```bash
+python3.9 -m venv server/.venv39
+./server/.venv39/bin/python -m pip install -r server/pip_requirements.txt pytest ruff
+```
+
+Run the app:
+
 ```bash
 # from repository root
 ./scripts/init-db.sh                 # create-if-missing: db.create_all() from models
 ./scripts/run-dev.sh                 # gunicorn --preload on :5000
 ```
+
+Then open `http://localhost:5000`.
 
 `scripts/init-db.sh` delegates to `server/scripts/init_db.py`, which:
 
@@ -642,14 +653,45 @@ When you reshape a model, drop and recreate the dev DB:
 
 The reset script requires `--yes` (set by the wrapper) so it cannot run by accident.
 
-### 9.2 Tests
+### 9.2 Tests and lint
 
 ```bash
-./scripts/test.sh                  # 74 tests across platform/ and plugins/ (~17 s)
+./scripts/test.sh                  # full test suite across platform/ and plugins/
 ./scripts/test.sh -x --tb=short    # stop at first failure
+./scripts/lint.sh                  # ruff lint
+# or via the task runner:
+just test
+just lint
 ```
 
-### 9.3 Docker
+### 9.3 Runtime assets
+
+The application expects two groups of assets to exist before the steering
+blueprint can serve recommendations:
+
+| Location                                  | Files                                                                                                                              |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg`                                            |
+| `server/plugins/steering/models/`         | `TopKSAE-1024.ckpt` (or `.pt`)                                                                                                     |
+| `server/plugins/steering/data/`           | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
+
+Both the dataset and the SAE plugin assets support two flows:
+
+- **GitHub Releases bootstrap (recommended for Docker / Railway).** Set
+  `DATASET_BOOTSTRAP=1` + `DATASET_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` +
+  `DATASET_RELEASE_TAG=v2.0` for the dataset, and `SAE_BOOTSTRAP_MODEL=1` +
+  `SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` + `SAE_MODEL_RELEASE_TAG=v2.0`
+  for the SAE assets. The entrypoint downloads everything on first boot and
+  skips re-download on subsequent starts if the files are already present.
+  Add `GITHUB_TOKEN` for private releases.
+- **Manual placement.** Place the files under the paths in the table above
+  (or under `$DATA_ROOT` when using a persistent volume). The entrypoint
+  validates their presence and refuses to start if any are missing.
+
+See [`server/plugins/steering/data/README.md`](../server/plugins/steering/data/README.md)
+for the per-file inventory.
+
+### 9.4 Docker
 
 ```bash
 docker compose up --build
@@ -660,7 +702,7 @@ entrypoint symlinks all persistent state directories under `/data` so they
 survive container restarts. The entrypoint then runs `server/scripts/init_db.py`
 and starts gunicorn.
 
-### 9.4 Environment variables
+### 9.5 Environment variables
 
 | Var | Default | Purpose |
 | --- | --- | --- |
@@ -680,7 +722,7 @@ and starts gunicorn.
 | `GUNICORN_WORKERS` | `1` | Number of gunicorn worker processes. |
 | `PROLIFIC_BASE_URL` | `https://app.prolific.com/submissions/complete` | Completion redirect base URL. |
 
-### 9.5 Production checklist
+### 9.6 Production checklist
 
 - Set `APP_SECRET_KEY` to a strong, persistent value.
 - Mount a persistent volume at `DATA_ROOT` (`/data`). The SQLite DB, SAE model,
@@ -697,12 +739,12 @@ and starts gunicorn.
   `./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
   Alembic baseline by design — see [`design-decisions.md`](design-decisions.md) §3.
 
-### 9.6 Backups
+### 9.7 Backups
 
 `server/scripts/backup_db.py` writes a timestamped `.dump` file to `/data/backups/`.
 Run it as a cron service (Railway cron: `0 3 * * *`) pointing at the same volume.
 
-### 9.7 Logs and observability
+### 9.8 Logs and observability
 
 The application logs to stdout. Gunicorn formats request lines; the Flask app uses the root logger. Wire stdout to your log shipping (Loki / CloudWatch / Datadog).
 

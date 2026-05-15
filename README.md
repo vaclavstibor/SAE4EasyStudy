@@ -22,12 +22,11 @@ The repository delivers a study-ready implementation of this idea: an EasyStudy-
 
 ## Repositories
 
-
-| Repo                                                                      | Description                                                                                           |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** (this) | Research framework: platform, SAE Steering plugin, runtime, and docs.                                 |
-| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)**                   | Upstream framework for recommender-system user studies that this project extends.                     |
-| **[OfflineEasyStudy](TODO)**                                              | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details. This repository is private due to sensitive nature of the participants data. |
+| Repo | Role | Description |
+| --- | --- | --- |
+| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** *(this)* | Online study runtime | EasyStudy-based Flask platform, the SAE Steering plugin (sliders, toggles, text, examples, reranking), researcher dashboard, CSV export, and deployment scripts. |
+| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework | Original user-study framework for recommender systems that this project extends through the plugin contract. |
+| **[OfflineEasyStudy](TODO)** *(private)* | Offline pipeline | Dataset preprocessing, ELSA + Top‑K SAE training, LLM-based neuron labeling, post-hoc study-results analysis, and reproducibility notes. Kept private because it contains raw participant data. |
 
 
 ## Documentation
@@ -47,72 +46,26 @@ docker-compose.yml      # local orchestration
 pyproject.toml          # Python tooling
 justfile                # task runner
 docs/                   # project documentation
-docker/                 # Docker config and examples
-deployment/             # deployment notes and env examples
+docker/                 # Docker config and env examples
+deployment/             # Railway deployment notes and env examples
 scripts/                # dev, test, lint, and DB helpers
-tests/                  # canonical test suite
+tests/                  # canonical test suite (platform + plugins)
 server/
-  platform/             # framework kernel (Flask, persistence, participant flow)
+  platform/             # framework kernel (Flask app, persistence, participant flow, runtime, admin)
   plugins/
-    steering/           # SAE Steering plugin (thesis contribution)
-    fastcompare/        # upstream EasyStudy plugin (kept verbatim)
-    empty_template/     # minimal plugin skeleton
+    steering/           # SAE Steering plugin — thesis contribution (modalities, audit, dashboard, export)
+    fastcompare/        # upstream EasyStudy plugin — kept as a runnable plugin-contract reference
+    layoutshuffling/    # upstream EasyStudy plugin — kept with a minimal demo flow
+    empty_template/     # minimal plugin skeleton (developer scaffold, hidden from admin)
+    vae/                # VAE algorithm wrappers consumed by fastcompare (hidden from admin)
+    utils/              # shared recommender utilities (data loading, mandate allocation, normalization)
 ```
 
 ## Development
 
-Run with Docker:
-
-```bash
-docker compose up --build
-```
-
-Or locally (Python 3.9 baseline):
-
-```bash
-python3.9 -m venv server/.venv39
-./server/.venv39/bin/python -m pip install -r server/pip_requirements.txt pytest ruff
-./scripts/init-db.sh
-./scripts/run-dev.sh
-```
-
-Then open `http://localhost:5000`.
-
-Tests and lint:
-
-```bash
-./scripts/test.sh       # or: just test
-./scripts/lint.sh       # or: just lint
-```
-
-## Runtime Assets
-
-The application expects two groups of assets to exist before the steering
-blueprint can serve recommendations:
-
-
-| Location                                  | Files                                                                                                                              |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg`                                            |
-| `server/plugins/steering/models/`         | `TopKSAE-1024.ckpt` (or `.pt`)                                                                                                     |
-| `server/plugins/steering/data/`           | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
-
-
-Both the dataset and the SAE plugin assets support two flows:
-
-- **GitHub Releases bootstrap (recommended for Docker / Railway).** Set
-  `DATASET_BOOTSTRAP=1` + `DATASET_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` +
-  `DATASET_RELEASE_TAG=v2.0` for the dataset, and `SAE_BOOTSTRAP_MODEL=1` +
-  `SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` + `SAE_MODEL_RELEASE_TAG=v2.0`
-  for the SAE assets. The entrypoint downloads everything on first boot and
-  skips re-download on subsequent starts if the files are already present.
-  Add `GITHUB_TOKEN` for private releases.
-- **Manual placement.** Place the files under the paths in the table above
-  (or under `$DATA_ROOT` when using a persistent volume). The entrypoint
-  validates their presence and refuses to start if any are missing.
-
-See [server/plugins/steering/data/README.md](server/plugins/steering/data/README.md)
-for the per-file inventory.
+For local setup, Docker, tests, runtime assets, environment variables and
+the production checklist, see
+[`docs/tech-docs.md` §9 — Runtime and Deployment](docs/tech-docs.md#9-runtime-and-deployment).
 
 ## References
 
