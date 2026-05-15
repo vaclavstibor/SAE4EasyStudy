@@ -45,7 +45,7 @@
 
 This application is a plugin-first study framework for measuring **interpretable, controllable steering** of recommender systems through Sparse Autoencoder (SAE) features. It extends [pdokoupil/EasyStudy](https://github.com/pdokoupil/EasyStudy) — a study framework for recommender-system user research — with a new `sae_steering` plugin that lets a participant directly manipulate SAE-derived feature clusters (`sliders`, `toggles`, `text`, `examples`), reset their session, and compare multiple steering approaches in one study.
 
-The thesis contribution is the **SAE Steering plugin** plus a structured audit pipeline that records every participant action as a typed database row. This enables column-driven analytics (per-approach mean-absolute adjustment, search-then-adjust funnels, reset frequency, text-steering match rates) and additional post-hoc analysis on stored data. The application is delivered with a researcher dashboard, a per-table CSV export, and a complete admin/participant UI.
+The project's research contribution is the **SAE Steering plugin** plus a structured audit pipeline that records every participant action as a typed database row. This enables column-driven analytics (per-approach mean-absolute adjustment, search-then-adjust funnels, reset frequency, text-steering match rates) and additional post-hoc analysis on stored data. The application is delivered with a researcher dashboard, a per-table CSV export, and a complete admin/participant UI.
 
 The framework preserves EasyStudy compatibility: existing EasyStudy plugins (`fastcompare`, `empty_template`, `utils`) run unchanged, and the platform half of this repository is a thin reshuffle of upstream EasyStudy with the same Flask blueprints and the same ORM models.
 
@@ -56,8 +56,8 @@ The framework preserves EasyStudy compatibility: existing EasyStudy plugins (`fa
 
 This document describes the runtime, the architecture, and the database schema of the framework. It is written for:
 
-- thesis reviewers, who need a self-contained technical reference,
-- the supervisor and consultants, who need to verify the implementation against `proposal.tex`,
+- research project reviewers, who need a self-contained technical reference,
+- the supervisor and consultants, who need to verify the implementation against `specification.pdf`,
 - future maintainers, who need to extend the system without breaking EasyStudy parity.
 
 ### 2.2 Scope
@@ -73,7 +73,7 @@ The documentation covers:
 
 ### 2.3 Lineage — extending EasyStudy
 
-The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdokoupil/EasyStudy). The proposal (`proposal.tex`) was written against that base. The refactor preserves EasyStudy compatibility so future upstream upgrades drop in cleanly and any other EasyStudy-native plugins continue to work.
+The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdokoupil/EasyStudy). The specification (`specification.pdf`) was written against that base. The refactor preserves EasyStudy compatibility so future upstream upgrades drop in cleanly and any other EasyStudy-native plugins continue to work.
 
 **What stayed from EasyStudy:**
 
@@ -91,7 +91,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 | Module | Purpose |
 | --- | --- |
-| `server/plugins/steering/` | The SAE-based interpretable steering plugin — the actual thesis work. Owns its blueprint, modalities, persistence models, analytics. |
+| `server/plugins/steering/` | The SAE-based interpretable steering plugin. Owns its blueprint, modalities, persistence models, analytics. |
 | `server/platform/participant_flow/` | EasyStudy's participant-side pages pulled out of upstream `main.py` so the admin surface stays narrow. |
 | `server/platform/runtime/` | `PluginMetadata`, `StudyPluginContract`, `load_canonical_plugin_contracts`, session-state helpers. |
 | `server/platform/shared/questionnaire_cache.py` | Cross-plugin helper that caches questionnaire JSON per study. |
@@ -126,7 +126,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 | Dedicated `/reset` endpoint | FR-12 | `routes/steering/actions.py::reset_steering` |
 | Configurable reranking strategy (three strategies) | FR-10 | `service/iteration_controller.py`, `recommendation/sae_recommender.py` |
 | Per-session iteration history panel | FR-13 | `templates/steering_interface.html::renderActivityHistory` (client-side, scoped to one session) |
-| Feature search inside the steering UI | thesis-added | `routes/steering/actions.py::search_features` |
+| Feature search inside the steering UI | project-added | `routes/steering/actions.py::search_features` |
 | Researcher dashboard per approach | FR-16 | `results/analytics.py` |
 | ZIP CSV export of every typed table | FR-17 | `routes/results/views.py::export_csv_data` |
 | Per-participant journey timeline | FR-15 | `routes/results/journey.py` |
@@ -153,7 +153,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
 
-There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by the research group. It is maintained in a private repository for data and submission reasons; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
+There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by (us) the research group. It is maintained in a private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository for data and submission reasons; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
 
 ### 3.5 Schema management at a glance
 
@@ -180,7 +180,7 @@ There is no migration framework. See [`design-decisions.md` Section 3](design-de
       shared/                  common helpers (translations, questionnaire_cache)
       web/                     admin/auth Jinja templates (kept under this name for EasyStudy parity)
     plugins/
-      steering/                SAE steering plugin (this thesis)
+      steering/                SAE steering plugin (this project's research contribution)
         constants.py           plugin-wide enums and defaults
         plugin.py              blueprint + StudyPluginContract export
         study_config.py        normalize_study_config + active-model resolution
@@ -805,7 +805,7 @@ These smoke tests guard the upstream parity: both plugins are part of `CANONICAL
 
 ### 11.1 Limitations
 
-1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. The research group is actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol.
+1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. We are actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol for another paper.
 2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
 3. **FR-16 dashboard focuses on per-approach behavioural signal; remaining aggregates are computed from exports.** The dashboard is intentionally scoped to metrics that require per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings). Other aggregates (e.g. a sign histogram over `SaeFeatureAdjustment.delta`) are straightforward to compute from the FR-17 CSV bundle and are typically handled in the paper / analysis notebook rather than in the deployment UI. Participant demographics are treated as optional: in Prolific-based runs, demographics are typically available from Prolific and do not need to be re-collected in the app.
 4. **FR-13 iteration history is bounded by study configuration.** The history panel is client-side and shows one section per iteration the participant went through in the current session. In practice the bound is the configured `num_iterations` per approach (typically 3); there is no additional hard “last 10” eviction because the study config already constrains the count and the audit tables keep the full record regardless.

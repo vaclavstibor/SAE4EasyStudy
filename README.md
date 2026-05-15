@@ -7,17 +7,17 @@
 
 ## About
 
-Neural recommender systems achieve strong predictive accuracy, yet the concepts they rely on internally are hidden from the user. Conventional feedback (ratings, likes, preferences) only influences the model indirectly — there is no direct way for a participant to inspect those concepts, let alone adjust them.
+Neural recommender systems achieve strong predictive accuracy, yet the concepts they rely on internally are hidden from the user. Standard interaction signals (ratings, likes, preferences) only influences the model indirectly — there is no direct way for a participant to inspect those concepts, let alone adjust them.
 
 This project makes those concepts explicit. It pairs an ELSA recommender with a **Sparse Autoencoder (SAE)** that decomposes the model's internal representations into sparse, human-interpretable concepts — for a movie domain, features such as *"1980s sci-fi"*, *"strong female leads"*, or *"slow-paced cinematography"*. Those features are surfaced in the participant UI as first-class controls (sliders, toggles, free-text prompts, and example-based steering), so users can directly nudge the model's reasoning instead of treating it as a black box.
 
-The result is a study-ready **Steering Loop** on top of [EasyStudy](https://github.com/pdokoupil/EasyStudy): see recommendations → adjust interpretable concepts → see the effect → iterate. The repository delivers:
+The result is a study-ready **Steering Loop** on top of [EasyStudy](https://github.com/pdokoupil/EasyStudy). The repository delivers:
 
 - the **SAE Steering plugin** with multiple steering modalities and multi-approach comparisons;
 - a **researcher dashboard** with per-approach analytics, per-participant journeys, and attention-check tracking, exports, and additional metrics;
 - end-to-end **deployment recipes** (local, Docker, Railway) with first-boot asset bootstrap from GitHub Releases.
 
-A short specification rationale and full requirements list (FR / NFR ids referenced throughout the docs) live in [`proposal.tex`](proposal.tex).
+A short specification rationale and full requirements list (FR / NFR ids referenced throughout the docs) live in [`specification.pdf`](proposal/specification.pdf).
 
 
 ## Demo
@@ -79,7 +79,6 @@ the production checklist, see
 
 ## References
 
-- Peška, L. et al. Research on explainable and controllable recommender systems, GAČR 25-16785S (Charles University).
 - Dokoupil, P. et al. [EasyStudy](https://github.com/pdokoupil/EasyStudy) — upstream user-study framework for recommender systems.
-- [Project Proposal](proposal.tex) — original specification and motivation.
+- Czech Science Foundation (GAČR). Project No. 25‑16785S: “Empowering Multi-Objective Recommender Systems with Large Language Models” (PI: Mgr. Ladislav Peška, Ph.D., Charles University)
 

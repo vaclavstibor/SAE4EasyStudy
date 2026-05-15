@@ -1,14 +1,14 @@
 # Contribution Summary
 
-This repository is the deliverable described in `proposal.tex`: an EasyStudy-based study framework extended with an SAE Steering plugin, the surrounding admin/participant UI, and a reproducible audit/export pipeline suitable for research studies.
+This repository is the deliverable described in [`specification.pdf`](../proposal/specification.pdf): an EasyStudy-based study framework extended with an SAE Steering plugin, the surrounding admin/participant UI, and a reproducible audit/export pipeline suitable for research studies.
 
 ## Contents
 
 1. [What this repository adds to upstream EasyStudy](#what-this-repository-adds-to-upstream-easystudy)  
    Core deliverables and major additions.
-2. [Evaluation alignment with `proposal.tex`](#evaluation-alignment-with-proposaltetex-section-evaluation)  
+2. [Evaluation alignment with `specification.pdf`](#evaluation-alignment-with-specificationpdf-section-evaluation)  
    How the contribution aligns with the proposal's evaluation section.
-3. [Risks from `proposal.tex`](#risks-from-proposaltetex-section-risks)  
+3. [Risks from `specification.pdf`](#risks-from-specificationpdf-section-risks)  
    How the contribution addresses the proposal's risks.
 
 ## What this repository adds to upstream EasyStudy
@@ -20,8 +20,9 @@ This repository is the deliverable described in `proposal.tex`: an EasyStudy-bas
 - **Researcher dashboard + exports (FR-16/FR-17)**: a per-approach results dashboard plus a ZIP CSV export (one file per typed table) designed for downstream analysis.
 - **Operational features beyond the proposal**: per-participant journey view, attention-check evaluation declared in questionnaire HTML and persisted at submit time, and robust deployment bootstrapping of runtime assets from GitHub Releases.
 - **Upstream parity preserved**: upstream EasyStudy plugins (`fastcompare`, `layoutshuffling`, `vae`, `empty_template`) remain loadable via the canonical contract so researchers see the same plugin matrix as upstream plus the steering plugin.
+- **Refactored architecture**: the project's research contribution is refactored to be more modular, robust, better documented, more testable, more deployable, more data driven, and safer to extend.
 
-## Evaluation alignment with `proposal.tex` (Section “Evaluation”)
+## Evaluation alignment with `specification.pdf` (Section “Evaluation”)
 
 The proposal emphasises case-based validation and limited usability validation (5–10 users) rather than a full comparative study. This repository supports that approach:
 
@@ -30,7 +31,7 @@ The proposal emphasises case-based validation and limited usability validation (
 - **Questionnaire infrastructure**: the system supports per-approach and final questionnaires as drop-in HTML files under `server/static/questionnairs/`, with attention-check specs declared inline and evaluated at submit time.
 - **Documentation for reproducibility**: the audit schema, algorithms and deployment steps are documented in `docs/` (tech-docs, equations, formative recipes) so future researchers can reproduce runs and extend the framework.
 
-## Risks from `proposal.tex` (Section “Risks”) 
+## Risks from `specification.pdf` (Section “Risks”) 
 
 - **SAE interpretability**: the submitted paper’s results indicate the interpretability problem is manageable in practice for the slider-steering setup (participants reported mostly positive experience). The system also supports fallback interaction patterns (example-based steering, feature search).
 - **Natural-language mapping**: treated as an active research question; we actively investigate the right semantics for text steering and study composition for another paper submitting.
