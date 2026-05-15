@@ -1,10 +1,42 @@
 # Design Decisions
 
-This page records the binding architectural decisions and the reasoning behind them. It is a companion to [`tech-docs.md`](tech-docs.md): the tech doc tells you *what* the system looks like, this one tells you *why*.
+This page records the binding architectural decisions and the reasoning behind them. It is a companion to [`tech-docs.md`](tech-docs.md): the tech doc tells you *what* the system looks like, this one tells you *why*. Note that this files is also for our decision making process archive between studies we have already done and will be modified (making smaller) or removed in the future.
 
 Each section follows the same shape: **Decision, Context, Alternatives considered, Consequences**.
 
----
+## Contents
+
+### Foundations
+
+1. [Plugin-first extension of EasyStudy](#1-plugin-first-extension-of-easystudy-rather-than-a-fork)  
+   Keep upstream parity and stay mergeable.
+2. [Typed audit tables + thin envelope](#2-typed-audit-tables--thin-envelope-no-json-event-soup)  
+   Typed facts + stable analytics, no JSON parsing on reads.
+3. [No migration framework](#3-models-are-the-single-source-of-truth--no-migration-framework)  
+   Models are the schema; `create_all()` on boot.
+4. [Single-writer audit service](#4-single-writer-audit-service-routes-own-the-session)  
+   One writer, explicit session ownership.
+
+### Participant loop decisions
+
+5. [Reset endpoint](#5-reset-is-a-dedicated-endpoint-not-a-flag-on-adjust-features)  
+   Reset is its own action + audit fact.
+6. [Text composition modes](#6-text-steering-composition-is-a-configurable-mode-fr-09)  
+   `replace` / `add` / `intersect` are explicit study choices.
+7. [NFR-12 no-match](#7-nfr-12-text-steering-ambiguity-degrades-gracefully)  
+   Graceful degradation and analyzable failure mode.
+
+### Researcher surfaces and comparative studies
+
+8. [Dashboard & questionnaire invariants](#13-the-results-dashboard-is-generic--no-hard-coded-questionnaire-ids)  
+   Generic dashboard, no hardcoded questionnaire ids.
+9. [Attention checks](#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)  
+   Declared in HTML, evaluated at submit time.
+10. [Side-by-side comparison invariants](#22-side-by-side-comparison-invariants-audit-fan-out-list_id-routing)  
+   list_id routing and audit fan-out.
+11. [Reranking strategies rationale](#23-reranking-strategies-reranking_strategy-config-key)  
+   Why the set of strategies exists.
+
 
 ## 1. Plugin-first extension of EasyStudy (rather than a fork)
 
@@ -15,21 +47,20 @@ Each section follows the same shape: **Decision, Context, Alternatives considere
 **Alternatives considered.**
 
 - **Hard fork.** Rejected — it would lock out future upstream improvements (Prolific integration, questionnaire features, new auth flows) and require a manual rebase every time.
-- **Branch on `pdokoupil/EasyStudy` directly.** Rejected — upstream code is owned by a different research group; opening a long-lived branch is fragile across versions and licensing.
+- **Branch on `pdokoupil/EasyStudy` directly.** Considering for the future.
 
 **Consequences.**
 
 - `Interaction` and `Message` ORM tables stay even though the steering plugin does not use them. Upstream `fastcompare` and `utils` plugins still log to them. Removing them would break upstream parity.
 - The platform must not import from `server.plugins.*` at module top-level. Architectural rule #5 in [`tech-docs.md` Section 4.4](tech-docs.md#44-architectural-rules) enforces this.
-- New thesis code lives under `server/plugins/steering/`. Other plugins (`fastcompare`, `empty_template`, `utils`) are kept verbatim.
+- New project code lives under `server/plugins/steering/`. Other plugins (`fastcompare`, `empty_template`, `utils`) are kept.
 
----
 
 ## 2. Typed audit tables + thin envelope (no JSON event soup)
 
 **Decision.** Every user action writes one **typed** row to a domain-specific table (e.g. `sae_feature_adjustment`) **and** one minimal `SaeSteeringEvent` envelope row that carries only ids and timestamps. Analytics joins the typed tables. `SaeSteeringEvent.raw_payload` is provenance only and is **never** read by analytics.
 
-**Context.** The proposal mandates per-approach metrics (FR-16) and a CSV export per fact (FR-17). The initial prototype stored everything in a single `Interaction` table with a JSON `data` column. Each dashboard query had to parse JSON in Python; queries took seconds; column meanings drifted across iterations.
+**Context.** The proposal mandates per-approach metrics (FR-16) and a CSV export per fact (FR-17). Upstream EasyStudy logs participant actions through the generic `Interaction(participation_id, interaction_type, data, time)` table, where `data` is a free-form JSON column. That shape is fine for the upstream `fastcompare` plugin (uniform click logs aggregated in Python), but our analytics need to filter by `approach_id`, by modality, by cluster, and by `event_id` joins — every dashboard query would otherwise have to parse JSON at read time and would lose the column-level contract that lets researchers diff schema changes against the model file.
 
 **Alternatives considered.**
 
@@ -42,23 +73,17 @@ Each section follows the same shape: **Decision, Context, Alternatives considere
 - The `raw_payload` column stays as a provenance escape hatch for journey rendering and manual debugging. It is intentionally not indexed and not in any dashboard query.
 - Per-table CSV export is trivial: each writer reads one typed table and emits one CSV.
 
----
 
 ## 3. Models are the single source of truth — no migration framework
 
 **Decision.** `server/platform/persistence/base_models.py` and each plugin's `persistence/models.py` are the only source of truth for the schema. `db.create_all()` runs on every boot. There is no Alembic, no `migrations/` directory, no `flask db upgrade`.
 
-**Context.** Earlier iterations used Flask-Migrate / Alembic. After a Phase 2 refactor reshaped half of the SAE tables, the Alembic flow broke in two ways:
-
-1. `db.create_all()` ran first inside `create_app()`, creating the new tables. Then `flask db upgrade` tried to `CREATE TABLE` for the same tables and failed with `OperationalError: table sae_feature_adjustment already exists`.
-2. Because the migration aborted mid-way, the `ALTER TABLE sae_steering_event ADD COLUMN raw_payload` step never ran, and every subsequent request crashed with `OperationalError: ... has no column named raw_payload`.
-
-We also discovered two `migrations/` directories existed (`migrations/` and a stale leftover `server/migrations/`).
+**Context.** The thesis runs a small, fixed number of studies. Schema changes are research-side decisions ("we want one more typed column"), not continuous deployments. With `db.create_all()` driven from the model files, adding a column is a one-place edit; with Alembic, the same change is two-place (model + autogenerated migration), and the autogenerate step is unreliable across SQLite and Postgres because SQLite has no `ALTER TABLE DROP COLUMN`. The cost of carrying a migration framework therefore outweighed the rare schema-evolution event.
 
 **Alternatives considered.**
 
-- **Make Alembic the single source of truth.** Rejected — autogenerate is unreliable across SQLite and Postgres (SQLite has no `ALTER TABLE DROP COLUMN`), and the migration history would have to be rebuilt from scratch.
-- **Keep Alembic but stamp it on every boot.** Rejected — that is exactly the half-working state we just fixed; it embeds a "fallback" code path the user explicitly forbade.
+- **Make Alembic the single source of truth.** Rejected — autogenerate cannot fully cross the SQLite/Postgres boundary, and the project does not run enough independent deployments to amortise the upkeep cost.
+- **Keep Alembic but stamp it on every boot.** Rejected — embeds a fallback code path on top of `db.create_all()`; researchers would not know which mechanism actually ran.
 
 **Consequences.**
 
@@ -67,17 +92,16 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - Production schema changes happen out of band (manual `ALTER TABLE` against the managed Postgres) before deploying the new build. This is acceptable because the thesis runs a fixed number of studies and schema changes are rare research-side decisions, not continuous deployments.
 - Reintroducing Alembic is a deliberate, opt-in decision when the application moves out of thesis scope and into a long-lived production service.
 
----
 
 ## 4. Single-writer audit service; routes own the session
 
 **Decision.** Only `server/plugins/steering/service/audit.py` writes to typed audit tables. All `record_*` functions take `participation_id` and `approach_index` as **keyword-only** arguments. The service module never reads `flask.session`. Routes pass session values in explicitly.
 
-**Context.** Earlier code had `audit.record_event` reading from `flask.session` directly, plus a self-rebuilding `ensure_study_run` that read `session["approach_order"]` and called helpers that *also* called `ensure_study_run`, producing a `RecursionError` and intermittent `UNIQUE constraint failed: sae_study_run.participation_id` errors when the order had not been seeded yet.
+**Context.** The audit pipeline is the single most fragile contract in the system: every typed table, every CSV export, and every dashboard chart depends on it writing the right ids in the right order. A service that also read `flask.session` would be hard to unit-test (every test would need a `flask.request_context`) and would couple session state to write semantics. Pushing session access to the route layer keeps the audit service pure-functional from the request boundary inward.
 
 **Alternatives considered.**
 
-- **Service reads session, routes are thin.** Rejected because of the recursion above and because it forces tests to stand up a `flask.request_context` for unit-level audit assertions.
+- **Service reads session, routes are thin.** Rejected because it forces tests to stand up a `flask.request_context` for unit-level audit assertions and because re-entrant calls (`ensure_study_run` invoking helpers that need the same context) become hard to reason about.
 - **No service layer; routes write rows directly.** Rejected because it would distribute the audit contract across ~20 route handlers and make consistent envelope writing impossible.
 
 **Consequences.**
@@ -86,13 +110,12 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - The recursion is gone: `ensure_study_run` is called once per request, and `audit.record_*` callers pass `approach_index` explicitly so `ensure_approach_run` is idempotent.
 - Adding a new typed table is a one-place change ([`formative-examples.md` Section 4](formative-examples.md#4-add-a-new-typed-audit-table)).
 
----
 
 ## 5. Reset is a dedicated endpoint, not a flag on `/adjust-features`
 
-**Decision.** `POST /sae_steering/reset` is its own endpoint. It writes one `SaeResetAction` row + one envelope and clears session state. The legacy `reset_all: true` flag inside `/adjust-features` payloads is gone.
+**Decision.** `POST /sae_steering/reset` is its own endpoint. It writes one `SaeResetAction` row + one envelope and clears session state. `/adjust-features` does not accept a "reset" flag.
 
-**Context.** FR-12 in the proposal is "single-click reset, recorded". The original implementation smuggled `reset_all=true` and `reset_reason="..."` into the `/adjust-features` JSON body and let the iteration controller branch internally. This produced confusing audit rows where a reset looked like a degenerate adjustment, and the analytics had to special-case `applied_via='reset'` rows.
+**Context.** FR-12 in the proposal is "single-click reset, recorded". Overloading `/adjust-features` with a `reset_all` payload would produce ambiguous audit rows (a reset that looks like a degenerate adjustment) and would force the analytics layer to special-case `applied_via='reset'` rows everywhere it counts adjustments. A separate endpoint keeps the typed-audit contract clean: a reset is a fact of its own type, with its own row, its own column set, and its own analytics card.
 
 **Alternatives considered.**
 
@@ -105,7 +128,6 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - Analytics counts `sae_reset_action` rows directly. No coalescing.
 - Tests cover the contract: see `test_steering_actions_and_security.py::test_reset_writes_one_audit_row_and_clears_session`.
 
----
 
 ## 6. Text steering composition is a configurable mode (FR-09)
 
@@ -125,13 +147,12 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - `intersect` mode keeps only clusters present in both iterations, using iteration N's weight. Useful for participants refining a stable intent.
 - See [`equations.md` Section 4.5](equations.md#45-top-k-and-composition-across-iterations) for the formal definition.
 
----
 
 ## 7. NFR-12: text-steering ambiguity degrades gracefully
 
 **Decision.** When the lexical resolver matches zero clusters, `/parse-text-steering` returns HTTP 200 with `status="no-match"` and a friendly message. A `SaeTextSteeringQuery` row is still written (with zero matches), so the failure mode is analyzable offline.
 
-**Context.** NFR-12 (graceful degradation) is in the proposal. The pilot exposed cases where participants wrote off-topic prompts ("I don't know what I want") that produced empty match sets. The earlier implementation returned an empty `features` array silently; participants kept clicking and got confused.
+**Context.** NFR-12 (graceful degradation) is in the proposal. Off-topic or contradictory prompts ("I don't know what I want", "more action but no action") legitimately produce empty match sets in a lexical resolver. Returning an empty `features` array without a status hint would leave the UI in an ambiguous state ("did nothing change because I'm wrong, or because the system is broken?"); the explicit `no-match` status with a friendly message answers that question once, in one place.
 
 **Consequences.**
 
@@ -139,28 +160,22 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - Analytics can count zero-match queries (`COUNT(*) FROM sae_text_steering_query WHERE NOT EXISTS (SELECT 1 FROM sae_text_steering_match WHERE query_id = q.id)`).
 - The participant's previous adjustments are preserved (no destructive write on empty match).
 
----
 
-## 8. Reranking strategy as a typed enum (FR-10) — superseded by Section 23
+## 8. Reranking strategy as a typed enum (FR-10) — schema and dispatch contract
 
-**Status.** Superseded by Section 23 once `latent-perturbation` and `constrained-subset` were implemented in the recommender. This section is kept for archive purposes — it documents the enum/schema decision that pre-dated the algorithmic work.
-
-**Decision (still in force).** `study_config.reranking_strategy` is a typed enum (`SUPPORTED_RERANKING_STRATEGIES` in `constants.py`) and is snapshotted onto `SaeApproachRun.reranking_strategy` so historical study runs carry the strategy that was active when they ran. Validation happens at config-normalisation time; unknown values fall back to the default.
-
-**Historical context.** The proposal lists three reranking strategies. The first implementation pinned the dispatch to `feature-conditioned` and reserved the other two values for future work, exactly so that schema and admin UI could be kept ready without a migration when the alternatives landed. The reserved values were later filled in — see Section 23 for the implementation decisions, `equations.md` Section 10 for the math, and `formative-examples.md` Section 5 for the recipe to add a fourth strategy.
+**Decision.** `study_config.reranking_strategy` is a typed enum (`SUPPORTED_RERANKING_STRATEGIES` in `constants.py`) and is snapshotted onto `SaeApproachRun.reranking_strategy` so historical study runs always carry the strategy that was active when they ran. Validation happens at config-normalisation time; unknown values fall back to the default. The dispatch lives inside `recommendation/sae_recommender.py::get_recommendations` so call sites stay uniform regardless of which strategy is active. The mathematical content of each strategy is in [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key); the implementation rationale for the *set* of strategies is in Section 23 below.
 
 **Consequences.**
 
-- `SaeApproachRun.reranking_strategy` remained a string column, so old runs (which all carry `feature-conditioned`) co-exist with new runs that may carry any of the three values. No backfill or migration was required.
-- Adding a fourth strategy is still a one-place change: add the enum value to `SUPPORTED_RERANKING_STRATEGIES`, add the branch inside `recommendation/sae_recommender.py::get_recommendations`, and document the math in `equations.md` Section 10.
+- `SaeApproachRun.reranking_strategy` is a stable string column, so studies running any of the three supported strategies co-exist in the same database. No backfill is needed when a new strategy is added — only the enum and the dispatch branch change.
+- Adding a fourth strategy is a one-place change: add the enum value to `SUPPORTED_RERANKING_STRATEGIES`, add a branch inside `recommendation/sae_recommender.py::get_recommendations`, and document the math in `equations.md` Section 10. The recipe lives in [`formative-examples.md` Section 5](formative-examples.md#5-add-a-new-reranking-strategy).
 
----
 
 ## 9. Researcher endpoints require login; participant endpoints do not
 
 **Decision.** Every researcher-facing endpoint carries `@login_required`. Participant endpoints (`/join`, `/preference-elicitation`, `/parse-text-steering`, `/adjust-features`, `/reset`, ...) do **not** because participants are anonymous from a Flask-Login perspective; their identity is the session `participation_id`.
 
-**Context.** The earlier code had `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, and `/results/<plugin>/<guid>` open. Anyone with the URL could enumerate studies. The CSV export was also open.
+**Context.** Researcher endpoints expose the list of studies, participant tallies, and the raw CSV bundle. Without `@login_required` anyone with a URL could enumerate studies and download participant data. Participant endpoints, by contrast, must remain anonymous so the Prolific link flow works without sign-up; the participant's identity is the session `participation_id`, which is bound to the opaque `Participation.uuid`.
 
 **Consequences.**
 
@@ -213,14 +228,14 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** The dashboard only knows about the typed audit columns (`rank`, `delta`, `cluster_label`, `query_text`, `mood`, …). It must **not** branch on question-level ids like `p_attention_check` or `f1_preference`. Per-questionnaire summaries are produced by the modular *Questionnaire Monitor*, which auto-discovers fields from `SaeQuestionnaireResponse.answers` and infers a kind per field.
 
-**Context.** The first iteration of the dashboard wired the Likert deltas, attention-funnel, and preference distribution charts to specific question ids from the bundled `sae_*_questionnaire.html` files. Whenever a researcher uploaded a different questionnaire the charts broke silently — or worse, the analytics pretended a result existed by reading missing keys.
+**Context.** Hard-wiring Likert deltas, attention-funnel and preference distribution charts to specific question ids from the bundled `sae_*_questionnaire.html` files would break silently whenever a researcher uploaded a different questionnaire — or worse, the analytics layer would pretend a result existed by reading missing keys. Researchers must be able to ship custom questionnaires (FR-15) without editing the dashboard, so the dashboard cannot know question ids in advance.
 
 **Consequences.**
 
 - `analytics._questionnaire_monitor` aggregates one section per `questionnaire_file`. Within each section, every key in the answers JSON becomes a row whose summary is chosen from the inferred kind (`likert` / `numeric` / `categorical` / `text`).
 - The Overview tab focuses on the *behavioural* signal of steering: selected-movie rank distribution by approach, slider movement by cluster, text-prompt-to-cluster mappings. None of these depend on a specific questionnaire.
 - Adding a new questionnaire is a no-code operation (drop a template in `server/static/questionnairs/`, point an approach at it). See [`formative-examples.md` Section 9](formative-examples.md#9-add-a-new-questionnaire).
-- The legacy "attention-check funnel" / "Steered minus Baseline" / "composite change" charts are deleted. Researchers who want those specific statistics can compute them in R or pandas from the CSV bundle.
+- Researchers who want bespoke statistics (attention-funnel breakdowns, composite Likert deltas, …) compute them in R or pandas from the CSV bundle. The dashboard intentionally stays domain-agnostic.
 
 ---
 
@@ -228,7 +243,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** Every typed table that records a participant action has an `event_id` FK to `sae_steering_event`. The audit service always writes the envelope **first** and then attaches the typed row using `event.id`.
 
-**Context.** All typed tables (`SaeFeatureAdjustment`, `SaeTextSteeringQuery`, `SaeFeatureSearch`, `SaeResetAction`, `SaeExampleSteering`) followed this pattern from day one — except `SaeMovieFeedback`, which was the first table written and accidentally did the reverse (feedback row to envelope) with the feedback id stored in `event.raw_payload`. The journey view tried to use `feedback.event_id`, which didn't exist, and the page 500'd.
+**Context.** The envelope row is the timeline anchor: it carries the timestamp, the `event_type` enum and the participation / approach / iteration ids that every downstream view uses. If the typed row were written first and the envelope inherited *from it*, then any future code path that needs to find "the action that produced this typed row" would have to back-reference through column-specific joins. Pinning the direction (envelope first, typed row second, `event_id` FK on the typed row) keeps the read pattern uniform: timeline rendering, raw export and CSV export all walk `SaeSteeringEvent → typed table` in one direction.
 
 **Consequences.**
 
@@ -243,7 +258,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** `PluginMetadata` carries only what the platform actually needs to identify a plugin (`name`, `version`, `description`). The study-author display name and contact email are platform-level configuration — `STUDY_AUTHOR_NAME` and `STUDY_AUTHOR_CONTACT` environment variables, surfaced through Flask config and a single Jinja `context_processor` in `server/platform/app.py`.
 
-**Context.** The `Author` column on `/administration` came from `PluginMetadata.author`, populated per plugin with strings like `"Research Team"` or `"Study Framework"`. Those values were placeholders that never described anything researchers could act on, and `PluginMetadata.author_contact` was set in every plugin contract but never read anywhere in the canonical tree. Meanwhile, the participant-facing surfaces that actually need an authorship signal — the study intro meta-strip, the finish screen contact chip, the global participant footer, and the admin hero subcopy — were a mix of empty placeholders, hard-coded mailto links, and the legacy upstream `layoutshuffling` jumbotron line.
+**Context.** Authorship information belongs to a *deployment*, not to a *plugin*. A single study deployment has one researcher contact, regardless of which plugins are loaded. Surfacing the contact through `PluginMetadata.author` would either duplicate the same string across every plugin (drift waiting to happen) or omit it (forcing per-template `mailto:` strings). The participant-facing surfaces that need an authorship signal — the study intro meta-strip, the finish screen contact chip, the participant footer, and the admin hero subcopy — should all read from one source.
 
 **Alternatives considered.**
 
@@ -253,11 +268,11 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Consequences.**
 
-- `PluginMetadata` shrunk to three fields. Two `PLUGIN_AUTHOR*` constants in `server/plugins/steering/constants.py` were removed, and the corresponding rows in `server/plugins/{steering,empty_template,fastcompare}/plugin.py` are gone.
+- `PluginMetadata` carries only three fields (`name`, `version`, `description`).
 - `server/platform/app.py` registers a single `inject_study_author_info` context processor, so every Jinja template (platform or plugin) sees `study_author_contact` and `study_author_name` without per-route plumbing.
 - Defaults are baked in (`Václav Stibor` / `vaclav.stibor@student.cuni.cz`) and can be overridden via env: `STUDY_AUTHOR_NAME`, `STUDY_AUTHOR_CONTACT`. Both `deployment/app.env.example` and `docker/compose.env.example` advertise the new variables.
-- Four participant- and researcher-facing surfaces now read from the same source: `study_intro.html` (meta-pill), `participant_flow/finish.html` (`.contact-chip`), `participant_flow/footer.html` and `layoutshuffling/footer.html` (mailto chip), and `administration.html` (hero subcopy). The platform footer is canonical for everything routed through the `utils` (participant-flow) blueprint, while `layoutshuffling` keeps its own footer because its routes resolve templates against its own blueprint folder first.
-- `formative-examples.md` no longer shows `PLUGIN_AUTHOR*` in the copy-paste plugin skeleton. The orphaned upstream surfaces that referenced authorship were removed (`layoutshuffling/templates/{layoutshuffling,step,tmp}.html` and the `__author__` / `__author_contact__` module constants in both `vae/__init__.py` and `layoutshuffling/__init__.py`), so the platform now has a single source for author/contact and no dead `Anonymous Author` text lingering in the tree.
+- Four participant- and researcher-facing surfaces read from the same source: `study_intro.html` (meta-pill), `participant_flow/finish.html` (`.contact-chip`), `participant_flow/footer.html` and `layoutshuffling/footer.html` (mailto chip), and `administration.html` (hero subcopy). The platform footer is canonical for everything routed through the `utils` (participant-flow) blueprint, while `layoutshuffling` keeps its own footer because its routes resolve templates against its own blueprint folder first.
+- `formative-examples.md` does not show `PLUGIN_AUTHOR*` in the copy-paste plugin skeleton — that channel is platform-level, not plugin-level.
 
 ---
 
@@ -265,7 +280,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** The two upstream EasyStudy plugins (`server/plugins/layoutshuffling` and `server/plugins/vae`) are registered in `CANONICAL_PLUGIN_MODULES` so the kernel loads all five plugins (`sae_steering`, `fastcompare`, `emptytemplate`, `layoutshuffling`, `vae`). Which of these the admin "Available templates" picker shows is a separate decision — see Section 17. The migration is minimum-viable: routes stay in `__init__.py`, but each plugin now exposes a `PLUGIN: StudyPluginContract` and a `get_plugin()` callable so the kernel can register the blueprint exactly like a thesis-owned plugin.
 
-**Context.** The plugin registry was refactored to load only thesis-owned plugins (`sae_steering`, `fastcompare`, `emptytemplate`), which silently dropped `layoutshuffling` and `vae` from the admin picker even though both packages still lived in the tree. Researchers cloning the repo expected the same plugin matrix as the upstream `pdokoupil/EasyStudy` project; the missing entries made the kernel look stricter than it actually is.
+**Context.** Upstream [`pdokoupil/EasyStudy`](https://github.com/pdokoupil/EasyStudy) ships five plugins (`fastcompare`, `utils`, `layoutshuffling`, `vae`, `empty_template`). The thesis adds a sixth (`steering`) and preserves the other five so a researcher who clones this repo gets the same plugin matrix as upstream plus the new steering work. `CANONICAL_PLUGIN_MODULES` therefore lists all canonical plugins (`steering`, `fastcompare`, `empty_template`, `layoutshuffling`, `vae`); `utils` is consumed as a library, not registered as a blueprint.
 
 **Alternatives considered.**
 
@@ -274,10 +289,10 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Consequences.**
 
-- `Blueprint(__plugin_name__, __plugin_name__, …)` is replaced with `Blueprint(PLUGIN_NAME, __name__, …)` in both plugins so Flask resolves the template/static roots correctly relative to the package, not relative to the string `"layoutshuffling"`.
-- The legacy `from plugins.utils.*` imports in `layoutshuffling/__init__.py` are rewritten to `from server.plugins.utils.*` so module load works with the current `server.*` package layout.
-- A new regression test (`test_all_canonical_plugins_load_and_register` in `tests/plugins/steering/test_initialization.py`) asserts that every entry in `CANONICAL_PLUGIN_MODULES` loads cleanly **and** registers at least one route, so a future plugin-renaming refactor cannot silently drop another upstream package.
-- Offline tooling around the new typed-audit JSON shape is back online: `scripts/reconstruct_journey.py` now imports `build_journey` from `server.plugins.steering.results.journey_builder`, which adapts the v1 export schema produced by `/export-raw/<guid>` into the same `{timeline, summary}` envelope the legacy CLI relied on (the legacy `sae_steering.journey` module was deleted along with the old plugin tree).
+- `Blueprint(__plugin_name__, __plugin_name__, …)` is replaced with `Blueprint(PLUGIN_NAME, __name__, …)` in both plugins so Flask resolves the template/static roots relative to the package rather than relative to the literal plugin name string.
+- Upstream relative imports (`from plugins.utils.*`) are normalised to absolute imports (`from server.plugins.utils.*`) so the modules load under the `server.*` package layout.
+- A regression test (`test_all_canonical_plugins_load_and_register` in `tests/plugins/steering/test_initialization.py`) asserts that every entry in `CANONICAL_PLUGIN_MODULES` loads cleanly **and** registers at least one route, so a future plugin-renaming refactor cannot silently drop an upstream package.
+- Offline tooling around the typed-audit JSON shape stays consistent: `scripts/reconstruct_journey.py` imports `build_journey` from `server.plugins.steering.results.journey_builder`, which adapts the v1 export schema produced by `/export-raw/<guid>` into the same `{timeline, summary}` envelope the on-screen admin journey view uses.
 
 ---
 
@@ -290,7 +305,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 | `emptytemplate` (`server/plugins/empty_template`) | Developer scaffold. It is the copy-paste starter for new plugins (see [`formative-examples.md` Section 1](formative-examples.md#1-add-a-new-plugin)); listing it as a study type would invite researchers to "create studies" out of a placeholder. |
 | `vae` (`server/plugins/vae`) | Algorithm wrapper. Provides VAE algorithm hooks consumed by `fastcompare`; there is no `/vae/create` because there is no VAE-only study type. |
 
-**Context.** Before the upstream-plugin re-wire (Section 16) the admin picker only listed the three plugins that happened to have a `/create` route AND were in `CANONICAL_PLUGIN_MODULES`. After Section 16 the picker would have surfaced `emptytemplate` as a fourth choice and (had `vae` declared `/create`) `vae` as a fifth — neither of which is a study type a researcher should pick. A hard-coded skip list in `get_loaded_plugins()` would have hidden the intent inside the platform; instead the plugin itself declares its intent through its own metadata.
+**Context.** With all canonical plugins registered (Section 16), the admin picker would otherwise surface `emptytemplate` and `vae` next to `sae_steering` and `fastcompare` — neither is a study type a researcher should pick (one is a scaffold, the other is an algorithm wrapper). A hard-coded skip list in `get_loaded_plugins()` would hide that intent inside the platform; instead each plugin declares its admin-visibility through its own metadata, so the filter rule is uniform and traceable from the plugin file.
 
 **Alternatives considered.**
 
@@ -311,7 +326,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** Each questionnaire HTML file ships its attention-check answer key as an inline JSON block. The audit pipeline evaluates the submission against that key once, at submit time, and stores the verdict on `SaeQuestionnaireResponse.attention_check_passed` (`True` / `False` / `NULL` when no spec is declared). The Results dashboard reads only the stored verdict and lets the admin set a per-study pass threshold in the participants table.
 
-**Context.** Before this change the participants table showed `QUESTIONNAIRES = <count>` — a number every researcher confirmed was useless (it merely echoed the configured approach count plus the final questionnaire). The interesting signal is whether the participant actually read the questions, and that signal exists inside the answers JSON (`p_attention_check`, `f_attention_check`, …). Recomputing it in the dashboard every time the page reloads would couple analytics to a moving spec, so the verdict is computed once on write and persisted.
+**Context.** A `QUESTIONNAIRES = <count>` column in the participants table would merely echo the configured approach count plus the final questionnaire — uninformative for the researcher who wants to know whether the participant actually read the questions. That signal already exists inside the answers JSON (`p_attention_check`, `f_attention_check`, …). Recomputing it in the dashboard every page load would couple analytics to a moving spec (editing the questionnaire HTML afterwards would silently change historical verdicts), so the verdict is computed once on write and persisted.
 
 The bundled questionnaires now ship the following specs (`server/static/questionnairs/sae_*_questionnaire.html`):
 
@@ -348,9 +363,9 @@ The bundled questionnaires now ship the following specs (`server/static/question
 
 **Decision.** Every aggregation in `analytics.py` that crosses participants groups by `SaeApproachRun.approach_id` (a stable identifier from `conf['models'][i]['id']`) and never by `approach_index`. `approach_index` records the per-participant phase position (1st, 2nd, … approach the participant saw) and is meaningless across participants when `randomize_approach_order` is enabled. The dashboard returns each per-approach dict pre-seeded in config-models order so the rendering order is deterministic without sorting on the client.
 
-**Context.** With two participants and `randomize_approach_order=True`, participant P1 might see `approach_a` at phase 0 and `approach_b` at phase 1, while P2 sees the opposite. The audit rows correctly store both `approach_index` (the phase position the participant saw) and `approach_id` (the stable identity from `conf`). The first version of the analytics functions grouped by `approach_index`, then chose the bucket label from whichever `approach_name` SQL returned first for that index. Result: every cross-participant view (Selection Dynamics table, Slider Movement charts, Selected movie rank distribution, Approach Overview) showed two rows both labelled "Approach A" — the data was a 50/50 mix of two approaches under one label, silently destroying the comparison.
+**Context.** With two participants and `randomize_approach_order=True`, participant P1 might see `approach_a` at phase 0 and `approach_b` at phase 1, while P2 sees the opposite. The audit rows correctly store both `approach_index` (the phase position the participant saw) and `approach_id` (the stable identity from `conf`). Grouping cross-participant aggregates by `approach_index` would pick a bucket label from whichever `approach_name` SQL returned first for that index — every cross-participant view (Selection Dynamics, Slider Movement, Selected movie rank distribution, Approach Overview) would then show two rows both labelled "Approach A" with the data being a 50/50 mix of two approaches under one label, silently destroying the comparison.
 
-The fix is structural, not cosmetic. **Approach identity (`approach_id`)** and **phase position (`approach_index`)** are different concepts and the only correct cross-participant key is identity. Frontend code now relies on insertion order, so the analytics layer is responsible for emitting buckets in canonical (config-models) order.
+**Approach identity (`approach_id`)** and **phase position (`approach_index`)** are different concepts, and the only correct cross-participant key is identity. Frontend code relies on insertion order, so the analytics layer is responsible for emitting buckets in canonical (config-models) order.
 
 **Alternatives considered.**
 
@@ -372,9 +387,9 @@ The fix is structural, not cosmetic. **Approach identity (`approach_id`)** and *
 
 **Decision.** The Modalities tab and the Overview "Modality usage by approach" card grid render exactly the modalities each approach declared in `conf['models'][i]['enabled_modalities']`. The audit-table contents inform the *counts* inside each modality card, but they never decide which cards are shown. An approach with `enabled_modalities=["text"]` never gets a slider card — even if the typed adjustment table contains rows for that approach (which the text pipeline does write, with placeholder cluster labels).
 
-**Context.** The first iteration of the Modalities tab had two hardcoded chart cards labelled "Approach A" and "Approach B" that both rendered the *Slider Movement by Cluster* chart. With one slider-only approach and one text-only approach, the second card surfaced text-driven feature adjustments whose `cluster_label` was a placeholder (`feature_<n>` / `cluster_<n>`). After Section 19 filtered placeholders out of the slider chart, the card stayed visually present but empty — the dashboard implied "this approach has slider data" when it didn't. The Overview section had a parallel issue: a single "Modality usage" card aggregated across all approaches, hiding the fact that one approach used only text and the other only sliders.
+**Context.** Hardcoding two chart cards labelled "Approach A" and "Approach B" that both render *Slider Movement by Cluster* would mislabel modalities for any study where one approach uses sliders and another uses text. The text pipeline writes feature-adjustment rows too (composition produces cluster weights), but their `cluster_label` is a placeholder (`feature_<n>` / `cluster_<n>`); after Section 19 filters placeholders out of the slider chart, a card for a text-only approach would stay visually present but empty — the dashboard would imply "this approach has slider data" when it does not. A single global "Modality usage" card would hide the fact that one approach used only text and the other only sliders.
 
-The fix is to make the dashboard read the *study contract* (`enabled_modalities`) as the source of truth for what cards to render. The audit table answers a different question (what happened) and is consulted only after the contract decides what to show.
+The dashboard must therefore read the *study contract* (`enabled_modalities`) as the source of truth for what cards to render. The audit table answers a different question (what happened) and is consulted only after the contract decides what to show.
 
 **Backend design.** `analytics._approach_modality_breakdown(user_study_id, config_models)` returns one entry per approach keyed by `approach_id`, in config order:
 
@@ -417,7 +432,7 @@ Both paths iterate over `Object.entries(modality_breakdown)`; they never branch 
 **Alternatives considered.**
 
 - **Show every modality card with "no data" placeholder when the approach didn't declare it.** Rejected — visually noisy and gives the false impression that the researcher could enable a different modality post-hoc by editing the chart.
-- **Derive `enabled_modalities` from the audit table instead of the config.** Rejected — the typed tables contain side effects of pipelines (e.g. the text composer writes feature adjustments), so reverse-engineering intent from data would re-introduce the original bug.
+- **Derive `enabled_modalities` from the audit table instead of the config.** Rejected — the typed tables contain side effects of pipelines (e.g. the text composer writes feature adjustments), so reverse-engineering intent from data would conflate intent with side effects.
 - **Hardcode a per-modality SQL query in the frontend.** Rejected — pushes domain logic to the wrong layer and couples the dashboard to plugin internals.
 
 **Consequences.**
@@ -437,7 +452,7 @@ Both paths iterate over `Object.entries(modality_breakdown)`; they never branch 
 1. **Backend scope guard.** `session["last_text_steering"]` carries a `scope` field equal to `"<study_guid>:<phase_index>"`. Both `parse_text_steering` (which writes it) and the `previous_text_query` lookup in `session_controller` (which reads it for the "You said before" banner) ignore the payload when the stored scope does not match the current scope. Without this, a Flask session cookie that survives a study transition would re-surface the prior study's last prompt in the new study's UI, and a phase-2 participant would inherit phase-1's prompt history.
 2. **Per-iteration UI clear.** When `fetchAndRender` (Get Recommendations) succeeds, the steering interface explicitly clears the prompt input, the "detected cluster chips" container, the "You said before" banner, and the "no match" hint. The current iteration's prompt is already encoded in the adjustments that just produced the new recommendations; leaving the prompt text + chips visible implies "your next recommendations will again be because you said X", which is misleading. Server-side `last_text_steering` is **untouched** by the UI clear — composition modes that need the prior dict (`add`, `intersect`) continue to work for the next parse within the same `(guid, phase)` scope.
 
-**Context.** Before this change, `last_text_steering` was a flat dict (`{"query": ..., "adjustments": ...}`) in the Flask session, with no namespace. A participant who finished study A and then joined study B in the same browser saw A's last prompt in the "You said before" banner. The same leak occurred when advancing between approaches: phase-1 participants saw phase-0's prompt. Symmetrically, the iteration boundary on Get Recommendations left the prompt input and chip tags from the previous iteration on screen, even though those tags described an interaction that had already been consumed and persisted into adjustments.
+**Context.** Without a scope tag, `last_text_steering` would be a flat dict (`{"query": ..., "adjustments": ...}`) in the Flask session with no isolation. A participant who finished study A and then joined study B in the same browser would see A's last prompt in the "You said before" banner; the same leak would occur when advancing between approaches (phase-1 participants seeing phase-0's prompt). Symmetrically, the iteration boundary on Get Recommendations would leave the prompt input and chip tags from the previous iteration on screen, even though those tags describe an interaction that has already been consumed and persisted into adjustments — a misleading affordance for the participant.
 
 **Implementation.**
 
@@ -468,7 +483,7 @@ Both paths iterate over `Object.entries(modality_breakdown)`; they never branch 
 
 **Context.** A side-by-side study renders **two recommendation columns** for the same participant at the same time. The UI has one shared slider grid, one shared text input, and one set of buttons. Two `SaeApproachRun` rows exist for the participant — one per column. The participant likes movies in either column, but does not advance phases (there is only one phase in side-by-side).
 
-This design has three subtle invariants that are easy to break and that earlier code did break:
+This design has three subtle invariants that are easy to break:
 
 **Invariant 1 — Exactly two approaches.**
 
@@ -520,7 +535,7 @@ def record_movie_feedback(
         approach_index = _COMPARISON_LIST_TO_APPROACH[list_id]
 ```
 
-Regression test: `test_record_movie_feedback_routes_column_b_to_approach_1`. Without the remap, every like on column B was discarded, which made side-by-side studies look like everyone unanimously preferred Approach A (because Approach B had zero recorded likes).
+Regression test: `test_record_movie_feedback_routes_column_b_to_approach_1`. Without the remap, every like on column B would be discarded — side-by-side studies would then appear as if every participant unanimously preferred Approach A (because Approach B would carry zero recorded likes), silently corrupting the comparison the study was designed to make.
 
 **Invariant 3 — Shared steering events fan out to both approaches.**
 

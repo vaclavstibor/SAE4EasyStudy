@@ -5,8 +5,39 @@ This page is the math reference for the SAE Steering plugin. Each modality has i
 Cross-references:
 
 - [`tech-docs.md` Section 6](tech-docs.md#6-steering-modalities-and-the-iteration-loop) — the iteration loop that consumes these weights.
-- [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09), [Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully), [Section 8](design-decisions.md#8-reranking-strategy-as-a-typed-enum-fr-10-superseded-by-section-23) — rationale for composition modes, the no-match fallback, and the reranking enum.
+- [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09), [Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully), [Section 8](design-decisions.md#8-reranking-strategy-as-a-typed-enum-fr-10-schema-and-dispatch-contract) — rationale for composition modes, the no-match fallback, and the reranking enum.
 - [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset), [Section 5](formative-examples.md#5-add-a-new-reranking-strategy) — how to add a new modality / a new reranking strategy.
+
+## Contents
+
+### Steering modalities
+
+1. [Common framework](#1-common-framework)  
+   The shared modality interface and cluster→neuron expansion.
+2. [Sliders (FR-05/06)](#2-sliders-fr-0506)  
+   Slider deltas, amplification, and per-iteration accumulation.
+3. [Toggles (FR-07)](#3-toggles-fr-07)  
+   Signed fixed-magnitude weights.
+4. [Text steering (FR-09)](#4-text-steering-fr-09)  
+   Segmentation, token/phrase scoring, top-K, and composition modes.
+5. [Example-based steering (FR-08)](#5-example-based-steering-fr-08)  
+   Mean activation over liked examples and top-K selection.
+6. [Reset (FR-12)](#6-reset-fr-12)  
+   Session clearing + audit contract.
+
+### Base recommender and reranking
+
+7. [ELSA seed re-weighting from likes](#7-elsa-seed-re-weighting-from-likes)  
+   How likes bias the seed embedding.
+8. [Reranking strategies](#10-reranking-strategies-rerankingstrategy-config-key)  
+   `feature-conditioned`, `latent-perturbation`, `constrained-subset`.
+
+### Reference
+
+9. [Notation summary](#9-notation-summary)  
+   Symbol table used across equations.
+10. [Appendix: What is configurable](#appendix-what-is-configurable)  
+   Config keys and defaults.
 
 ## 1. Common framework
 
@@ -127,7 +158,7 @@ The study-level `interaction_mode` config key (default `cumulative`, surfaced in
 - **`cumulative`** — `previous_adjustments` is loaded from `session["cumulative_adjustments"]`, the new raw deltas are accumulated on top per the formulas in Section 2, and the touched-cluster set in `session["user_touched_features"]` grows monotonically until the approach ends. The like signal also persists: `update_elsa_seed_with_likes` is called with the participant's current liked set whenever it changes, so the ELSA seed (Section 7) is re-weighted accordingly.
 - **`reset`** — at the very top of `apply_feature_adjustment_iteration` the controller hard-clears the relevant session keys: `cumulative_adjustments`, `user_touched_features`, `last_text_steering`, `last_example_steering`, `excluded_movies_from_text`, and `boosted_liked_ids` all start the iteration empty, and `update_elsa_seed_with_likes` is then called with an empty liked set so the ELSA seed is rebuilt from `elicitation_selected_movies` alone. The current iteration's adjustments and liked set still flow into the typed-audit rows (`record_feature_adjustment` captures `liked_movies` directly from the request body), so the database always reflects what the participant did.
 
-Switching between approaches (`_do_advance_phase` in `routes/study.py`) wipes the same session keys regardless of the mode, so cross-approach pollution is impossible under either setting.
+Switching between approaches (`_do_advance_phase` in `routes/study.py`) clears `cumulative_adjustments`, `feature_adjustments`, `boosted_liked_ids`, the iteration counters, `excluded_movies_from_text` and the cached `last_text_steering` payload regardless of the mode — that is enough to guarantee that none of the active steering signals leak from one approach into the next. The text-steering scope guard described in Section 6 below also rejects any residual entry by `(study_guid, phase)` mismatch, so even a stale session cookie cannot resurrect a prior approach's prompt.
 
 ## 3. Toggles (FR-07)
 
@@ -506,7 +537,7 @@ When the study's `interaction_mode` (Section 2.1) is `reset`, the iteration cont
 
 ## 8. Final ranking (pointer)
 
-This section is now superseded by Section 10 below, which documents the full set of three reranking strategies. Read Section 10 for the math; this section remains as a stub for backwards-compatibility with older cross-references.
+This section is a short pointer to the reranking content. Read Section 10 for the full math and the complete set of strategies; this stub remains only to keep older cross-references stable.
 
 ## 9. Notation summary
 
@@ -642,7 +673,7 @@ Code: `sae_recommender.py:466-479` and `sae_recommender.py:576-585`.
 |---|---|---|---|
 | Steering enters as | additive score term | seed rotation, then CF | hard filter, then CF |
 | Has $\gamma$ / clamp magic? | yes (adaptive) | no (single $\alpha$) | no (single $\tau$) |
-| Top-1 can be "off-target" | yes (steering can fail to clear base+clamp) | yes (rotation is gentle) | **no** — every returned item is on-target by construction |
+| Top-1 can be "off-target" | yes (steering can fail to clear base+clamp) | yes (rotation is gentle) | no when the filter has survivors (every returned item satisfies the SAE threshold by construction); the fallback for an empty mask ranks by base CF only and is honest about it via `debug.constrained_subset_survivors` |
 | Falls back when SAE signal is empty | yes (steering term becomes $0$) | yes (no perturbation applied) | yes (mask is dropped if no positive SAE score) |
 | Suitable for ablation | baseline | "is the SAE signal information useful even without explicit boosting?" | "what is the upper bound of *guaranteed* steering, ignoring CF gradients?" |
 

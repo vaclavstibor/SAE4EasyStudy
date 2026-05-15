@@ -2,6 +2,23 @@
 
 This is the participant experience for an SAE Steering study. It is the user-facing companion to [`admin-manual.md`](admin-manual.md). Times are approximate and depend on study configuration.
 
+## Contents
+
+1. [Join the study](#1-join-the-study--1-minute)  
+   Consent + intro, session starts.
+2. [Preference elicitation](#2-preference-elicitation--3-minutes)  
+   Pick baseline movies and search titles.
+3. [Resolution gate](#3-resolution-gate)  
+   Minimum screen-size check (if configured).
+4. [Steering iterations](#4-steering-iterations--10-minutes)  
+   Review → (optional) steer → approve → refresh.
+5. [Per-approach questionnaire](#5-per-approach-questionnaire--1-minute-optional)  
+   Optional questionnaire between approaches.
+6. [Final questionnaire](#7-final-questionnaire--2-minutes)  
+   End-of-study questionnaire and finish.
+7. [Edge cases](#edge-cases-the-ui-handles)  
+   No-match, refresh, resume behaviour.
+
 ## 1. Join the study — ~1 minute
 
 - The invitation link points at `/sae_steering/join?guid=<study-guid>`.

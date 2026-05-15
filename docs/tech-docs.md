@@ -1,33 +1,54 @@
 # Technical Documentation
 
-**Project**: SAE-Based Interpretable Neural Steering for Recommendation Systems  
-**Type**: Research project — extends [pdokoupil/EasyStudy](https://github.com/pdokoupil/EasyStudy/tree/main/server)  
-**Author**: Bc. Václav Stibor  
-**Supervisor**: Mgr. Ladislav Peška, Ph.D.  
-**Consultants**: RNDr. Patrik Dokoupil; Ing. Vojtěch Vančura, Ph.D.; Mgr. Martin Spišák; Mgr. Petr Škoda, Ph.D.  
-**Institution**: Department of Software Engineering, Faculty of Mathematics and Physics, Charles University
+## Contents
 
-This document is the technical reference for the application. Companion documents:
+### Orientation
 
-| File | Audience | Purpose |
-| --- | --- | --- |
-| [`design-decisions.md`](design-decisions.md) | reviewers, future maintainers | *Why* the architecture looks like this. Records the binding design choices. |
-| [`formative-examples.md`](formative-examples.md) | future contributors | *How* to add a new plugin, modality, dataset, audit table — with code snippets. |
-| [`equations.md`](equations.md) | reviewers, downstream researchers | The math behind every scoring function (text steering, SAE shifts, ELSA seed, reranking). |
-| [`admin-manual.md`](admin-manual.md) | researchers running studies | Step-by-step usage of the admin UI and the export pipeline. |
-| [`user-manual.md`](user-manual.md) | participants | What the study looks like from the participant's perspective. |
+1. [Abstract](#1-abstract)  
+   What the system is and what it adds to EasyStudy.
+2. [Introduction](#2-introduction)  
+   Purpose, scope, and lineage against upstream EasyStudy.
+3. [System Overview](#3-system-overview)  
+   End-to-end participant flow and feature map.
 
----
+### Architecture and data model
+
+4. [Architecture](#4-architecture)  
+   Module map, plugin contract, and architectural rules.
+5. [Database Schema](#5-database-schema)  
+   Platform tables vs steering plugin typed audit tables.
+
+### Core mechanics
+
+6. [Steering Modalities and the Iteration Loop](#6-steering-modalities-and-the-iteration-loop)  
+   How the steering loop composes inputs and refreshes recommendations.
+7. [Audit Pipeline](#7-audit-pipeline)  
+   Single-writer audit service and typed write contracts.
+8. [Analytics and Exports](#8-analytics-and-exports)  
+   Dashboard payload, journey view, CSV/JSON exports.
+
+### Operations
+
+9. [Runtime and Deployment](#9-runtime-and-deployment)  
+   Assets, Docker/Railway, env vars, backups.
+10. [Testing Strategy](#10-testing-strategy)  
+   What tests exist and what they guard.
+
+### Closing
+
+11. [Limitations and Future Work](#11-limitations-and-future-work)  
+   Research-scoped decisions and next steps.
+12. [Appendix: where to find things](#appendix-where-to-find-things)  
+   Quick index of code locations.
 
 ## 1. Abstract
 
 This application is a plugin-first study framework for measuring **interpretable, controllable steering** of recommender systems through Sparse Autoencoder (SAE) features. It extends [pdokoupil/EasyStudy](https://github.com/pdokoupil/EasyStudy) — a study framework for recommender-system user research — with a new `sae_steering` plugin that lets a participant directly manipulate SAE-derived feature clusters (`sliders`, `toggles`, `text`, `examples`), reset their session, and compare multiple steering approaches in one study.
 
-The thesis contribution is the **SAE Steering plugin** plus a structured audit pipeline that records every participant action as a typed database row. This enables column-driven analytics (per-approach mean-absolute adjustment, search-then-adjust funnels, reset frequency, text-steering match rates) instead of post-hoc JSON parsing. The application is delivered with a researcher dashboard (FR-16), a per-table CSV export (FR-17), and a complete admin/participant UI.
+The thesis contribution is the **SAE Steering plugin** plus a structured audit pipeline that records every participant action as a typed database row. This enables column-driven analytics (per-approach mean-absolute adjustment, search-then-adjust funnels, reset frequency, text-steering match rates) and additional post-hoc analysis on stored data. The application is delivered with a researcher dashboard, a per-table CSV export, and a complete admin/participant UI.
 
 The framework preserves EasyStudy compatibility: existing EasyStudy plugins (`fastcompare`, `empty_template`, `utils`) run unchanged, and the platform half of this repository is a thin reshuffle of upstream EasyStudy with the same Flask blueprints and the same ORM models.
 
----
 
 ## 2. Introduction
 
@@ -46,7 +67,7 @@ The documentation covers:
 - The platform half (`server/platform/`): Flask app factory, admin UI, auth, participant flow, persistence, plugin registry.
 - The SAE Steering plugin (`server/plugins/steering/`): modalities, recommendation pipeline, audit service, analytics, templates, routes.
 - The audit pipeline: typed tables, envelope rows, single-writer service.
-- Outputs: FR-16 dashboard, FR-17 CSV export, per-participant journey timeline.
+- Outputs: dashboard, export pipeline, per-participant journey timeline.
 - Runtime and deployment: schema bootstrap, environment variables, Docker, production checklist.
 - Testing strategy: pytest layout and what each test guards.
 
@@ -82,24 +103,12 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 - `plugins/utils/interaction_logging.py` keeps `log_interaction`, `log_message`, `study_ended` as EasyStudy primitives. Only EasyStudy-native plugins call these.
 - `server/platform/web/` is the upstream `server/templates/` directory; do not rename it.
 
-**What we removed** (our additions that turned out to duplicate EasyStudy primitives):
-
-- `server/plugins/steering/service/events.py`
-- `server/platform/runtime/events.py`
-- `server/platform/runtime/interaction_logging.py`
-- `server/platform/runtime/interaction_routes.py`
-- `server/plugins/steering/results/journey_builder.py`
-
-The steering plugin now writes only to typed audit tables described in Section 5.
-
----
-
 ## 3. System Overview
 
 ### 3.1 What the framework does
 
 1. **Recruits participants** for recommendation-system user studies (Prolific-compatible).
-2. **Elicits initial preferences** via a movie picker (`/preference-elicitation`).
+2. **Elicits initial preferences** via a preference elicitation page (`/preference-elicitation`).
 3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
 4. **Cycles through approaches** if the study compares multiple steering configurations (sequential mode).
 5. **Collects questionnaires** between approaches and at the end.
@@ -140,7 +149,13 @@ The steering plugin now writes only to typed audit tables described in Section 5
 | Linter / formatter | ruff |
 | ML stack | PyTorch + custom SAE / ELSA, MovieLens-32M-Filtered |
 
-### 3.4 Schema management at a glance
+### 3.4 FR-03: Dataset selection and offline pipeline note
+
+FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
+
+There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by the research group. It is maintained in a private repository for data and submission reasons; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
+
+### 3.5 Schema management at a glance
 
 - The platform's `server/platform/persistence/base_models.py` and each plugin's `persistence/models.py` are the **only** source of truth for the schema.
 - `create_app()` calls `db.create_all()` on every boot — idempotent.
@@ -149,14 +164,11 @@ The steering plugin now writes only to typed audit tables described in Section 5
 
 There is no migration framework. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
 
----
-
 ## 4. Architecture
 
 ### 4.1 Module map
 
 ```
-
   server/
     platform/                  framework-owned code (one-to-one with upstream EasyStudy roles)
       app.py                   create_app() factory, DB/session/login init
@@ -180,7 +192,9 @@ There is no migration framework. See [`design-decisions.md` Section 3](design-de
         results/analytics.py   column-driven dashboard payload
         templates/             plugin Jinja templates
       fastcompare/             EasyStudy-native plugin (kept verbatim)
-      empty_template/          EasyStudy-native plugin (kept verbatim)
+      empty_template/          EasyStudy-native scaffold (hidden in admin; copy-paste starter for new plugins)
+      layoutshuffling/         EasyStudy-native plugin (kept; demonstrates an alternative study flow)
+      vae/                     EasyStudy-native algorithm wrapper (hidden in admin; consumed by `fastcompare`)
       utils/                   EasyStudy-native cross-plugin primitives
     static/                    shared static assets (datasets, questionnaires, bootstrap-vue, ...)
     scripts/                   init_db.py, reset_db.py
@@ -238,7 +252,7 @@ flowchart LR
 2. **Routes own `flask.session`.** Service modules accept identifiers as arguments; they do not read the session.
 3. **Reads never parse JSON.** Analytics joins typed tables. `SaeSteeringEvent.raw_payload` is provenance only.
 4. **Each plugin owns its tables.** The platform owns `User`, `UserStudy`, `Participation`, `Interaction`, `Message`.
-5. **Platform may not import from `server.plugins.*` at module top-level.** The platform reaches plugins only through the `StudyPluginContract` registry. Lazy imports are tolerated in route handlers that bridge EasyStudy-native primitives (one such case: `participant_flow/routes.py::movie_search`).
+5. **Platform may not import from `server.plugins.steering` at module top-level.** The platform reaches study plugins only through the `StudyPluginContract` registry. The one carve-out is `server.plugins.utils`, which the upstream EasyStudy treats as a cross-plugin primitives package: `server/platform/participant_flow/routes.py` top-level-imports `study_ended` and `register_interaction_routes` from `server.plugins.utils` (the EasyStudy logging API), and lazy-imports `search_for_movie` inside the `movie_search` handler.
 6. **Plugins may import from `server.platform.*` freely.** That is the dependency direction.
 
 ---
@@ -386,7 +400,7 @@ Every user action writes one typed row **and** one envelope row. The typed row c
 | `sae_reset_action` | `/reset` | `trigger`, `scope` (`all-features` / `single-feature:<id>`), `iteration` |
 | `sae_recommendation_set` (+ `_item`) | iteration controller, after refresh | parent: `approach_index`, `iteration`, `list_id`, `steering_mode`, `debug_payload`. Child: `movie_id`, `title`, `genres`, `rank`, `score`, `cf_score`, `genre_score`, `steering_score`, `raw_payload`. |
 | `sae_movie_feedback` | `/log-movie-feedback` | `movie_id`, `title`, `genres`, `action` (`like`/`dislike`/`neutral`), `event_id` (FK to `sae_steering_event`, NOT NULL, CASCADE), `recommendation_set_id` (NOT NULL, CASCADE), `rank`, `list_id`, `iteration` |
-| `sae_questionnaire_response` | `/finish-iteration-questionnaire`, `/finish-final-questionnaire` | `response_type` (`approach-questionnaire`/`final`), `questionnaire_file`, `answers` (JSON), `attention_check_passed` (Boolean, NULL when the questionnaire declares no spec — see Section 5.4 and [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) |
+| `sae_questionnaire_response` | `/_advance-phase` (per-approach questionnaire submit), `/_complete-study` (final questionnaire submit) | `response_type` (`approach` / `final` — the envelope `event_type` is `approach-questionnaire` / `final-questionnaire`), `questionnaire_file`, `answers` (JSON), `attention_check_passed` (Boolean, NULL when the questionnaire declares no spec — see Section 5.4 and [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) |
 | `sae_elicitation_pick` | `/preference-elicitation` | `movie_id`, `action` (`select`/`deselect`), `participation_id`, `user_study_id` |
 
 #### Cascades
@@ -435,7 +449,7 @@ A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a ne
     - `feature-conditioned`: additive blend with adaptive $\gamma$ and clamping.
     - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by $\alpha \cdot direction$, then rank with pure CF (no additive SAE term).
     - `constrained-subset`: hard-mask candidates whose SAE score is below $\tau \cdot max\text{-}positive\text{-}SAE$, then rank survivors by base CF + genre.
-6. **Refresh the candidate list.** Generates $4k$ candidates, blends `cf_score` with the SAE-derived $f_i$ using $\alpha = selection\_signal\_weight$, keeps the top $k$.
+6. **Refresh the candidate list.** Calls `recommender.get_recommendations(..., n_items=max(k \cdot 15, 300), ...)` so the recommender ranks a wide candidate pool, blends `cf_score` with the SAE-derived $f_i$ using an *adaptive* gain $\gamma$ and clamp $c$ (see [`equations.md` Section 10.1](equations.md#101-feature-conditioned-default--additive-blend) for the formulas), then trims to the top $k$ requested by the iteration controller. The `selection_signal_weight` config key is unrelated to this blending: it weights liked movies inside the ELSA seed update (see [`equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes)).
 7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster adjustment becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions Section 22.
 8. **Return** the new `recommendations`, `current_features`, `reranking_strategy` (so the UI can mirror it for debugging), and the iteration counter.
 
@@ -489,12 +503,12 @@ See [`equations.md` Section 1](equations.md#1-common-framework) for the scoring 
 
 ### 7.1 Why typed tables + a thin envelope
 
-The proposal mandates per-approach analytics (FR-16) and a CSV export per fact (FR-17). The original prototype stored everything in a single `events` table with a JSON `data` column, and every analytic query had to parse that blob. The refactor replaces this with:
+The proposal mandates per-approach analytics (FR-16) and a CSV export per fact (FR-17). Upstream EasyStudy logs participant actions through `Interaction(participation_id, interaction_type, data, time)` where `data` is a free-form JSON column — adequate for `fastcompare`'s click logging but expensive when every dashboard query has to parse JSON in Python and infer column shapes at read time. The steering plugin therefore writes to its own schema:
 
 - one **typed table per fact type** (e.g. `sae_feature_adjustment`),
 - one **envelope row** (`SaeSteeringEvent`) per user action for timeline ordering and provenance.
 
-Analytics joins the typed tables. The envelope's `raw_payload` is never read by analytics — only by the journey UI and manual debugging.
+Analytics joins the typed tables. The envelope's `raw_payload` is provenance only — never read by analytics, only by the journey view and manual debugging.
 
 ### 7.2 Single-writer service
 
@@ -512,7 +526,7 @@ Analytics joins the typed tables. The envelope's `raw_payload` is never read by 
 | `record_global_reset(...)` | One envelope + one `SaeResetAction`. |
 | `record_recommendation_set(...)` | One envelope + one `SaeRecommendationSet` + N `SaeRecommendationItem`. |
 | `record_movie_feedback(...)` | One envelope + one `SaeMovieFeedback`. |
-| `record_questionnaire(...)` | One envelope + one `SaeQuestionnaireResponse`. |
+| `record_questionnaire_response(...)` | One envelope + one `SaeQuestionnaireResponse` (including the `attention_check_passed` verdict, see [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)). |
 | `record_elicitation_pick(...)` | One envelope + one `SaeElicitationPick`. |
 | `record_autosave_snapshot(...)` | One envelope only (`autosave`, kept thin to avoid log spam). |
 
@@ -606,9 +620,9 @@ sae_questionnaire_response.csv
 sae_elicitation_pick.csv
 ```
 
-Column headers in each CSV match Section 5.2 exactly. Recommended pipeline for downstream stats tools:
+Column headers in each CSV are emitted directly from the typed ORM models (Section 5.2 is the canonical schema reference). Recommended pipeline for downstream stats tools:
 
-1. Load `sae_study_run.csv` and `sae_approach_run.csv` as the "demographics" of the run.
+1. Load `sae_study_run.csv` and `sae_approach_run.csv` as the per-participant and per-approach run anchors (stable ids + config snapshots).
 2. Join the per-action tables on `approach_run_id` for per-approach analytics.
 3. Use `sae_steering_event.csv` only when you need wall-clock ordering across action types.
 
@@ -731,8 +745,10 @@ and starts gunicorn.
   `*_GITHUB_REPO` and `*_RELEASE_TAG` values on first deploy. Both are no-ops
   on subsequent deploys if the files are already on the volume.
 - For >100 concurrent participants: swap Flask-Session to Redis-backed storage
-  (NFR-02). The app config in `server/platform/app.py` already reads
-  `SESSION_TYPE` and `SESSION_REDIS` env vars — only the ops wiring is missing.
+  (NFR-02). The current `create_app()` hardcodes `SESSION_TYPE = "sqlalchemy"`
+  in `server/platform/app.py`; redoing this as a Redis backend requires (a)
+  changing those two lines to read from env, (b) adding `Flask-Session[redis]`
+  to `pip_requirements.txt`, and (c) provisioning a Redis instance.
 - Configure HTTPS upstream. The Flask app does not terminate TLS (Railway
   provides it automatically; for other hosts use Caddy or nginx).
 - When a model changes in a way that requires reshaping existing tables, run
@@ -741,8 +757,7 @@ and starts gunicorn.
 
 ### 9.7 Backups
 
-`server/scripts/backup_db.py` writes a timestamped `.dump` file to `/data/backups/`.
-Run it as a cron service (Railway cron: `0 3 * * *`) pointing at the same volume.
+`server/scripts/backup_db.py` writes a timestamped backup into `BACKUP_DIR` (default `/app/backups`, override via env): `db_<UTC>.sql.gz` for Postgres (`pg_dump | gzip`) and `db_<UTC>.sqlite.gz` for SQLite (raw file copy through `gzip`). It keeps the most recent `KEEP_LAST` archives (default `14`). Run it as a cron service (Railway cron: `0 3 * * *`) pointing at the same volume as the database. Both `BACKUP_DIR` and `KEEP_LAST` are read from the environment.
 
 ### 9.8 Logs and observability
 
@@ -754,7 +769,7 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ## 10. Testing Strategy
 
-`tests/` lives at the repository root and is the canonical pytest root. The suite (74 tests) runs in about 17 seconds.
+`tests/` lives at the repository root and is the canonical pytest root. The suite currently has ~80 tests and runs in well under one minute on a laptop. Counts are reported by `pytest --collect-only`; don't rely on a fixed number in code reviews.
 
 ### 10.1 Platform tests (`tests/platform/`)
 
@@ -775,9 +790,14 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 | `test_attention_checks.py` | Evaluator semantics for `expected` / `expected_one_of` / `expected_range`, malformed JSON resilience, and the spec/answer contract of every bundled questionnaire (so editing one of those HTML files without re-running tests fails loudly). See design-decisions Section 18. |
 | `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the $[-0.95, +0.95]$ clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. (6) Text-steering scope guard: payload is stamped with `<guid>:<phase>` and ignored if scope mismatches (other study / other phase); composition uses the previous payload only when scope matches (design-decisions Section 21). (7) Side-by-side audit semantics: `get_audit_approach_indices` fans out to `[0, 1]` for side-by-side, otherwise `[current_phase]`; `record_movie_feedback` re-maps `list_id="recs-model-b"` to `approach_index=1` (Bug B1 regression, design-decisions Section 22). |
 
-### 10.3 EasyStudy plugin tests (`tests/plugins/fastcompare/`)
+### 10.3 EasyStudy plugin smoke tests
 
-`test_plugin.py` smokes the upstream EasyStudy comparison plugin to confirm the platform reshuffle did not break parity.
+| File | Coverage |
+| --- | --- |
+| `tests/plugins/fastcompare/test_plugin.py` | Plugin contract metadata, `/health` route, lifecycle (`/create` → `/initialize` → `/join`) reaches a renderable page without DB errors. |
+| `tests/plugins/layoutshuffling/test_plugin.py` | Plugin contract metadata, synchronous `/initialize` activates the `UserStudy` row, `/join` renders the demo template. |
+
+These smoke tests guard the upstream parity: both plugins are part of `CANONICAL_PLUGIN_MODULES`, so a future plugin-registry refactor cannot silently drop them.
 
 ---
 
@@ -785,20 +805,17 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ### 11.1 Limitations
 
-1. **Lexical text steering.** The text resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). Full sentence-transformer text steering is research-track future work; the proposal's FR-09 reference to `sentence-transformers` is therefore documented but not exercised in this build.
-2. **Single dataset.** MovieLens-32M-Filtered (8328 movies) is the only supported dataset. Adding a dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
-3. **No real-time presence.** The framework does not show which other participants are currently in the study. Out of scope for the thesis.
-4. **No Alembic migration baseline.** This is a deliberate trade-off: the cost of one Alembic noise step at every dev iteration outweighed the rare schema-evolution cost during the thesis. Production schema changes happen out of band. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
-5. **FR-16 sub-items not surfaced as standalone dashboard widgets.** The proposal's FR-16 list mentions "steering direction ratios (boost / suppress / neutral)" and "participant demographics breakdown" as separate cards. In this build the data is recorded (sign of `SaeFeatureAdjustment.delta` for direction, `Participation.age_group` / `gender` / `education` for demographics) and exposed verbatim in the CSV export (Section 8.4), but no dedicated dashboard card aggregates them — researchers can compute these in R / pandas from the CSV bundle. The Overview + Modalities cards focus on the behavioural signal that requires per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings), which is where the thesis contribution adds value over a generic study dashboard.
-6. **FR-13 iteration history is client-side and unbounded.** The proposal mentions a "last 10 iterations" cap. The actual UI panel (`renderActivityHistory` in `steering_interface.html`) renders one collapsible section per iteration the participant has lived through in the current session. The practical cap is `num_iterations` per approach (researcher-configured, typically 3); there is no hard "last-10" eviction because no piloted configuration approaches that bound. The audit tables retain the full history regardless.
+1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. The research group is actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol.
+2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
+3. **FR-16 dashboard focuses on per-approach behavioural signal; remaining aggregates are computed from exports.** The dashboard is intentionally scoped to metrics that require per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings). Other aggregates (e.g. a sign histogram over `SaeFeatureAdjustment.delta`) are straightforward to compute from the FR-17 CSV bundle and are typically handled in the paper / analysis notebook rather than in the deployment UI. Participant demographics are treated as optional: in Prolific-based runs, demographics are typically available from Prolific and do not need to be re-collected in the app.
+4. **FR-13 iteration history is bounded by study configuration.** The history panel is client-side and shows one section per iteration the participant went through in the current session. In practice the bound is the configured `num_iterations` per approach (typically 3); there is no additional hard “last 10” eviction because the study config already constrains the count and the audit tables keep the full record regardless.
 
 ### 11.2 Future work
 
 1. **Sentence-transformer text steering.** Replace the lexical resolver with a semantic-similarity scorer; keep the segmentation + intensity logic.
 2. **Multi-dataset support.** Generalize `data_loading` to dispatch on `ml_variant` so multiple datasets can co-exist in one deployment.
-3. **Redis-backed sessions for >100 concurrent participants.** The wiring is already swappable; only the operations setup is missing (NFR-02).
-4. **Demographics + direction-ratio dashboard cards.** Wire the existing `Participation` demographic fields and the `SaeFeatureAdjustment.delta` sign histogram into dedicated Overview cards so the dashboard fully matches FR-16 sub-items (1.5).
-5. **Per-iteration strategy switch and per-approach strategy override in the admin UI.** The recommender already accepts a per-call `reranking_strategy`; exposing it per approach would enable within-study A/B/C comparisons of the three strategies (design-decisions Section 23).
+3. **Redis-backed sessions for >100 concurrent participants.** The wiring is already swappable; only the operations setup is missing (NFR-02) and this is not a problem for our use case.
+4. **Per-iteration strategy switch and per-approach strategy override in the admin UI.** The recommender already accepts a per-call `reranking_strategy`; exposing it per approach would enable within-study A/B/C comparisons of the three strategies (design-decisions Section 23).
 
 ---
 
