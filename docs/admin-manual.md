@@ -45,7 +45,7 @@ A study can define one or more approach blocks. Each block describes one recomme
 | Field | Meaning |
 | --- | --- |
 | Base model | Default `elsa`. |
-| SAE model | Default `topk_sae`. |
+| SAE model | Default checkpoint id `TopKSAE-1024` (UI label may show the human-readable name). |
 | Feature controls | `Sliders` (continuous), `Toggles` (boost / suppress), or `None`. |
 | Selection strength | How strongly liked movies bias the recommender. See [`equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes). |
 | Feature-selection algorithm | Personalized grouped `top-K` or global label-diverse `top-K`. |
@@ -59,8 +59,8 @@ A study can define one or more approach blocks. Each block describes one recomme
 | Strategy | Behaviour |
 | --- | --- |
 | `feature-conditioned` (default) | Additive blend of $CF + genre + \gamma \cdot SAE\ score$, with per-iteration clamping. This is the strategy every existing pilot used. |
-| `latent-perturbation` | Decodes the SAE adjustment vector back to ELSA embedding space and rotates the user seed by $\alpha \cdot direction$; ranks with pure CF on the rotated seed (no additive SAE term). Defensible "steering = user-profile shift" alternative; default $\alpha = 0.30$. |
-| `constrained-subset` | Keeps only candidates whose SAE score is at least $\tau \times max\text{-}positive\text{-}SAE$, then ranks survivors by base CF + genre; falls back to base ranking if no item satisfies the constraint. Defensible "guaranteed on-target" alternative; default $\tau = 0.25$. |
+| `latent-perturbation` | Decodes the SAE adjustment vector back to ELSA embedding space and rotates the user seed by $\alpha \cdot direction$; ranks with pure CF on the rotated seed (no additive SAE term); Default $\alpha = 0.30$. |
+| `constrained-subset` | Keeps only candidates whose SAE score is at least $\tau \times max\text{-}positive\text{-}SAE$, then ranks survivors by base CF + genre; falls back to base ranking if no item satisfies the constraint; default $\tau = 0.25$. |
 
 The choice is captured on every `SaeApproachRun` row (`reranking_strategy` column) so retrospective analyses can correctly attribute outcomes to the active strategy. See [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math and [`design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-rerankingstrategy-config-key) for the rationale.
 
@@ -82,11 +82,13 @@ Typical values are `10` recommendations across `3` iterations.
 | `sequential` | Each participant sees approaches one at a time, in their assigned (possibly randomised) order. There is exactly one recommendation column on screen; the `list_id` is always `recs-single`. Use this for any study with 1, 3, or more approaches. |
 | `side_by_side` | Two recommendation columns rendered next to each other for the same participant in the same iteration; one shared slider grid, one shared text input, one set of buttons. **Use only with exactly two approaches.** Studies with 3+ approaches that select `side_by_side` are silently downgraded to `sequential` (the UI has no third column). |
 
-Side-by-side records likes per column (`list_id="recs-model-a"` maps to approach `0`; `list_id="recs-model-b"` maps to approach `1`) and fans every shared steering action (slider move, text prompt, example pick, reset) out to both approach runs so the per-approach Modalities dashboard charts are symmetric. Phase-questionnaire wiring uses approach `0`'s `phase_questionnaire_file` only; for a between-approach comparison questionnaire, use the study-level `questionnaire_file` (final questionnaire). See [`design-decisions.md` Section 22](design-decisions.md#22-side-by-side-comparison-invariants-audit-fan-out-listid-routing) for the full invariants and audit semantics.
+Side-by-side records likes per column (`list_id="recs-model-a"` maps to approach `0`; `list_id="recs-model-b"` maps to approach `1`) and fans every shared steering action (slider move, text prompt, example pick, reset) out to both approach runs so the per-approach Modalities dashboard charts are symmetric. **Sequential** studies: after each approach, the participant gets that approach model’s `phase_questionnaire_file` (or the study-level `phase_questionnaire_file` fallback when the model omits it). **Side-by-side** studies: there is no per-approach phase questionnaire between the two columns mid-task — put between-system comparison items on the study-level **Final questionnaire** (`questionnaire_file`). See [`design-decisions.md` Section 22](design-decisions.md#22-side-by-side-comparison-invariants-audit-fan-out-listid-routing).
 
 ### Questionnaires and completion
 
-Use the **Final questionnaire** field to upload a questionnaire file or select the bundled default. Use the optional **Prolific completion code** field if you recruit participants through Prolific.
+For each approach, the **Approach Questionnaires** stack lets you pick the bundled **implicit** or **explicit** feedback HTML template, or upload a custom `.html` file. That choice is stored in config as `phase_questionnaire_file` and is **not** overwritten when you later change feature controls or steering mode in the form — switch the radio explicitly if you want a different template.
+
+Use the **Final questionnaire** field to upload an end-of-study file or keep the bundled default. Use the optional **Prolific completion code** field if you recruit participants through Prolific.
 
 After configuring the form, click **Create study**. The server runs initialization (loads dataset caches, prepares SAE clusters). Once `initialized = true` in `/user-studies`, set the study to **active** to start accepting participants.
 
@@ -159,7 +161,7 @@ Both endpoints require login. The CSV ZIP contains 16 files; a recommended downs
 ## 8. Operational checks
 
 - The healthz endpoint is `/healthz`.
-- The DB backup endpoint is `/administration/db-backup` (admin only). It returns the most recent `db_*.gz` snapshot from `BACKUP_DIR` (default `/app/backups`).
-- The session backend is SQLAlchemy-backed Flask-Session. To swap to Redis for >100 concurrent users (NFR-02), edit `server/platform/app.py::create_app`, set `app.config["SESSION_TYPE"] = "redis"`, and provide `SESSION_REDIS`. The architecture keeps the backend swappable. (*Note that we use in recent paper participants in batches up to 50 and it was not a problem without redis, so we do not delve deeper into this topic.*)
+- The DB backup endpoint is `/administration/db-backup` (admin only). Each click creates a fresh snapshot on the server and streams it back as `db_<UTC>.{sql,sqlite}.gz`. Files are kept under the directory resolved by `server.platform.shared.common.resolve_backup_dir()`: `BACKUP_DIR` if set, otherwise `<repo_root>/backups` (which is `/app/backups` inside the Docker image; on Railway the entrypoint symlinks that to `${DATA_ROOT}/backups` so backups survive redeploys). Rolling retention keeps the most recent `KEEP_LAST` (default `14`) archives. The same `server/scripts/backup_db.py` can be run as a CLI for unattended snapshots.
+- The session backend is SQLAlchemy-backed Flask-Session. To swap to Redis for >100 concurrent users (NFR-02), edit `server/platform/app.py::create_app`, set `app.config["SESSION_TYPE"] = "redis"`, and provide `SESSION_REDIS`. The architecture keeps the backend swappable. Deployments in this project have run with tens of concurrent participants on SQLAlchemy sessions without issues; Redis is documented as the scale-out path if you need it.
 - To reshape the schema (after editing a model), run `./scripts/reset-db.sh`. To bootstrap a fresh deployment, run `./scripts/init-db.sh`. There is no migration framework; see [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
 

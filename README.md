@@ -25,8 +25,8 @@ A full specification rationale and requirements list (FR / NFR ids referenced th
 
 | Link                                                                  | Role          | Description                                            |
 | --------------------------------------------------------------------- | ------------- | ------------------------------------------------------ |
-| [Administration](https://sae4easystudy.up.railway.app/) | Administrator | Administrator panel for creating and managing studies *(use login: `admin@admin.cz`, password: `Admin1!`)*. |
-| [Study](https://...)                                    | Participant   | Concrete study join link as a participant.                      |
+| [Administration](https://sae4easystudy.up.railway.app/) | Administrator | Administrator panel for creating and managing studies (sign in with the credentials configured on that deployment). |
+| [Study](https://TODO)                                    | Participant   | Replace with a concrete join link once a study is created and activated. |
 
 
 ## Repositories
@@ -70,7 +70,6 @@ server/
 - [Admin Manual](docs/admin-manual.md) — researcher workflow and operations guide.
 - [User Manual](docs/user-manual.md) — participant-facing walkthrough.
 - [Contribution Summary](docs/contribution-summary.md) — how the project's research contribution aligns with the proposal's requirements, evaluation, and risks.
-- [Evaluation](evaluation/README.md) — primary paper-based evaluation (n = 200, private bundle) and supplementary in-house sanity check (5 colleagues × 3 modalities).
 
 
 ## Evaluation
@@ -78,7 +77,7 @@ server/
 The repository's evaluation evidence is described in [`evaluation/README.md`](evaluation/README.md). In short:
 
 - A **200-participant Prolific study** (no-steering vs slider-steering) was conducted for a paper currently in review. The raw data, analysis, and manuscript live in the private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository; access can be requested.
-- A **supplementary in-house sanity check** with five colleagues across the three steering modalities (toggle, slider, text) on default settings is committed under [`evaluation/data/`](evaluation/data/) as a filled-in Likert questionnaire with an anonymisation map.
+- A **supplementary in-house evaluation** with few anonymized participants across the three steering modalities (toggle, slider, text) on default settings is committed under [`evaluation/data/`](evaluation/data/) as a filled-in Likert questionnaire. 
 
 ## Development
 

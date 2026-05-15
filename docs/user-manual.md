@@ -12,11 +12,15 @@ This is the participant experience for an SAE Steering study. It is the user-fac
    Minimum screen-size check (if configured).
 4. [Steering iterations](#4-steering-iterations--10-minutes)  
    Review → (optional) steer → approve → refresh.
-5. [Per-approach questionnaire](#5-per-approach-questionnaire--1-minute-optional)  
-   Optional questionnaire between approaches.
-6. [Final questionnaire](#7-final-questionnaire--2-minutes)  
-   End-of-study questionnaire and finish.
-7. [Edge cases](#edge-cases-the-ui-handles)  
+5. [Per-approach questionnaire](#5-per-approach-questionnaire--2-minutes)  
+   Optional questionnaire between approaches (when the researcher configured one).
+6. [Approach switch](#6-approach-switch-sequential-studies-only)  
+   Transition between approaches (sequential studies only).
+7. [Final questionnaire](#7-final-questionnaire--1-minute)  
+   End-of-study questionnaire.
+8. [Finish](#8-finish)  
+   Completion and Prolific code (if any).
+9. [Edge cases](#edge-cases-the-ui-handles)  
    No-match, refresh, resume behaviour.
 
 ## 1. Join the study — ~1 minute
@@ -64,17 +68,17 @@ Fetches a new set of recommendations using the cumulative adjustments.
 
 When the configured number of iterations is reached, the iteration controls lock and the participant moves on.
 
-## 5. Per-approach questionnaire — ~1 minute (optional)
+## 5. Per-approach questionnaire — ~2 minutes
 
-If the study is configured with a phase questionnaire, it is shown between approaches.
+If the study is configured with a phase questionnaire for the current segment, it is shown before switching to the next part of the flow.
 
 ## 6. Approach switch (sequential studies only)
 
-If the study has multiple approaches, the participant sees a short transition page and the next approach starts.
+If the study has multiple approaches and uses sequential comparison, the participant sees a short transition page and the next approach starts.
 
-## 7. Final questionnaire — ~2 minutes
+## 7. Final questionnaire — ~1 minute
 
-A single final questionnaire is shown at the end. Typical content: comparative preference, SUS-like usability questions, free-text feedback.
+A single final questionnaire is shown at the end (and may also carry comparison questions when the study used side-by-side mode). Typical content: comparative preference, SUS-like usability questions, free-text feedback.
 
 ## 8. Finish
 
@@ -85,5 +89,3 @@ A single final questionnaire is shown at the end. Typical content: comparative p
 ## Edge cases the UI handles
 
 - **Ambiguous text prompt** (NFR-12). When the parser cannot match any cluster, the UI shows "We could not match your text to any feature, try different wording" and the participant's existing adjustments are preserved. The query is still recorded for offline analysis. See [`design-decisions.md` Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully).
-- **Browser refresh mid-iteration.** Iteration state is autosaved on every meaningful interaction. A refresh resumes where the participant left off.
-- **Tab close mid-study.** The participation row stays open. The participant can resume from the join link as long as the study is still active.

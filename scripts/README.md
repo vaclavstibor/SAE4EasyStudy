@@ -8,5 +8,6 @@ repository root instead of from inside `server/`.
 - `init-db.sh` runs the idempotent database bootstrap.
 - `test.sh` runs the canonical repository test suite.
 - `lint.sh` runs Ruff on the maintained source and test trees.
+- `reconstruct_journey.py` reconstructs a journey from the audit tables.
 
 All runtime-facing scripts use the project-local `server/.venv39` interpreter.

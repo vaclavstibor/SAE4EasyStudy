@@ -3,12 +3,12 @@
 Evidence supporting the SAE Steering project lives here. The directory has two sources of evaluation data:
 
 1. a **primary 200-participant user study** reported in a paper currently under review (raw data in a private repository), and
-2. a **supplementary in-house sanity check** with five colleagues that exercises each steering modality on default settings.
+2. a **supplementary in-house sanity check** with five participants that exercises each steering modality on default settings.
 
 ## Contents
 
 1. [Primary evaluation — submitted paper (n = 200)](#1-primary-evaluation--submitted-paper-n--200)
-2. [Supplementary in-house evaluation — 5 colleagues × 3 modalities](#2-supplementary-in-house-evaluation--5-colleagues--3-modalities)
+2. [Supplementary in-house evaluation — 5 participants × 3 modalities](#2-supplementary-in-house-evaluation--5-participants--3-modalities)
 3. [Files](#files)
 4. [How to read `responses.csv`](#how-to-read-responsescsv)
 5. [Headline observations from the 15 supplementary responses](#headline-observations-from-the-15-supplementary-responses)
@@ -19,9 +19,9 @@ The primary evaluation is a **200-participant user study** conducted on Prolific
 
 When the paper clears review, the anonymised analysis bundle (CSVs, notebooks, headline plots) will be linked from this README.
 
-## 2. Supplementary in-house evaluation — 5 colleagues × 3 modalities
+## 2. Supplementary in-house evaluation — 5 participants × 3 modalities
 
-In addition to the formal study, the steering UI was sanity-checked with five colleagues from the research group. Each person ran the steering loop on the bundled `ml-32m-filtered` dataset with the three steering modalities — **toggle**, **slider**, and **text (only)** — kept at the default study configuration:
+In addition to the formal study, five participants ran the steering loop on the bundled `ml-32m-filtered` dataset with the three steering modalities — **toggle**, **slider**, and **text (only)** — kept at the default study configuration:
 
 - the default ELSA + Top‑K SAE checkpoint shipped via the GitHub Releases bootstrap (`TopKSAE-1024`),
 - `num_iterations = 3`, `n_items_to_show = 12` per iteration,

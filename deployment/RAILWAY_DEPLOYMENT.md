@@ -64,15 +64,21 @@ and start in under a minute.
 5. Runs `init_db.py` to create/update the SQLite schema.
 6. Starts gunicorn.
 
-## 6. Database backup (optional cron service)
+## 6. Database backups
 
-Add a second Railway service in the same project:
+Backups are produced on demand by `/administration/db-backup` (admin
+only). Each click runs `server/scripts/backup_db.py::create_backup_now()`
+in-process, writes `db_<UTC>.{sql,sqlite}.gz`, and streams the new file
+back to the browser.
 
-| Setting | Value |
-|---------|-------|
-| Builder | Dockerfile (same repo) |
-| Schedule | `0 3 * * *` |
-| Start command | `python /app/server/scripts/backup_db.py` |
-| Volume | mount the same `/data` volume |
+Files land at `/data/backups/` on the persistent volume — the entrypoint
+symlinks `/app/backups` → `${DATA_ROOT}/backups`, so the script's
+default (`<repo_root>/backups` → `/app/backups`) resolves onto the
+volume. Set `BACKUP_DIR=/some/other/path` to override; set `KEEP_LAST`
+(default `14`) to change the rolling retention count.
 
-Backup files land at `/data/backups/`.
+If you also want unattended snapshots, schedule the same CLI externally:
+
+```bash
+python /app/server/scripts/backup_db.py
+```

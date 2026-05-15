@@ -589,7 +589,7 @@ The mirror is therefore a visual sync, not an audit duplicate.
 **Consequences.**
 
 - The audit log size for side-by-side studies is roughly $2\times$ compared to a same-iteration sequential study with one approach. Researchers should size storage accordingly. Side-by-side studies are also capped at two approaches, so $2\times$ is the worst case.
-- Phase-questionnaire wiring uses `current_phase=0`, so only approach A's phase questionnaire would be shown if both approaches were configured with `phase_questionnaire_file`. Side-by-side studies should therefore put their comparison questionnaire on the study-level `questionnaire_file` (final questionnaire). Per-approach phase questionnaires for side-by-side are not supported.
+- Phase-questionnaire prompts between approaches are wired only in **sequential** comparison mode (the steering view sets `has_phase_questionnaire_for_current_phase` when `comparison_mode=sequential`). In **side-by-side** mode both approaches share one steering shell, so per-approach phase questionnaires between columns are not supported — put comparison wording on the study-level `questionnaire_file` (final questionnaire).
 - Regression tests:
   - `test_get_audit_approach_indices_fans_out_side_by_side` — helper contract.
   - `test_record_movie_feedback_routes_column_b_to_approach_1` — Bug B1 regression.

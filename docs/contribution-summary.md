@@ -20,7 +20,7 @@ This repository is the deliverable described in [`specification.pdf`](../proposa
 - **Researcher dashboard + exports (FR-16/FR-17)**: a per-approach results dashboard plus a ZIP CSV export (one file per typed table) designed for downstream analysis.
 - **Operational features beyond the proposal**: per-participant journey view, attention-check evaluation declared in questionnaire HTML and persisted at submit time, and robust deployment bootstrapping of runtime assets from GitHub Releases.
 - **Upstream parity preserved**: upstream EasyStudy plugins (`fastcompare`, `layoutshuffling`, `vae`, `empty_template`) remain loadable via the canonical contract so researchers see the same plugin matrix as upstream plus the steering plugin.
-- **Refactored architecture**: the project's research contribution is refactored to be more modular, robust, better documented, more testable, more deployable, more data driven, and safer to extend.
+- **Modular layout**: platform and steering plugin are split for easier testing, deployment, and extension while keeping EasyStudy's plugin contract.
 - **Evaluation artefacts**: a five-question Likert instrument and a filled-in supplementary in-house run with five colleagues across all three steering modalities (toggle, slider, text) on default settings are committed in [`evaluation/`](../evaluation/README.md). The primary 200-participant Prolific study (paper in review) is hosted in the private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository and shared on request.
 
 ## Evaluation alignment with `specification.pdf` (Section “Evaluation”)
@@ -35,7 +35,7 @@ The proposal emphasises case-based validation and limited usability validation (
 ## Risks from `specification.pdf` (Section “Risks”) 
 
 - **SAE interpretability**: the submitted paper’s results indicate the interpretability problem is manageable in practice for the slider-steering setup (participants reported mostly positive experience). The system also supports fallback interaction patterns (example-based steering, feature search).
-- **Natural-language mapping**: treated as an active research question; we actively investigate the right semantics for text steering and study composition for another paper submitting.
+- **Natural-language mapping**: treated as an active research question; we continue to refine semantics and composition modes for text steering in follow-on work.
 - **Steering coherence**: conflicts were not observed as a practical issue in the submitted paper; the UI and audit pipeline make it possible to detect and analyse incoherent patterns post-hoc if they occur.
 - **Performance**: the system is operated in controlled participant batches (≈5–50) to manage budget and data quality; this load does not require Redis-backed sessions. The architecture remains swappable if future deployments need it.
 - **Integration complexity**: keeping upstream EasyStudy parity (canonical plugin registry + smoke tests for upstream plugins) reduces integration risk; merging with original EasyStudy is being discussed with the author.

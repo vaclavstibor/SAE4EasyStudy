@@ -210,7 +210,7 @@ flowchart TB
         db[("Database<br/>PostgreSQL (prod) /<br/>SQLite (dev)<br/>Sae* tables + sessions")]
         volume[("Persistent volume /data<br/>SAE ckpt, dataset CSVs,<br/>semantic clusters, LLM labels,<br/>cache/, instance/")]
         entry["Entrypoint<br/>docker-entrypoint.sh<br/>schema init + asset bootstrap"]
-        cron["Backup cron<br/>backup_db.py<br/>pg_dump / sqlite copy → .gz"]
+        backup["Backup helper<br/>backup_db.py<br/>pg_dump / sqlite copy → .gz<br/>(admin endpoint or CLI)"]
     end
 
     actor -->|HTTPS| browser
@@ -220,15 +220,16 @@ flowchart TB
     entry --> db
     entry --> volume
     entry -. first boot only .-> gh
-    cron --> db
-    cron --> volume
+    backup --> db
+    backup --> volume
+    flask -. invokes on /administration/db-backup .-> backup
     flask -. completion redirect .-> prolific
 
     classDef container fill:#438dd5,stroke:#2e6da4,color:#fff
     classDef storage fill:#62a0d3,stroke:#2e6da4,color:#fff
     classDef external fill:#999999,stroke:#777777,color:#fff
     classDef person fill:#08427b,stroke:#073b6f,color:#fff
-    class browser,flask,entry,cron container
+    class browser,flask,entry,backup container
     class db,volume storage
     class gh,prolific external
     class actor person
@@ -236,11 +237,11 @@ flowchart TB
 
 **Notes on the runtime topology** (cross-references in [Section 9 — Runtime and Deployment](#9-runtime-and-deployment)):
 
-- The **entrypoint** (`server/docker-entrypoint.sh`) is a one-shot boot step. It symlinks the volume's `instance/`, `cache/`, `plugins/steering/models/`, `plugins/steering/data/`, and `datasets/` subdirectories into the app tree, runs `server/scripts/init_db.py` (`db.create_all()`, idempotent), optionally fetches the dataset and SAE assets from GitHub Releases (`DATASET_BOOTSTRAP=1` / `SAE_BOOTSTRAP_MODEL=1`), and finally `exec`s gunicorn. Subsequent boots skip the downloads if the files are already on the volume.
+- The **entrypoint** (`server/docker-entrypoint.sh`) is a one-shot boot step. It symlinks the volume's `instance/`, `cache/`, `plugins/steering/models/`, `plugins/steering/data/`, `datasets/`, and `backups/` subdirectories into the app tree, runs `server/scripts/init_db.py` (`db.create_all()`, idempotent), optionally fetches the dataset and SAE assets from GitHub Releases (`DATASET_BOOTSTRAP=1` / `SAE_BOOTSTRAP_MODEL=1`), and finally `exec`s gunicorn. Subsequent boots skip the downloads if the files are already on the volume.
 - The **Flask app** runs as a single gunicorn process (default `GUNICORN_WORKERS=1`) with `--preload`. It loads the platform blueprints (`admin`, `auth`, `participant_flow`) and every plugin registered through `load_canonical_plugin_contracts`. The SAE Steering plugin owns its own blueprint, persistence models, modalities, analytics, and templates inside `server/plugins/steering/`.
 - The **database** holds the platform tables (`User`, `UserStudy`, `Participation`, `Interaction`, `Message`), the plugin's typed audit tables (`Sae*`), and the Flask-Session `sessions` table. Postgres is recommended for production; SQLite is the local default.
 - The **persistent volume** (`/data`) survives container restarts and Railway redeploys. SAE model weights, dataset CSVs, semantic clusters and LLM labels, the SQLite instance DB (when used), and per-process cache pickles all live there. The entrypoint links those locations into the in-image paths so the running app reads `/app/server/cache`, `/app/server/instance`, etc.
-- The **backup cron** is a separate scheduled job (Railway cron `0 3 * * *`). It shares the volume and writes timestamped dumps to `/app/backups/db_<UTC>.{sql,sqlite}.gz`, keeping the most recent `KEEP_LAST` (default 14) archives.
+- The **backup helper** (`server/scripts/backup_db.py`) is invoked on demand. Admins trigger it via the `/administration/db-backup` endpoint (the route reuses `create_backup_now()` and streams the freshly-created file back), and operators can also run it manually as a CLI (`python server/scripts/backup_db.py`). It writes timestamped dumps to `/app/backups/db_<UTC>.{sql,sqlite}.gz` (the entrypoint symlinks `/app/backups` → `${DATA_ROOT}/backups`, so on Railway the files land at `/data/backups/` on the persistent volume), keeping the most recent `KEEP_LAST` (default 14) archives.
 - The **OfflineEasyStudy** repository is **not part of the runtime**. It is the private offline pipeline (dataset preprocessing, SAE training, LLM labeling, post-hoc analytics) that produces the artefacts uploaded to GitHub Releases as published releases. The runtime sees only those published artefacts.
 
 ## 4. Architecture
@@ -836,7 +837,13 @@ and starts gunicorn.
 
 ### 9.7 Backups
 
-`server/scripts/backup_db.py` writes a timestamped backup into `BACKUP_DIR` (default `/app/backups`, override via env): `db_<UTC>.sql.gz` for Postgres (`pg_dump | gzip`) and `db_<UTC>.sqlite.gz` for SQLite (raw file copy through `gzip`). It keeps the most recent `KEEP_LAST` archives (default `14`). Run it as a cron service (Railway cron: `0 3 * * *`) pointing at the same volume as the database. Both `BACKUP_DIR` and `KEEP_LAST` are read from the environment.
+Backups are produced on demand by a single helper, `server/scripts/backup_db.py`. The admin endpoint `/administration/db-backup` invokes its `create_backup_now()` function in-process (so clicking the button always produces and streams back a fresh snapshot), and the same script also runs as a CLI for ad-hoc or externally-scheduled use:
+
+```bash
+python server/scripts/backup_db.py
+```
+
+Files land in the directory returned by `server.platform.shared.common.resolve_backup_dir()`: `BACKUP_DIR` if set, otherwise `<repo_root>/backups` (which is `/app/backups` inside the Docker image; on Railway the entrypoint symlinks that to `${DATA_ROOT}/backups`, so files land at `/data/backups/` on the persistent volume). The helper writes `db_<UTC>.sql.gz` for Postgres (`pg_dump | gzip`) and `db_<UTC>.sqlite.gz` for SQLite (raw file copy through `gzip`), and prunes everything outside the most recent `KEEP_LAST` archives (default `14`). No separate scheduled job is required — schedule the CLI externally only if you want unattended snapshots in addition to the admin-triggered ones.
 
 ### 9.8 Logs and observability
 
