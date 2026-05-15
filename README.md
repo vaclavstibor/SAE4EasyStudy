@@ -53,7 +53,7 @@ tests/                  # canonical test suite (platform + plugins)
 server/
   platform/             # framework kernel (Flask app, persistence, participant flow, runtime, admin)
   plugins/
-    steering/           # SAE Steering plugin — thesis contribution (modalities, audit, dashboard, export)
+    steering/           # SAE Steering plugin — research contribution (modalities, audit, dashboard, export)
     fastcompare/        # upstream EasyStudy plugin — kept as a runnable plugin-contract reference
     layoutshuffling/    # upstream EasyStudy plugin — kept with a minimal demo flow
     empty_template/     # minimal plugin skeleton (developer scaffold, hidden from admin)
@@ -69,6 +69,7 @@ server/
 - [Equations](docs/equations.md) — mathematical descriptions of the steering and additional modalities.
 - [Admin Manual](docs/admin-manual.md) — researcher workflow and operations guide.
 - [User Manual](docs/user-manual.md) — participant-facing walkthrough.
+- [Contribution Summary](docs/contribution-summary.md) — how the project's research contribution aligns with the proposal's requirements, evaluation, and risks.
 
 
 ## Development
