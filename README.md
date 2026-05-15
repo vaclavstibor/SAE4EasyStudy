@@ -26,16 +26,16 @@ A full specification rationale and requirements list (FR / NFR ids referenced th
 | Link                                                                  | Role          | Description                                            |
 | --------------------------------------------------------------------- | ------------- | ------------------------------------------------------ |
 | [Administration](https://sae4easystudy.up.railway.app/) | Administrator | Administrator panel for creating and managing studies (sign in with the credentials configured on that deployment). |
-| [Study](https://TODO)                                    | Participant   | Replace with a concrete join link once a study is created and activated. |
+| [Study](http://sae4easystudy.up.railway.app/sae_steering/join?guid=KEQ-usXvd56_YvuAG8HbRR03Q8xApwbS)                                    | Participant   | Slider and non steering study join link. |
 
 
 ## Repositories
 
-| Repo | Role | Description |
-| --- | --- | --- |
-| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** *(this)* | Online study runtime | EasyStudy-based Flask platform, the SAE Steering plugin, researcher dashboard, exports, and deployment scripts. |
-| **[OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy)** *(private)* | Offline pipeline | Dataset preprocessing, ELSA + Top‑K SAE training, LLM-based neuron labeling, post-hoc study-results analysis, and reproducibility notes. Kept private because it contains raw participant data. (*Do not hesitate to ask for access if you are interested in the details*) |
-| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework | Original user-study framework for recommender systems that this project extends through the plugin contract. |
+| Repo | Description |
+| --- | --- |
+| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** *(this)* | EasyStudy-based Flask platform, the SAE Steering plugin, researcher dashboard, exports, and deployment scripts. |
+| **[OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy)** *(private)* | Dataset preprocessing, ELSA + Top‑K SAE training, LLM-based neuron labeling, post-hoc study-results analysis, and reproducibility notes. Kept private because it contains raw participant data. (*Do not hesitate to ask for access if you are interested in the details*) |
+| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Original user-study framework for recommender systems that this project extends through the plugin contract. |
 
 
 ## Project Structure
