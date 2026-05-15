@@ -7,9 +7,19 @@
 
 ## About
 
-Neural recommender systems achieve strong predictive accuracy, but their internal reasoning stays opaque and users have little control over *how* recommendations are produced. This project introduces a **steerable recommender** that uses **Sparse Autoencoder (SAE)** features as user-facing controls, letting participants directly adjust interpretable concepts instead of treating the model as a black box.
+Modern neural recommender systems achieve strong predictive accuracy, but the concepts they rely on internally are hidden from the user. Ratings, likes and skips influence the model only indirectly — there is no direct way for a participant to inspect those concepts, let alone adjust them.
 
-The repository delivers a study-ready implementation of this idea: an EasyStudy-based platform, the SAE Steering plugin with multiple steering modalities (sliders, toggles, text, examples), a typed audit pipeline, a researcher dashboard, and CSV export. It supports controlled user studies on a MovieLens-derived catalog comparing baseline recommendations against steered variants.
+This project makes those concepts explicit. It pairs an ELSA recommender with a **Sparse Autoencoder (SAE)** that decomposes the model's internal representations into sparse, human-interpretable concepts — for a movie domain, features such as *"1980s sci-fi"*, *"strong female leads"*, or *"slow-paced cinematography"*. Those features are surfaced in the participant UI as first-class controls (sliders, toggles, free-text prompts, and example-based steering), so users can directly nudge the model's reasoning instead of treating it as a black box. The result is a transparent **Steering Loop**: see recommendations → adjust interpretable concepts → see the effect → iterate.
+
+The repository delivers a study-ready realization of the idea on top of [EasyStudy](https://github.com/pdokoupil/EasyStudy):
+
+- the **SAE Steering plugin** with sliders, toggles, text, and example-based modalities;
+- a **researcher dashboard** with per-approach analytics, per-participant journeys, and attention-check tracking, exports, and additional metrics;
+- end-to-end **deployment recipes** (local, Docker, Railway) with first-boot asset bootstrap from GitHub Releases.
+
+Controlled user studies are currently running on a MovieLens-derived catalog, comparing baseline recommendations against steered variants under several configurations. 
+
+A short specification rationale and full requirements list (FR / NFR ids referenced throughout the docs) live in [`proposal.tex`](proposal.tex).
 
 ## Demo
 
@@ -24,19 +34,10 @@ The repository delivers a study-ready implementation of this idea: an EasyStudy-
 
 | Repo | Role | Description |
 | --- | --- | --- |
-| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** *(this)* | Online study runtime | EasyStudy-based Flask platform, the SAE Steering plugin (sliders, toggles, text, examples, reranking), researcher dashboard, CSV export, and deployment scripts. |
-| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework | Original user-study framework for recommender systems that this project extends through the plugin contract. |
+| **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** *(this)* | Online study runtime | EasyStudy-based Flask platform, the SAE Steering plugin, researcher dashboard, exports, and deployment scripts. |
 | **[OfflineEasyStudy](TODO)** *(private)* | Offline pipeline | Dataset preprocessing, ELSA + Top‑K SAE training, LLM-based neuron labeling, post-hoc study-results analysis, and reproducibility notes. Kept private because it contains raw participant data. |
+| **[EasyStudy](https://github.com/pdokoupil/EasyStudy)** | Upstream framework | Original user-study framework for recommender systems that this project extends through the plugin contract. |
 
-
-## Documentation
-
-- [Technical Documentation](docs/tech-docs.md) — architecture, plugin contract, database, audit pipeline, analytics, runtime, deployment, testing, and other technical details.
-- [Design Decisions](docs/design-decisions.md) — rationale behind the main architectural and implementation decisions.
-- [Formative Examples](docs/formative-examples.md) — worked recipes for extending the framework with new plugins, modalities, datasets, and analytics.
-- [Equations](docs/equations.md) — math behind steering and reranking.
-- [Admin Manual](docs/admin-manual.md) — researcher workflow and operations guide.
-- [User Manual](docs/user-manual.md) — participant-facing walkthrough.
 
 ## Project Structure
 
@@ -61,11 +62,21 @@ server/
     utils/              # shared recommender utilities (data loading, mandate allocation, normalization)
 ```
 
+## Documentation
+
+- [Technical Documentation](docs/tech-docs.md) — architecture, plugin contract, database, audit pipeline, analytics, runtime, deployment, testing, and other technical details.
+- [Design Decisions](docs/design-decisions.md) — rationale behind the main architectural and implementation decisions.
+- [Formative Examples](docs/formative-examples.md) — worked recipes for extending the framework with new plugins, modalities, datasets, and analytics.
+- [Equations](docs/equations.md) — mathematical descriptions of the steering and additional modalities.
+- [Admin Manual](docs/admin-manual.md) — researcher workflow and operations guide.
+- [User Manual](docs/user-manual.md) — participant-facing walkthrough.
+
+
 ## Development
 
 For local setup, Docker, tests, runtime assets, environment variables and
 the production checklist, see
-[`docs/tech-docs.md` §9 — Runtime and Deployment](docs/tech-docs.md#9-runtime-and-deployment).
+[`docs/tech-docs.md` Section 9 — Runtime and Deployment](docs/tech-docs.md#9-runtime-and-deployment).
 
 ## References
 
