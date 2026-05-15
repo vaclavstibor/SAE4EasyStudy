@@ -47,8 +47,12 @@ if [ "${DATASET_BOOTSTRAP:-0}" = "1" ]; then
 fi
 
 if [ "${SAE_BOOTSTRAP_MODEL:-0}" = "1" ]; then
-  if [ -f "${MODEL_DIR}/TopKSAE-1024.ckpt" ] || [ -f "${MODEL_DIR}/TopKSAE-1024.pt" ]; then
-    echo "SAE model already present at ${MODEL_DIR}, skipping download."
+  _ckpt_ok=0
+  _data_ok=0
+  { [ -f "${MODEL_DIR}/TopKSAE-1024.ckpt" ] || [ -f "${MODEL_DIR}/TopKSAE-1024.pt" ]; } && _ckpt_ok=1
+  [ -f "${DATA_DIR}/item_sae_features_TopKSAE-1024.pt" ] && _data_ok=1
+  if [ "${_ckpt_ok}" = "1" ] && [ "${_data_ok}" = "1" ]; then
+    echo "SAE model already present, skipping download."
   else
     echo "Bootstrapping SAE steering model from GitHub Releases..."
     python -m server.plugins.steering.bootstrap_model
