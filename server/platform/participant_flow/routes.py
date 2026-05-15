@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import secrets
 from pathlib import Path
 
@@ -50,9 +51,19 @@ def get_lang() -> str:
 def include_file(name: str) -> Markup:
     repo_root = get_abs_project_root_path().resolve()
     relative_name = str(name or "").lstrip("/")
-    target_path = (repo_root / relative_name).resolve()
-    if repo_root not in target_path.parents and target_path != repo_root:
+    # Lexical containment check: blocks `..` traversal but does not resolve
+    # symlinks. Deployments may mount persistent volumes via symlinks inside
+    # the repo (e.g. Railway maps `cache/` → `/data/cache/`); following those
+    # would make the include target appear "outside" the repo even though it
+    # is the intended on-disk location.
+    candidate = os.path.normpath(str(repo_root / relative_name))
+    try:
+        common = os.path.commonpath([str(repo_root), candidate])
+    except ValueError:
+        common = ""
+    if common != str(repo_root):
         raise FileNotFoundError(f"Refusing to include file outside repository root: {name}")
+    target_path = Path(candidate)
     if not target_path.is_file():
         raise FileNotFoundError(f"Included file does not exist: {name}")
     return Markup(target_path.read_text(encoding="utf-8"))
