@@ -8,7 +8,7 @@ try:
 except Exception:
     QuantileTransformer = None
 
-from server.plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance
+from server.plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance, prepare_tf_model
 from server.plugins.utils.data_loading import load_ml_dataset
 from server.plugins.utils.interaction_logging import log_interaction, study_ended
 
@@ -75,22 +75,23 @@ def get_num_to_select():
 
 # Public facing endpoint
 @bp.route("/join", methods=["GET"])
-@multi_lang
 def join():
-    assert "guid" in request.args, "guid must be available in arguments"
-    #guid = request.args.get("guid")
-    return redirect(url_for("utils.join", continuation_url=url_for("layoutshuffling.on_joined"), **request.args))
+    # Minimal plugin-based demo page. The original upstream EasyStudy
+    # version redirected into a shared "utils" blueprint that hosted the
+    # preference-elicitation + comparison flow; that blueprint is not
+    # part of this repository, so the route would 500. The page below
+    # demonstrates that the plugin contract is wired end-to-end: admin
+    # create → /initialize → study activated → /join is reachable.
+    guid = request.args.get("guid", "")
+    return render_template("layoutshuffling_demo.html", guid=guid)
 
 # Callback once user has joined we forward to preference elicitation
 @bp.route("/on-joined", methods=["GET", "POST"])
 def on_joined():
-    return redirect(url_for("utils.preference_elicitation",
-            continuation_url=url_for("layoutshuffling.send_feedback"),
-            consuming_plugin="layoutshuffling",
-            initial_data_url=url_for('utils.get_initial_data'),
-            search_item_url=url_for('utils.movie_search')
-        )
-    )
+    # Same reason as in join(): the upstream utils.preference_elicitation
+    # route is not available in this build, so we close the demo flow
+    # here instead of forwarding into the missing blueprint.
+    return redirect(url_for("layoutshuffling.join", guid=request.args.get("guid", "")))
 
 @bp.route("/compare-algorithms", methods=["GET"])
 def compare_algorithms():
@@ -663,37 +664,21 @@ def send_feedback():
     session["orig_permutation"] = algo_order # Backup, read-only
     return redirect(url_for("layoutshuffling.compare_algorithms"))
 
-from multiprocessing import Process
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-
-def long_initialization(guid):
-    import os
-    db_url = os.environ.get("DATABASE_URL", "sqlite:///instance/db.sqlite")
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-    engine = create_engine(db_url)
-    session = Session(engine)
-    q = session.query(UserStudy).filter(UserStudy.guid == guid).first()
-
-    load_ml_dataset()
-
-    q.initialized = True
-    q.active = True
-    session.commit()
-    session.expunge_all()
-    session.close()
-
 @bp.route("/initialize", methods=["GET"])
 def initialize():
+    # Synchronous activation: no TF prepare step in this build (the
+    # original heavy daemon-process initialisation belonged to the
+    # upstream comparison flow which lives in a "utils" blueprint that
+    # is not registered here). Activating the study row is the only
+    # piece the admin panel needs to wire a Join URL.
     guid = request.args.get("guid")
-    heavy_process = Process(
-        target=long_initialization,
-        daemon=True,
-        args=(guid, )
-    )
-    heavy_process.start()
-    return redirect(request.args.get("continuation_url"))
+    if guid:
+        study = UserStudy.query.filter_by(guid=guid).first()
+        if study is not None:
+            study.initialized = True
+            study.active = True
+            db.session.commit()
+    return redirect(request.args.get("continuation_url") or url_for("layoutshuffling.join", guid=guid))
 
 # Plugin specific disposal procedure
 # E.g. removing plugin-specific cache etc.
