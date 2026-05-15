@@ -7,7 +7,7 @@
 
 ## About
 
-Modern neural recommender systems achieve strong predictive accuracy, but the concepts they rely on internally are hidden from the user. Ratings, likes and skips influence the model only indirectly — there is no direct way for a participant to inspect those concepts, let alone adjust them.
+Neural recommender systems achieve strong predictive accuracy, yet their internal reasoning stays opaque. Participants can provide feedback through ratings or item preferences, but they cannot directly inspect or adjust the latent concepts the model relies on when ranking.
 
 This project makes those concepts explicit. It pairs an ELSA recommender with a **Sparse Autoencoder (SAE)** that decomposes the model's internal representations into sparse, human-interpretable concepts — for a movie domain, features such as *"1980s sci-fi"*, *"strong female leads"*, or *"slow-paced cinematography"*. Those features are surfaced in the participant UI as first-class controls (sliders, toggles, free-text prompts, and example-based steering), so users can directly nudge the model's reasoning instead of treating it as a black box. The result is a transparent **Steering Loop**: see recommendations → adjust interpretable concepts → see the effect → iterate.
 
