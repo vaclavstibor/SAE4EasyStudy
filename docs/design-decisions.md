@@ -20,7 +20,7 @@ Each section follows the same shape: **Decision → Context → Alternatives con
 **Consequences.**
 
 - `Interaction` and `Message` ORM tables stay even though the steering plugin does not use them. Upstream `fastcompare` and `utils` plugins still log to them. Removing them would break upstream parity.
-- The platform must not import from `server.plugins.*` at module top-level. Architectural rule #5 in [`tech-docs.md`](tech-docs.md) §4.4 enforces this.
+- The platform must not import from `server.plugins.*` at module top-level. Architectural rule #5 in [`tech-docs.md`](tech-docs.md) Section 4.4 enforces this.
 - New thesis code lives under `server/plugins/steering/`. Other plugins (`fastcompare`, `empty_template`, `utils`) are kept verbatim.
 
 ---
@@ -38,7 +38,7 @@ Each section follows the same shape: **Decision → Context → Alternatives con
 
 **Consequences.**
 
-- Adding a new fact requires three changes: a new model, a new `audit.record_*` function, a CSV writer in `routes/results/views.py`. Documented in [`formative-examples.md`](formative-examples.md) §4.
+- Adding a new fact requires three changes: a new model, a new `audit.record_*` function, a CSV writer in `routes/results/views.py`. Documented in [`formative-examples.md`](formative-examples.md) Section 4.
 - The `raw_payload` column stays as a provenance escape hatch for journey rendering and manual debugging. It is intentionally not indexed and not in any dashboard query.
 - Per-table CSV export is trivial: each writer reads one typed table and emits one CSV.
 
@@ -84,7 +84,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 - The service is unit-testable without a request context.
 - The recursion is gone: `ensure_study_run` is called once per request, and `audit.record_*` callers pass `approach_index` explicitly so `ensure_approach_run` is idempotent.
-- Adding a new typed table is a one-place change ([`formative-examples.md`](formative-examples.md) §4).
+- Adding a new typed table is a one-place change ([`formative-examples.md`](formative-examples.md) Section 4).
 
 ---
 
@@ -123,7 +123,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - Three explicit modes, validated in `study_config.py::normalize_text_composition_mode`.
 - `add` mode clamps each cluster sum to `[-0.95, 0.95]` so weights stay in the recommender's effective range.
 - `intersect` mode keeps only clusters present in both iterations, using iteration N's weight. Useful for participants refining a stable intent.
-- See [`equations.md`](equations.md) §1.5 for the formal definition.
+- See [`equations.md`](equations.md) Section 1.5 for the formal definition.
 
 ---
 
@@ -141,18 +141,18 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 ---
 
-## 8. Reranking strategy as a typed enum (FR-10) — superseded by §23
+## 8. Reranking strategy as a typed enum (FR-10) — superseded by Section 23
 
-**Status.** Superseded by §23 once `latent-perturbation` and `constrained-subset` were implemented in the recommender. This section is kept for archive purposes — it documents the enum/schema decision that pre-dated the algorithmic work.
+**Status.** Superseded by Section 23 once `latent-perturbation` and `constrained-subset` were implemented in the recommender. This section is kept for archive purposes — it documents the enum/schema decision that pre-dated the algorithmic work.
 
 **Decision (still in force).** `study_config.reranking_strategy` is a typed enum (`SUPPORTED_RERANKING_STRATEGIES` in `constants.py`) and is snapshotted onto `SaeApproachRun.reranking_strategy` so historical study runs carry the strategy that was active when they ran. Validation happens at config-normalisation time; unknown values fall back to the default.
 
-**Historical context.** The proposal lists three reranking strategies. The first implementation pinned the dispatch to `feature-conditioned` and reserved the other two values for future work, exactly so that schema and admin UI could be kept ready without a migration when the alternatives landed. The reserved values were later filled in — see §23 for the implementation decisions, `equations.md` §10 for the math, and `formative-examples.md` §5 for the recipe to add a fourth strategy.
+**Historical context.** The proposal lists three reranking strategies. The first implementation pinned the dispatch to `feature-conditioned` and reserved the other two values for future work, exactly so that schema and admin UI could be kept ready without a migration when the alternatives landed. The reserved values were later filled in — see Section 23 for the implementation decisions, `equations.md` Section 10 for the math, and `formative-examples.md` Section 5 for the recipe to add a fourth strategy.
 
 **Consequences.**
 
 - `SaeApproachRun.reranking_strategy` remained a string column, so old runs (which all carry `feature-conditioned`) co-exist with new runs that may carry any of the three values. No backfill or migration was required.
-- Adding a fourth strategy is still a one-place change: add the enum value to `SUPPORTED_RERANKING_STRATEGIES`, add the branch inside `recommendation/sae_recommender.py::get_recommendations`, and document the math in `equations.md` §10.
+- Adding a fourth strategy is still a one-place change: add the enum value to `SUPPORTED_RERANKING_STRATEGIES`, add the branch inside `recommendation/sae_recommender.py::get_recommendations`, and document the math in `equations.md` Section 10.
 
 ---
 
@@ -219,7 +219,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 - `analytics._questionnaire_monitor` aggregates one section per `questionnaire_file`. Within each section, every key in the answers JSON becomes a row whose summary is chosen from the inferred kind (`likert` / `numeric` / `categorical` / `text`).
 - The Overview tab focuses on the *behavioural* signal of steering: selected-movie rank distribution by approach, slider movement by cluster, text-prompt → cluster mappings. None of these depend on a specific questionnaire.
-- Adding a new questionnaire is a no-code operation (drop a template in `server/static/questionnairs/`, point an approach at it). See [`formative-examples.md`](formative-examples.md) §9.
+- Adding a new questionnaire is a no-code operation (drop a template in `server/static/questionnairs/`, point an approach at it). See [`formative-examples.md`](formative-examples.md) Section 9.
 - The legacy "attention-check funnel" / "Steered − Baseline" / "composite delta" charts are deleted. Researchers who want those specific statistics can compute them in R or pandas from the CSV bundle.
 
 ---
@@ -263,7 +263,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 ## 16. Upstream `layoutshuffling` and `vae` plugins are wired through the canonical contract
 
-**Decision.** The two upstream EasyStudy plugins (`server/plugins/layoutshuffling` and `server/plugins/vae`) are registered in `CANONICAL_PLUGIN_MODULES` so the kernel loads all five plugins (`sae_steering`, `fastcompare`, `emptytemplate`, `layoutshuffling`, `vae`). Which of these the admin "Available templates" picker shows is a separate decision — see §17. The migration is minimum-viable: routes stay in `__init__.py`, but each plugin now exposes a `PLUGIN: StudyPluginContract` and a `get_plugin()` callable so the kernel can register the blueprint exactly like a thesis-owned plugin.
+**Decision.** The two upstream EasyStudy plugins (`server/plugins/layoutshuffling` and `server/plugins/vae`) are registered in `CANONICAL_PLUGIN_MODULES` so the kernel loads all five plugins (`sae_steering`, `fastcompare`, `emptytemplate`, `layoutshuffling`, `vae`). Which of these the admin "Available templates" picker shows is a separate decision — see Section 17. The migration is minimum-viable: routes stay in `__init__.py`, but each plugin now exposes a `PLUGIN: StudyPluginContract` and a `get_plugin()` callable so the kernel can register the blueprint exactly like a thesis-owned plugin.
 
 **Context.** The plugin registry was refactored to load only thesis-owned plugins (`sae_steering`, `fastcompare`, `emptytemplate`), which silently dropped `layoutshuffling` and `vae` from the admin picker even though both packages still lived in the tree. Researchers cloning the repo expected the same plugin matrix as the upstream `pdokoupil/EasyStudy` project; the missing entries made the kernel look stricter than it actually is.
 
@@ -287,10 +287,10 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 | Plugin | Reason to hide |
 | --- | --- |
-| `emptytemplate` (`server/plugins/empty_template`) | Developer scaffold. It is the copy-paste starter for new plugins (see [`formative-examples.md`](formative-examples.md) §1); listing it as a study type would invite researchers to "create studies" out of a placeholder. |
+| `emptytemplate` (`server/plugins/empty_template`) | Developer scaffold. It is the copy-paste starter for new plugins (see [`formative-examples.md`](formative-examples.md) Section 1); listing it as a study type would invite researchers to "create studies" out of a placeholder. |
 | `vae` (`server/plugins/vae`) | Algorithm wrapper. Provides VAE algorithm hooks consumed by `fastcompare`; there is no `/vae/create` because there is no VAE-only study type. |
 
-**Context.** Before the upstream-plugin re-wire (§16) the admin picker only listed the three plugins that happened to have a `/create` route AND were in `CANONICAL_PLUGIN_MODULES`. After §16 the picker would have surfaced `emptytemplate` as a fourth choice and (had `vae` declared `/create`) `vae` as a fifth — neither of which is a study type a researcher should pick. A hard-coded skip list in `get_loaded_plugins()` would have hidden the intent inside the platform; instead the plugin itself declares its intent through its own metadata.
+**Context.** Before the upstream-plugin re-wire (Section 16) the admin picker only listed the three plugins that happened to have a `/create` route AND were in `CANONICAL_PLUGIN_MODULES`. After Section 16 the picker would have surfaced `emptytemplate` as a fourth choice and (had `vae` declared `/create`) `vae` as a fifth — neither of which is a study type a researcher should pick. A hard-coded skip list in `get_loaded_plugins()` would have hidden the intent inside the platform; instead the plugin itself declares its intent through its own metadata.
 
 **Alternatives considered.**
 
@@ -303,7 +303,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - `PluginMetadata` gains one optional field (`hidden_from_admin: bool = False`). `get_loaded_plugins()` carries a docstring describing the filter contract.
 - New plugins default to **visible**. Internal plugins must explicitly set `hidden_from_admin=True`; future contributors learn this from the `emptytemplate` and `vae` contracts plus this decision.
 - A regression test (`test_admin_available_templates_excludes_hidden_plugins` in `tests/plugins/steering/test_initialization.py`) asserts that `emptytemplate` and `vae` are absent from `get_loaded_plugins()` while the three researcher-facing plugins are present.
-- The admin manual ([`admin-manual.md`](admin-manual.md) §2) and the new-plugin walk-through ([`formative-examples.md`](formative-examples.md) §1) point at this decision so authors of future plugins know how to control admin visibility.
+- The admin manual ([`admin-manual.md`](admin-manual.md) Section 2) and the new-plugin walk-through ([`formative-examples.md`](formative-examples.md) Section 1) point at this decision so authors of future plugins know how to control admin visibility.
 
 ---
 
@@ -330,8 +330,8 @@ The bundled questionnaires now ship the following specs (`server/static/question
 **Alternatives considered.**
 
 - **Compute pass/fail on every page load.** Rejected — couples the dashboard to the live HTML; editing a question wording without touching the spec would silently change historical verdicts.
-- **Add a runtime migration framework to backfill the column for old DBs.** Rejected (see §3). The column is additive and nullable; researchers who want the new column on an existing DB run `./scripts/reset-db.sh` and create a fresh study, which is the project's standing migration story.
-- **Bake the spec into Python config next to the questionnaire path.** Rejected — questionnaires are self-contained drop-in HTML files (see [`formative-examples.md`](formative-examples.md) §9). Forcing researchers to edit a Python config to add a check would split a single artefact across two files.
+- **Add a runtime migration framework to backfill the column for old DBs.** Rejected (see Section 3). The column is additive and nullable; researchers who want the new column on an existing DB run `./scripts/reset-db.sh` and create a fresh study, which is the project's standing migration story.
+- **Bake the spec into Python config next to the questionnaire path.** Rejected — questionnaires are self-contained drop-in HTML files (see [`formative-examples.md`](formative-examples.md) Section 9). Forcing researchers to edit a Python config to add a check would split a single artefact across two files.
 
 **Consequences.**
 
@@ -372,7 +372,7 @@ The fix is structural, not cosmetic. **Approach identity (`approach_id`)** and *
 
 **Decision.** The Modalities tab and the Overview "Modality usage by approach" card grid render exactly the modalities each approach declared in `conf['models'][i]['enabled_modalities']`. The audit-table contents inform the *counts* inside each modality card, but they never decide which cards are shown. An approach with `enabled_modalities=["text"]` never gets a slider card — even if the typed adjustment table contains rows for that approach (which the text pipeline does write, with placeholder cluster labels).
 
-**Context.** The first iteration of the Modalities tab had two hardcoded chart cards labelled "Approach A" and "Approach B" that both rendered the *Slider Movement by Cluster* chart. With one slider-only approach and one text-only approach, the second card surfaced text-driven feature adjustments whose `cluster_label` was a placeholder (`feature_<n>` / `cluster_<n>`). After §19 filtered placeholders out of the slider chart, the card stayed visually present but empty — the dashboard implied "this approach has slider data" when it didn't. The Overview section had a parallel issue: a single "Modality usage" card aggregated across all approaches, hiding the fact that one approach used only text and the other only sliders.
+**Context.** The first iteration of the Modalities tab had two hardcoded chart cards labelled "Approach A" and "Approach B" that both rendered the *Slider Movement by Cluster* chart. With one slider-only approach and one text-only approach, the second card surfaced text-driven feature adjustments whose `cluster_label` was a placeholder (`feature_<n>` / `cluster_<n>`). After Section 19 filtered placeholders out of the slider chart, the card stayed visually present but empty — the dashboard implied "this approach has slider data" when it didn't. The Overview section had a parallel issue: a single "Modality usage" card aggregated across all approaches, hiding the fact that one approach used only text and the other only sliders.
 
 The fix is to make the dashboard read the *study contract* (`enabled_modalities`) as the source of truth for what cards to render. The audit table answers a different question (what happened) and is consulted only after the contract decides what to show.
 
@@ -449,7 +449,7 @@ Both paths iterate over `Object.entries(modality_breakdown)`; they never branch 
 **Alternatives considered.**
 
 - *Store one entry per scope in a nested dict (`session["last_text_steering"][scope] = ...`).* Rejected — unbounded growth across N phases × M studies, and we never read past entries anyway. A single-slot store with a scope tag is strictly simpler.
-- *Clear `last_text_steering` on every iteration server-side.* Rejected — would break `add` / `intersect` composition modes, which by design accumulate cluster weights across the iterations of a single phase (§ FR-09).
+- *Clear `last_text_steering` on every iteration server-side.* Rejected — would break `add` / `intersect` composition modes, which by design accumulate cluster weights across the iterations of a single phase (FR-09).
 - *Clear the UI surface on iteration only when composition mode is `replace`.* Rejected — composition mode is a backend concern; the participant's mental model is that "Get Recommendations" closes one iteration and opens the next, regardless of the math under the hood.
 - *Move `last_text_steering` from the Flask session into the database.* Rejected — adds persistence overhead for a transient UI affordance that is already an opt-in convenience, not a contract.
 
@@ -482,7 +482,7 @@ This design has three subtle invariants that are easy to break and that earlier 
         # one shared text input. With three or more approaches the
         # layout has nowhere to put approach 3+, so the study auto-
         # falls back to sequential and the participant walks approaches
-        # one at a time. See design-decisions.md §22.
+        # one at a time. See design-decisions.md Section 22.
         comparison_mode = "sequential"
 ```
 
@@ -581,14 +581,14 @@ The mirror is therefore a visual sync, not an audit duplicate.
 
 ## 23. Reranking strategies (`reranking_strategy` config key)
 
-**Context.** Three strategies are available in this build: `feature-conditioned` (the production default), `latent-perturbation`, and `constrained-subset`. The math for each is documented in `equations.md` §10; this section captures the design choices behind the *set* of strategies and how they coexist.
+**Context.** Three strategies are available in this build: `feature-conditioned` (the production default), `latent-perturbation`, and `constrained-subset`. The math for each is documented in `equations.md` Section 10; this section captures the design choices behind the *set* of strategies and how they coexist.
 
 **Decision.** Implement all three behind a single config key (`reranking_strategy`), with strategy-specific parameters (`latent_perturbation_alpha`, `constrained_subset_tau`) that fall back to constants when not supplied. The strategy enum is snapshotted on every `SaeApproachRun` so retrospective analyses can correctly attribute outcomes to the strategy that was active.
 
 **Rationale.**
 
 - The default (`feature-conditioned`) is the only strategy that has been piloted and that the dashboard analytics have been validated against. It must remain the default to keep production behaviour stable.
-- The proposal commits to evaluating "latent-perturbation" and "constrained-optimisation" alternatives. Without an implementation those are vapourware. The two simple formulations in §10.2 and §10.3 are research-grade — they are defensible, mathematically clean, and use only objects that already exist in the runtime (`sae_model.decoder_w`, `item_features`).
+- The proposal commits to evaluating "latent-perturbation" and "constrained-optimisation" alternatives. Without an implementation those are vapourware. The two simple formulations in Section 10.2 and Section 10.3 are research-grade — they are defensible, mathematically clean, and use only objects that already exist in the runtime (`sae_model.decoder_w`, `item_features`).
 - Routing the strategy through a single parameter on `get_recommendations` keeps the recommender's call sites uniform: every blend math change is internal to `sae_recommender.py`.
 
 **Trade-offs.**
@@ -606,7 +606,7 @@ The mirror is therefore a visual sync, not an audit duplicate.
 **Consequences.**
 
 - `SaeApproachRun.reranking_strategy` is populated from the iteration controller for every approach run and is queryable in retrospective analyses. Existing studies that pre-date this section still snapshot the value (they used `feature-conditioned`); no data migration is required.
-- The admin UI dropdown (`sae_steering_create.html`) lists all three strategies with one-sentence descriptions and a deep link to `equations.md §10`.
+- The admin UI dropdown (`sae_steering_create.html`) lists all three strategies with one-sentence descriptions and a deep link to `equations.md Section 10`.
 - Regression tests:
   - `test_feature_conditioned_strategy_is_default`
   - `test_latent_perturbation_strategy_rotates_seed_and_drops_additive_term`

@@ -4,9 +4,9 @@ This page is the math reference for the SAE Steering plugin. Each modality has i
 
 Cross-references:
 
-- [`tech-docs.md`](tech-docs.md) §6 — the iteration loop that consumes these weights.
-- [`design-decisions.md`](design-decisions.md) §6, §7, §8 — rationale for composition modes, the no-match fallback, and the reranking enum.
-- [`formative-examples.md`](formative-examples.md) §3, §5 — how to add a new modality / a new reranking strategy.
+- [`tech-docs.md`](tech-docs.md) Section 6 — the iteration loop that consumes these weights.
+- [`design-decisions.md`](design-decisions.md) Section 6, Section 7, Section 8 — rationale for composition modes, the no-match fallback, and the reranking enum.
+- [`formative-examples.md`](formative-examples.md) Section 3, Section 5 — how to add a new modality / a new reranking strategy.
 
 ## 1. Common framework
 
@@ -73,7 +73,7 @@ Each item `i` has a row `f_i` of SAE activations of length `n_features`. The rec
             sae_scores = torch.matmul(self.item_features, sae_profile)
 ```
 
-The full final score `cf + genre + clamp(γ · sae) + tiebreak` is summarized in §8; the per-modality math below covers only how each modality produces its slice of `δ_c`.
+The full final score `cf + genre + clamp(γ · sae) + tiebreak` is summarized in Section 8; the per-modality math below covers only how each modality produces its slice of `δ_c`.
 
 ## 2. Sliders (FR-05/06)
 
@@ -124,7 +124,7 @@ A subsequent slider refresh (`compute_updated_sliders`) hides clusters that have
 
 The study-level `interaction_mode` config key (default `cumulative`, surfaced in the admin UI as "Interaction History Mode") controls whether the per-iteration steering memory survives into the next iteration of the *same* approach:
 
-- **`cumulative`** — `previous_adjustments` is loaded from `session["cumulative_adjustments"]`, the new raw deltas are accumulated on top per the formulas in §2, and the touched-cluster set in `session["user_touched_features"]` grows monotonically until the approach ends. The like signal also persists: `update_elsa_seed_with_likes` is called with the participant's current liked set whenever it changes, so the ELSA seed (§7) is re-weighted accordingly.
+- **`cumulative`** — `previous_adjustments` is loaded from `session["cumulative_adjustments"]`, the new raw deltas are accumulated on top per the formulas in Section 2, and the touched-cluster set in `session["user_touched_features"]` grows monotonically until the approach ends. The like signal also persists: `update_elsa_seed_with_likes` is called with the participant's current liked set whenever it changes, so the ELSA seed (Section 7) is re-weighted accordingly.
 - **`reset`** — at the very top of `apply_feature_adjustment_iteration` the controller hard-clears the relevant session keys: `cumulative_adjustments`, `user_touched_features`, `last_text_steering`, `last_example_steering`, `excluded_movies_from_text`, and `boosted_liked_ids` all start the iteration empty, and `update_elsa_seed_with_likes` is then called with an empty liked set so the ELSA seed is rebuilt from `elicitation_selected_movies` alone. The current iteration's adjustments and liked set still flow into the typed-audit rows (`record_feature_adjustment` captures `liked_movies` directly from the request body), so the database always reflects what the participant did.
 
 Switching between approaches (`_do_advance_phase` in `routes/study.py`) wipes the same session keys regardless of the mode, so cross-approach pollution is impossible under either setting.
@@ -368,7 +368,7 @@ def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
 
 **NFR-12 no-match.** If `total(c) ≤ 0` for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows "We could not match your text to any feature, try different wording."
 
-**Scope.** The "previous prompt" $T_{t-1}$ is namespaced by `(study_guid, phase_index)`. A prompt that was issued in approach A's phase 0 cannot accidentally compose with a prompt issued later in approach B's phase 1, even though both share a Flask session. See design-decisions §21 for the leakage fix.
+**Scope.** The "previous prompt" $T_{t-1}$ is namespaced by `(study_guid, phase_index)`. A prompt that was issued in approach A's phase 0 cannot accidentally compose with a prompt issued later in approach B's phase 1, even though both share a Flask session. See design-decisions Section 21 for the leakage fix.
 
 ## 5. Example-based steering (FR-08)
 
@@ -431,7 +431,7 @@ The top `example_selection_top_k` clusters (config key, per-approach with study-
 
 **Direction.** Example-based steering only produces positive weights (`direction = boost`); suppression has no analogue here because there is no "anti-example" concept in the UI.
 
-**Composition (configurable).** Whether example weights are merged with the slider/toggle cumulative map at all is governed by the per-approach flag `use_selected_movies_as_examples` (config key, per-approach with study-level fallback; default `false`). When the flag is on, the iteration controller runs the `ExampleSteering` strategy on the participant's current likes every iteration and merges its output with the cumulative slider/toggle map via `_merge_adjustments` (additive, then values with `|·| < 10⁻³` are dropped). When the flag is off, likes drive only the ELSA seed re-weighting (§7) and the example modality is invoked only by the explicit `/apply-example-steering` route. In either case, example adjustments do not stack across iterations on their own — each call to `/apply-example-steering` overwrites `session["last_example_steering"]`.
+**Composition (configurable).** Whether example weights are merged with the slider/toggle cumulative map at all is governed by the per-approach flag `use_selected_movies_as_examples` (config key, per-approach with study-level fallback; default `false`). When the flag is on, the iteration controller runs the `ExampleSteering` strategy on the participant's current likes every iteration and merges its output with the cumulative slider/toggle map via `_merge_adjustments` (additive, then values with `|·| < 10⁻³` are dropped). When the flag is off, likes drive only the ELSA seed re-weighting (Section 7) and the example modality is invoked only by the explicit `/apply-example-steering` route. In either case, example adjustments do not stack across iterations on their own — each call to `/apply-example-steering` overwrites `session["last_example_steering"]`.
 
 ```129:143:server/plugins/steering/service/iteration_controller.py
     example_adjustments = {}
@@ -459,7 +459,7 @@ $$
 \Delta^{(t+1)}_n \;=\; 0 \quad \forall n,\qquad L^{(t+1)} \;=\; \varnothing,\qquad \hat{s}^{(t+1)} \;=\; \frac{1}{|E_0|}\sum_{m \in E_0} \text{emb}(m)
 $$
 
-The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed (§7) reverts to the elicitation-only mean. The frontend mirrors this: `resetAllControls()` zeroes every slider's `featureAdjustments`, drops the detected-tags container, empties `likedMovies` and `likedInIteration`, and re-syncs every previously-highlighted recommendation card so the heart selection visually disappears. The audit row in the DB is the single source of truth that the reset happened — individual per-movie unlikes are deliberately not re-logged (see [`design-decisions.md`](design-decisions.md) §6).
+The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed (Section 7) reverts to the elicitation-only mean. The frontend mirrors this: `resetAllControls()` zeroes every slider's `featureAdjustments`, drops the detected-tags container, empties `likedMovies` and `likedInIteration`, and re-syncs every previously-highlighted recommendation card so the heart selection visually disappears. The audit row in the DB is the single source of truth that the reset happened — individual per-movie unlikes are deliberately not re-logged (see [`design-decisions.md`](design-decisions.md) Section 6).
 
 ## 7. ELSA seed re-weighting from likes
 
@@ -469,9 +469,9 @@ $$
 \hat{s} \;=\; \frac{\sum_{m \in E_0} \text{emb}(m)\;+\;\lambda \cdot \sum_{m \in L^{\le k}} \text{emb}(m)}{|E_0| \;+\; \lambda \cdot |L^{\le k}|}
 $$
 
-where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend `(1-λ)·\hat{s}_{old} + λ·…`. The seed is then consumed by the recommender as the query vector for the cosine-similarity CF term (see §1.2 and §8 below).
+where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend `(1-λ)·\hat{s}_{old} + λ·…`. The seed is then consumed by the recommender as the query vector for the cosine-similarity CF term (see Section 1.2 and Section 8 below).
 
-When the study's `interaction_mode` (§2.1) is `reset`, the iteration controller calls `update_elsa_seed_with_likes(set(), …)` so `L` is forced empty and `\hat{s}` collapses to the pure elicitation mean — no like signal carries into the next iteration. `cumulative` mode passes the participant's actual liked set, which is the formula above.
+When the study's `interaction_mode` (Section 2.1) is `reset`, the iteration controller calls `update_elsa_seed_with_likes(set(), …)` so `L` is forced empty and `\hat{s}` collapses to the pure elicitation mean — no like signal carries into the next iteration. `cumulative` mode passes the participant's actual liked set, which is the formula above.
 
 ```27:54:server/plugins/steering/service/engine.py
         id_to_idx = {int(mid): i for i, mid in enumerate(recommender.item_ids)}
@@ -506,18 +506,18 @@ When the study's `interaction_mode` (§2.1) is `reset`, the iteration controller
 
 ## 8. Final ranking (pointer)
 
-This section is now superseded by §10 below, which documents the full set of three reranking strategies. Read §10 for the math; this section remains as a stub for backwards-compatibility with older cross-references.
+This section is now superseded by Section 10 below, which documents the full set of three reranking strategies. Read Section 10 for the math; this section remains as a stub for backwards-compatibility with older cross-references.
 
 ## 9. Notation summary
 
 | Symbol | Shape | Meaning |
 |---|---|---|
 | $e_i$ | $\mathbb{R}^{d}$ | Row $i$ of `recommender.item_embeddings` — the ELSA dense embedding for item $i$. $d=$ CF embedding dim (typically 256). |
-| $\hat{s}$ | $\mathbb{R}^{d}$ | The user seed embedding (`session["elsa_seed"]`, see §7), L2-normalised. |
+| $\hat{s}$ | $\mathbb{R}^{d}$ | The user seed embedding (`session["elsa_seed"]`, see Section 7), L2-normalised. |
 | $f_i$ | $\mathbb{R}^{n}$ | Row $i$ of `recommender.item_features` — the SAE feature activations for item $i$. $n=$ SAE feature count (1024 for `TopKSAE-1024`). |
-| $a$ | $\mathbb{R}^{n}$ | The per-neuron *sae_profile* built from `feature_adjustments` after cluster→neuron expansion (§1). Sparse. |
+| $a$ | $\mathbb{R}^{n}$ | The per-neuron *sae_profile* built from `feature_adjustments` after cluster→neuron expansion (Section 1). Sparse. |
 | $W_{\text{dec}}$ | $\mathbb{R}^{n \times d}$ | SAE decoder weight (`sae_model.decoder_w`), mapping feature space back to embedding space. |
-| $j_i$ | $\mathbb{R}_{\ge 0}$ | Genre Jaccard bonus for item $i$ (precomputed; §C). |
+| $j_i$ | $\mathbb{R}_{\ge 0}$ | Genre Jaccard bonus for item $i$ (precomputed; Appendix C). |
 | $w_{cf}, w_g$ | scalars | Blend weights from `build_blend_plan(feature_adjustments)`. Two regimes: `profile_prior` (no explicit steering) and `steering_primary` (any non-zero $a$). |
 
 ## 10. Reranking strategies (`reranking_strategy` config key)
@@ -652,7 +652,7 @@ The production system stays on `feature-conditioned` because that is what has be
 
 ## Appendix: What is configurable
 
-Every numeric constant that appears in a formula below is either a **config key** (researcher can change it per study or per approach) or a **hardcoded** value (intentionally fixed in code). The table below is the single source of truth; inline mentions in §1–§8 only repeat the key name, not the scope.
+Every numeric constant that appears in a formula below is either a **config key** (researcher can change it per study or per approach) or a **hardcoded** value (intentionally fixed in code). The table below is the single source of truth; inline mentions in Section 1–Section 8 only repeat the key name, not the scope.
 
 | Symbol in formulas | Code name | Default | Scope | Read from |
 | --- | --- | --- | --- | --- |

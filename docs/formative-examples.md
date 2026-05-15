@@ -6,23 +6,23 @@ Every recipe is grounded in the real code. File paths are relative to repository
 
 | Recipe | Section |
 | --- | --- |
-| Add a new plugin (full skeleton) | §1 |
-| Add a new steering modality | §2 |
-| Add a new dataset | §3 |
-| Add a new typed audit table | §4 |
-| Add a new reranking strategy | §5 |
-| Add a new researcher dashboard metric | §6 |
-| Add a new participant-facing endpoint | §7 |
-| Add a new CSV file to the export | §8 |
-| Write tests for the above | §9 |
+| Add a new plugin (full skeleton) | Section 1 |
+| Add a new steering modality | Section 2 |
+| Add a new dataset | Section 3 |
+| Add a new typed audit table | Section 4 |
+| Add a new reranking strategy | Section 5 |
+| Add a new researcher dashboard metric | Section 6 |
+| Add a new participant-facing endpoint | Section 7 |
+| Add a new CSV file to the export | Section 8 |
+| Write tests for the above | Section 9 |
 
 ---
 
 ## 1. Add a new plugin
 
-The framework's plugin contract is documented in [`tech-docs.md`](tech-docs.md) §4.2. A plugin is any Python package under `server/plugins/` that exposes `get_plugin() -> StudyPluginContract` from its `__init__.py`.
+The framework's plugin contract is documented in [`tech-docs.md`](tech-docs.md) Section 4.2. A plugin is any Python package under `server/plugins/` that exposes `get_plugin() -> StudyPluginContract` from its `__init__.py`.
 
-The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy and **intentionally hidden from the admin "Available templates" picker** via `PluginMetadata.hidden_from_admin=True` so researchers don't pick the scaffold by accident — see [`design-decisions.md`](design-decisions.md) §17). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
+The simplest possible plugin is `empty_template` (kept verbatim from upstream EasyStudy and **intentionally hidden from the admin "Available templates" picker** via `PluginMetadata.hidden_from_admin=True` so researchers don't pick the scaffold by accident — see [`design-decisions.md`](design-decisions.md) Section 17). The simplest *new* SAE-derivative plugin is the one we already built. Here is the skeleton you would produce for a new plugin called `mystudy`.
 
 ### 1.1 Directory layout
 
@@ -118,7 +118,7 @@ The platform will:
 
 ### 1.5 Required endpoints
 
-The plugin must implement five endpoints (`tech-docs.md` §4.2). Minimal skeleton:
+The plugin must implement five endpoints (`tech-docs.md` Section 4.2). Minimal skeleton:
 
 ```python
 # server/plugins/mystudy/routes/study.py
@@ -167,7 +167,7 @@ Models in a new plugin require the schema to be (re-)materialised:
 ./scripts/reset-db.sh
 ```
 
-See [`design-decisions.md`](design-decisions.md) §3 for the no-migrations rationale.
+See [`design-decisions.md`](design-decisions.md) Section 3 for the no-migrations rationale.
 
 ---
 
@@ -252,7 +252,7 @@ def apply_mood_steering():
 
     participation_id = session.get("participation_id")
     if participation_id:
-        # If the modality writes facts, call a typed audit writer (see §4).
+        # If the modality writes facts, call a typed audit writer (see Section 4).
         audit.record_event(
             "mood-steering-applied",
             participation_id=participation_id,
@@ -300,7 +300,7 @@ SUPPORTED_DATASET_VARIANTS = {
 }
 ```
 
-The `_resolve_safe_cache_path(ml_variant)` helper (see [`design-decisions.md`](design-decisions.md) §11) validates the variant against `^[A-Za-z0-9._-]+$` and resolves the cache directory under `server/cache/utils/<variant>/`, so the new variant is automatically sandboxed.
+The `_resolve_safe_cache_path(ml_variant)` helper (see [`design-decisions.md`](design-decisions.md) Section 11) validates the variant against `^[A-Za-z0-9._-]+$` and resolves the cache directory under `server/cache/utils/<variant>/`, so the new variant is automatically sandboxed.
 
 ### 3.3 Surface it in the create UI
 
@@ -310,7 +310,7 @@ The `sae_steering_create.html` page reads `SUPPORTED_DATASET_VARIANTS` for the d
 
 ## 4. Add a new typed audit table
 
-The audit pipeline is documented in [`tech-docs.md`](tech-docs.md) §7. Adding a fact requires exactly three changes.
+The audit pipeline is documented in [`tech-docs.md`](tech-docs.md) Section 7. Adding a fact requires exactly three changes.
 
 ### 4.1 Declare the model
 
@@ -350,7 +350,7 @@ class SaeMoodLog(db.Model):
     )
 ```
 
-The four FKs (`study_run_id`, `approach_run_id`, `participation_id`, `event_id`) and `CASCADE` on `participation.id` are the binding contract — see [`tech-docs.md`](tech-docs.md) §5.2 cascades.
+The four FKs (`study_run_id`, `approach_run_id`, `participation_id`, `event_id`) and `CASCADE` on `participation.id` are the binding contract — see [`tech-docs.md`](tech-docs.md) Section 5.2 cascades.
 
 ### 4.2 Add the single-writer function
 
@@ -392,7 +392,7 @@ def record_mood_steering(
     return row
 ```
 
-Architectural rule #1 (see [`tech-docs.md`](tech-docs.md) §4.4): **only** `audit.record_*` writes to typed tables. Routes call this; no other module inserts `SaeMoodLog` rows.
+Architectural rule #1 (see [`tech-docs.md`](tech-docs.md) Section 4.4): **only** `audit.record_*` writes to typed tables. Routes call this; no other module inserts `SaeMoodLog` rows.
 
 ### 4.3 Rebuild the DB
 
@@ -422,7 +422,7 @@ def _mood_counts(approach_run_ids):
 
 ## 5. Add a new reranking strategy
 
-`SaeApproachRun.reranking_strategy` is already a snapshot column. `SUPPORTED_RERANKING_STRATEGIES` in `server/plugins/steering/constants.py` lists the three strategies that ship today, all implemented: `feature-conditioned` (default), `latent-perturbation`, `constrained-subset`. See [`design-decisions.md`](design-decisions.md) §23 for the rationale and [`equations.md`](equations.md) §10 for the math of each.
+`SaeApproachRun.reranking_strategy` is already a snapshot column. `SUPPORTED_RERANKING_STRATEGIES` in `server/plugins/steering/constants.py` lists the three strategies that ship today, all implemented: `feature-conditioned` (default), `latent-perturbation`, `constrained-subset`. See [`design-decisions.md`](design-decisions.md) Section 23 for the rationale and [`equations.md`](equations.md) Section 10 for the math of each.
 
 Branching now happens inside `recommendation/sae_recommender.py::get_recommendations` (one `if / elif / elif`), not in the iteration controller — the controller just threads the strategy + params through. Adding a fourth strategy (call it `my-strategy`) is therefore three changes:
 
@@ -477,7 +477,7 @@ reranking_params = {
 
 ### 5.4 Document the math in `equations.md`
 
-The full scoring section for the three current strategies lives in [`equations.md`](equations.md) §10. Add §10.4 for `my-strategy` with the same `direction → final score → fallback behaviour` shape; cross-reference from this recipe.
+The full scoring section for the three current strategies lives in [`equations.md`](equations.md) Section 10. Add Section 10.4 for `my-strategy` with the same `direction → final score → fallback behaviour` shape; cross-reference from this recipe.
 
 ### 5.5 Expose the strategy in the admin UI
 
@@ -575,7 +575,7 @@ def my_new_action():
     return jsonify({"status": "ok"})
 ```
 
-If the new endpoint creates a fact (not just an envelope), follow §4 to declare a typed table and a `record_*` function.
+If the new endpoint creates a fact (not just an envelope), follow Section 4 to declare a typed table and a `record_*` function.
 
 ---
 
@@ -637,7 +637,7 @@ The full answers JSON is already in `sae_questionnaire_response.csv` (column `an
 
 ## 10. Testing patterns
 
-The full test suite is documented in [`tech-docs.md`](tech-docs.md) §10. Key conventions:
+The full test suite is documented in [`tech-docs.md`](tech-docs.md) Section 10. Key conventions:
 
 - **Unit test pure functions directly.** E.g. `_compose_text_adjustments` is tested without any DB fixture in `test_steering_actions_and_security.py::TestComposeTextAdjustments`.
 - **Integration tests use `app_ctx`.** The fixture in `tests/conftest.py` gives you a freshly-created app + DB. Seed the data with `_seed_participation` (see `tests/plugins/steering/test_sae_audit.py`).
