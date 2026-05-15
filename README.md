@@ -17,7 +17,7 @@ The result is a study-ready **Steering Loop** on top of [EasyStudy](https://gith
 - a **researcher dashboard** with per-approach analytics, per-participant journeys, and attention-check tracking, exports, and additional metrics;
 - end-to-end **deployment recipes** (local, Docker, Railway) with first-boot asset bootstrap from GitHub Releases.
 
-A short specification rationale and full requirements list (FR / NFR ids referenced throughout the docs) live in [`specification.pdf`](proposal/specification.pdf).
+A full specification rationale and requirements list (FR / NFR ids referenced throughout the docs) live in [`specification.pdf`](proposal/specification.pdf).
 
 
 ## Demo

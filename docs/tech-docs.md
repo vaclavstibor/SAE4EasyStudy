@@ -153,7 +153,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
 
-There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by (us) the research group. It is maintained in a private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository for data and submission reasons; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
+There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by (us) the research group. It is maintained in a private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository for data; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
 
 ### 3.5 Schema management at a glance
 
