@@ -28,26 +28,26 @@ In addition to the formal study, the steering UI was sanity-checked with five co
 - per-mode default reranking strategy (`feature-conditioned` additive blend for sliders/toggles, `feature-conditioned` for text),
 - no domain-specific guidance: participants explored the controls freely and rated the experience after each modality.
 
-This is **not a controlled experiment** — it is a usability sanity check that was collected outside the standard questionnaire UI (the participants filled the questionnaire offline). The responses below should not be read as statistical evidence; the paper study covers that. They are kept here because the supervisor asked for a quick, attributable smoke check that the three steering modalities are usable on default settings.
-
 ## Files
 
 - [`data/questionnaire.csv`](data/questionnaire.csv) — the five-question Likert instrument (1–5 scale) applied per modality.
 - [`data/responses.csv`](data/responses.csv) — long-format responses, **15 rows** (5 participants × 3 modalities).
-- [`data/anonymization_map.csv`](data/anonymization_map.csv) — mapping `anonym_1 … anonym_5` to real participant identities. Participants are colleagues who consented to be identified in the supervisor-facing version of this evaluation; in all other contexts treat the `anonym_*` ids as canonical.
+- `data/anonymization_map.csv` — mapping `anonym_1 … anonym_5` to the real participant identities. Kept locally only (see `.gitignore`) and shared on request with the supervisor / reviewer so the raw responses can be attributed during the review process; in all other contexts treat the `anonym_*` ids as canonical.
 
 ## How to read `responses.csv`
 
-| Column | Meaning |
-| --- | --- |
-| `participant_id` | `anonym_1` … `anonym_5`; resolves via `anonymization_map.csv` |
-| `mode` | `toggle`, `slider`, or `text` |
-| `q1_overall` | Interface understandability (1 = not at all; 5 = very) |
-| `q2_controls` | Ease of using steering controls (1 = very difficult; 5 = very easy) |
-| `q3_control` | Felt in control of recommendations (1 = not at all; 5 = very much) |
-| `q4_trust` | System reacted as intended (1 = not at all; 5 = very much) |
-| `q5_would_use` | Would use this in a real system (1 = definitely not; 5 = definitely yes) |
-| `comment` | Free-form qualitative note (Czech) |
+
+| Column           | Meaning                                                                  |
+| ---------------- | ------------------------------------------------------------------------ |
+| `participant_id` | `anonym_1` … `anonym_5`; resolves via `anonymization_map.csv`            |
+| `mode`           | `toggle`, `slider`, or `text`                                            |
+| `q1_overall`     | Interface understandability (1 = not at all; 5 = very)                   |
+| `q2_controls`    | Ease of using steering controls (1 = very difficult; 5 = very easy)      |
+| `q3_control`     | Felt in control of recommendations (1 = not at all; 5 = very much)       |
+| `q4_trust`       | System reacted as intended (1 = not at all; 5 = very much)               |
+| `q5_would_use`   | Would use this in a real system (1 = definitely not; 5 = definitely yes) |
+| `comment`        | Free-form qualitative note (Czech)                                       |
+
 
 ## Headline observations from the 15 supplementary responses
 

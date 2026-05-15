@@ -21,6 +21,7 @@ This repository is the deliverable described in [`specification.pdf`](../proposa
 - **Operational features beyond the proposal**: per-participant journey view, attention-check evaluation declared in questionnaire HTML and persisted at submit time, and robust deployment bootstrapping of runtime assets from GitHub Releases.
 - **Upstream parity preserved**: upstream EasyStudy plugins (`fastcompare`, `layoutshuffling`, `vae`, `empty_template`) remain loadable via the canonical contract so researchers see the same plugin matrix as upstream plus the steering plugin.
 - **Refactored architecture**: the project's research contribution is refactored to be more modular, robust, better documented, more testable, more deployable, more data driven, and safer to extend.
+- **Evaluation artefacts**: a five-question Likert instrument and a filled-in supplementary in-house run with five colleagues across all three steering modalities (toggle, slider, text) on default settings are committed in [`evaluation/`](../evaluation/README.md). The primary 200-participant Prolific study (paper in review) is hosted in the private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository and shared on request.
 
 ## Evaluation alignment with `specification.pdf` (Section “Evaluation”)
 

@@ -117,6 +117,8 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 ### 3.2 Main features
 
+(*Based on the `specification.pdf` requirements list*)
+
 | Feature | Backing FR | Module |
 | --- | --- | --- |
 | Slider steering (continuous boost/suppress per feature) | FR-05 | `modalities/sliders.py` |
