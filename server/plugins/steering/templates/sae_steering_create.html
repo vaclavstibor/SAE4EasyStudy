@@ -284,7 +284,7 @@
 
                     <div class="mt-3">
                         <label class="form-label">Approach Questionnaires (HTML files)</label>
-                        <div class="form-text">Optional. These stack automatically based on the selected number of approaches and each one is shown after its specific approach.</div>
+                        <div class="form-text">One per approach, shown right after that approach. Pick a built-in template (implicit / explicit feedback) or upload a custom HTML &mdash; the choice is explicit and never auto-changed by the steering mode controls above.</div>
                         <div class="questionnaire-stack" id="approach-questionnaire-stack"></div>
                     </div>
 
@@ -320,9 +320,33 @@
             final:    'sae_final_questionnaire.html',
         };
 
+        // Initial seed only — picks a sensible starting questionnaire when a
+        // new approach card is created. Once seeded, the admin's explicit
+        // radio choice in the questionnaire stack is the source of truth and
+        // is never overwritten when steering mode / modalities change.
         function defaultPhaseQuestionnaire(steeringMode) {
             if (steeringMode === 'none') return DEFAULT_QUESTIONNAIRES.implicit;
             return DEFAULT_QUESTIONNAIRES.explicit;
+        }
+
+        function questionnaireKindOf(filename) {
+            if (filename === DEFAULT_QUESTIONNAIRES.implicit) return 'implicit';
+            if (filename === DEFAULT_QUESTIONNAIRES.explicit) return 'explicit';
+            if (filename) return 'custom';
+            return 'custom';
+        }
+
+        function setApproachQuestionnaireKind(index, kind) {
+            if (kind === 'implicit') {
+                approaches[index].phase_questionnaire_file = DEFAULT_QUESTIONNAIRES.implicit;
+            } else if (kind === 'explicit') {
+                approaches[index].phase_questionnaire_file = DEFAULT_QUESTIONNAIRES.explicit;
+            } else if (kind === 'custom') {
+                if (questionnaireKindOf(approaches[index].phase_questionnaire_file) !== 'custom') {
+                    approaches[index].phase_questionnaire_file = '';
+                }
+            }
+            renderApproachQuestionnaireStack();
         }
 
         function preferredTopKModelId() {
@@ -610,11 +634,6 @@
             approaches[index][field] = value;
             if (field === 'steering_mode') {
                 approaches[index].enabled_modalities = deriveEnabledModalities(value);
-                const currentQ = approaches[index].phase_questionnaire_file;
-                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
-                if (!currentQ || isDefault) {
-                    approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(value);
-                }
             }
             if (field === 'sae' || field === 'steering_mode' || field === 'use_selected_movies_as_examples') {
                 renderApproachCards();
@@ -631,11 +650,6 @@
             }
             approaches[index].enabled_modalities = Array.from(current);
             normalizeApproachControls(approaches[index]);
-            const currentQ = approaches[index].phase_questionnaire_file;
-            const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
-            if (!currentQ || isDefault) {
-                approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
-            }
             renderApproachCards();
             renderApproachQuestionnaireStack();
         }
@@ -651,11 +665,6 @@
             }
             approaches[index].enabled_modalities = Array.from(current);
             normalizeApproachControls(approaches[index]);
-            const currentQ = approaches[index].phase_questionnaire_file;
-            const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(currentQ);
-            if (!currentQ || isDefault) {
-                approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
-            }
             renderApproachCards();
             renderApproachQuestionnaireStack();
         }
@@ -674,27 +683,52 @@
             if (!container) return;
 
             container.innerHTML = approaches.map((approach, index) => {
-                const isDefault = Object.values(DEFAULT_QUESTIONNAIRES).includes(approach.phase_questionnaire_file);
-                const hasCustom = !!approach.phase_questionnaire_file && !isDefault;
+                const kind = questionnaireKindOf(approach.phase_questionnaire_file);
+                const hasUploadedCustom = kind === 'custom' && !!approach.phase_questionnaire_file;
+                const customLabel = hasUploadedCustom
+                    ? `<span id="approach-questionnaire-filename-${index}" class="fw-semibold small">${approach.phase_questionnaire_file}</span>
+                       <span class="badge bg-info">uploaded</span>`
+                    : `<span class="text-muted small fst-italic">no file uploaded yet</span>`;
+
+                const fileInputDisabled = kind === 'custom' ? '' : 'disabled';
 
                 return `
                 <div class="questionnaire-item">
                     <div class="questionnaire-item-title">${approach.name || approachLabel(index)} questionnaire</div>
-                    <div class="mb-2 d-flex align-items-center flex-wrap gap-2">
-                        <span class="text-muted small">Current:</span>
-                        ${isDefault
-                            ? `<code class="small">${approach.phase_questionnaire_file}</code>
-                               <span class="badge bg-secondary">default</span>
-                               <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" style="font-size:.75em" onclick="clearApproachQuestionnaire(${index})">remove</button>`
-                            : hasCustom
-                                ? `<span id="approach-questionnaire-filename-${index}" class="fw-semibold small">${approach.phase_questionnaire_file}</span>
-                                   <span class="badge bg-info">uploaded</span>
-                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">reset to default</button>`
-                                : `<span class="text-muted small fst-italic">none</span>
-                                   <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" style="font-size:.75em" onclick="resetApproachQuestionnaire(${index})">restore default</button>`}
+                    <div class="d-flex flex-column gap-1 mb-2">
+                        <label class="form-check d-flex align-items-center gap-2 m-0">
+                            <input class="form-check-input m-0" type="radio"
+                                name="approach-questionnaire-kind-${index}" value="implicit"
+                                ${kind === 'implicit' ? 'checked' : ''}
+                                onchange="setApproachQuestionnaireKind(${index}, 'implicit')">
+                            <span class="form-check-label">
+                                Implicit feedback (default) &mdash;
+                                <code class="small">${DEFAULT_QUESTIONNAIRES.implicit}</code>
+                            </span>
+                        </label>
+                        <label class="form-check d-flex align-items-center gap-2 m-0">
+                            <input class="form-check-input m-0" type="radio"
+                                name="approach-questionnaire-kind-${index}" value="explicit"
+                                ${kind === 'explicit' ? 'checked' : ''}
+                                onchange="setApproachQuestionnaireKind(${index}, 'explicit')">
+                            <span class="form-check-label">
+                                Explicit feedback (default) &mdash;
+                                <code class="small">${DEFAULT_QUESTIONNAIRES.explicit}</code>
+                            </span>
+                        </label>
+                        <label class="form-check d-flex align-items-center gap-2 m-0">
+                            <input class="form-check-input m-0" type="radio"
+                                name="approach-questionnaire-kind-${index}" value="custom"
+                                ${kind === 'custom' ? 'checked' : ''}
+                                onchange="setApproachQuestionnaireKind(${index}, 'custom')">
+                            <span class="form-check-label">
+                                Custom upload &mdash; ${customLabel}
+                            </span>
+                        </label>
                     </div>
-                    <input type="file" class="form-control form-control-sm" id="approach-questionnaire-file-${index}" accept=".html,.htm">
-                    <div class="form-text">Upload a custom file to override${isDefault ? '' : ', or click "restore default"'}.</div>
+                    <input type="file" class="form-control form-control-sm"
+                        id="approach-questionnaire-file-${index}" accept=".html,.htm" ${fileInputDisabled}>
+                    <div class="form-text">Pick a template explicitly. Your selection is preserved when you tweak steering mode or modalities above.</div>
                 </div>`;
             }).join('');
 
@@ -720,16 +754,6 @@
             });
         }
 
-        function clearApproachQuestionnaire(index) {
-            approaches[index].phase_questionnaire_file = '';
-            renderApproachQuestionnaireStack();
-        }
-
-        function resetApproachQuestionnaire(index) {
-            approaches[index].phase_questionnaire_file = defaultPhaseQuestionnaire(approaches[index].steering_mode);
-            renderApproachQuestionnaireStack();
-        }
-
         async function uploadQuestionnaire(inputId, previewId, nameId, assignCallback) {
             const file = document.getElementById(inputId).files[0];
             if (!file) return;
@@ -743,8 +767,13 @@
             });
             const data = await resp.json();
             assignCallback(data.upload_name);
-            document.getElementById(previewId).style.display = 'block';
-            document.getElementById(nameId).textContent = file.name;
+            // Per-approach cards do not render a separate preview/name node
+            // (the radio stack rerenders itself once `phase_questionnaire_file`
+            // is assigned), so both lookups are best-effort.
+            const previewEl = previewId ? document.getElementById(previewId) : null;
+            if (previewEl) previewEl.style.display = 'block';
+            const nameEl = nameId ? document.getElementById(nameId) : null;
+            if (nameEl) nameEl.textContent = file.name;
         }
 
         async function loadOptions() {
