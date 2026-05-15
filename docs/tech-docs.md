@@ -166,6 +166,83 @@ There is also an internal offline preprocessing / training / labeling pipeline (
 
 There is no migration framework. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
 
+### 3.6 System view (C4 level 1 + 2)
+
+A top-down map of who interacts with the system and what runs inside the deployment. The diagrams follow the [C4 model](https://c4model.com): the **Context** view (level 1) shows the system in its environment, and the **Container** view (level 2) zooms one level into the deployment. The C4 "component" level — internal modules and their boundaries inside the Flask app — is covered by Section [4. Architecture](#4-architecture).
+
+**Level 1 — System context.**
+
+```mermaid
+flowchart TB
+    researcher(("Researcher / admin"))
+    participant(("Study participant"))
+    sae["SAE4EasyStudy<br/>(this repository)"]
+    prolific["Prolific<br/>recruitment platform"]
+    gh["GitHub Releases<br/>vaclavstibor/SAE4EasyStudy"]
+    offline["OfflineEasyStudy<br/>(private offline pipeline)"]
+
+    researcher -->|"creates studies,<br/>views dashboard,<br/>exports CSV"| sae
+    participant -->|"joins via link,<br/>runs iteration loop"| sae
+    prolific -. routes participants .-> participant
+    sae -. completion redirect .-> prolific
+    sae -->|"first-boot asset bootstrap"| gh
+    offline -. uploads built artefacts .-> gh
+
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff
+    classDef system fill:#1168bd,stroke:#0e5aa7,color:#fff
+    classDef external fill:#999999,stroke:#777777,color:#fff
+    class researcher,participant person
+    class sae system
+    class prolific,gh,offline external
+```
+
+**Level 2 — Containers inside the deployment.**
+
+```mermaid
+flowchart TB
+    actor(("Researcher /<br/>participant"))
+    gh["GitHub Releases"]
+    prolific["Prolific"]
+
+    subgraph deploy ["SAE4EasyStudy deployment"]
+        browser["Browser<br/>Jinja2 + Bootstrap-Vue +<br/>Chart.js + vanilla JS"]
+        flask["Flask app<br/>gunicorn --preload<br/>platform/* + plugins/steering/*"]
+        db[("Database<br/>PostgreSQL (prod) /<br/>SQLite (dev)<br/>Sae* tables + sessions")]
+        volume[("Persistent volume /data<br/>SAE ckpt, dataset CSVs,<br/>semantic clusters, LLM labels,<br/>cache/, instance/")]
+        entry["Entrypoint<br/>docker-entrypoint.sh<br/>schema init + asset bootstrap"]
+        cron["Backup cron<br/>backup_db.py<br/>pg_dump / sqlite copy → .gz"]
+    end
+
+    actor -->|HTTPS| browser
+    browser <-->|"HTML + JSON over HTTP"| flask
+    flask -->|"SQLAlchemy 2.x"| db
+    flask -->|"reads SAE assets,<br/>writes cache pickles"| volume
+    entry --> db
+    entry --> volume
+    entry -. first boot only .-> gh
+    cron --> db
+    cron --> volume
+    flask -. completion redirect .-> prolific
+
+    classDef container fill:#438dd5,stroke:#2e6da4,color:#fff
+    classDef storage fill:#62a0d3,stroke:#2e6da4,color:#fff
+    classDef external fill:#999999,stroke:#777777,color:#fff
+    classDef person fill:#08427b,stroke:#073b6f,color:#fff
+    class browser,flask,entry,cron container
+    class db,volume storage
+    class gh,prolific external
+    class actor person
+```
+
+**Notes on the runtime topology** (cross-references in [Section 9 — Runtime and Deployment](#9-runtime-and-deployment)):
+
+- The **entrypoint** (`server/docker-entrypoint.sh`) is a one-shot boot step. It symlinks the volume's `instance/`, `cache/`, `plugins/steering/models/`, `plugins/steering/data/`, and `datasets/` subdirectories into the app tree, runs `server/scripts/init_db.py` (`db.create_all()`, idempotent), optionally fetches the dataset and SAE assets from GitHub Releases (`DATASET_BOOTSTRAP=1` / `SAE_BOOTSTRAP_MODEL=1`), and finally `exec`s gunicorn. Subsequent boots skip the downloads if the files are already on the volume.
+- The **Flask app** runs as a single gunicorn process (default `GUNICORN_WORKERS=1`) with `--preload`. It loads the platform blueprints (`admin`, `auth`, `participant_flow`) and every plugin registered through `load_canonical_plugin_contracts`. The SAE Steering plugin owns its own blueprint, persistence models, modalities, analytics, and templates inside `server/plugins/steering/`.
+- The **database** holds the platform tables (`User`, `UserStudy`, `Participation`, `Interaction`, `Message`), the plugin's typed audit tables (`Sae*`), and the Flask-Session `sessions` table. Postgres is recommended for production; SQLite is the local default.
+- The **persistent volume** (`/data`) survives container restarts and Railway redeploys. SAE model weights, dataset CSVs, semantic clusters and LLM labels, the SQLite instance DB (when used), and per-process cache pickles all live there. The entrypoint links those locations into the in-image paths so the running app reads `/app/server/cache`, `/app/server/instance`, etc.
+- The **backup cron** is a separate scheduled job (Railway cron `0 3 * * *`). It shares the volume and writes timestamped dumps to `/app/backups/db_<UTC>.{sql,sqlite}.gz`, keeping the most recent `KEEP_LAST` (default 14) archives.
+- The **OfflineEasyStudy** repository is **not part of the runtime**. It is the private offline pipeline (dataset preprocessing, SAE training, LLM labeling, post-hoc analytics) that produces the artefacts uploaded to GitHub Releases as published releases. The runtime sees only those published artefacts.
+
 ## 4. Architecture
 
 ### 4.1 Module map
