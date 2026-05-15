@@ -13,7 +13,6 @@ RUN apt-get update \
         g++ \
         libstdc++6 \
         libgomp1 \
-        postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 COPY server/pip_requirements.txt /tmp/pip_requirements.txt

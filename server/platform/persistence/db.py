@@ -23,8 +23,10 @@ DEFAULT_INSTANCE_PATH = SERVER_ROOT / "instance"
 
 def resolve_database_url() -> str:
     url = os.environ.get("DATABASE_URL", DEFAULT_DATABASE_URL)
+    # Connector for some cases (e.g. Railway deployment): https://docs.railway.app/databases/postgresql
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
+    # Connector for local/docker deployment
     if url.startswith("sqlite:///") and not url.startswith("sqlite:////"):
         sqlite_path = url.removeprefix("sqlite:///")
         if sqlite_path and sqlite_path != ":memory:":
