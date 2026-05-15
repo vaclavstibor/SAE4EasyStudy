@@ -11,13 +11,13 @@ Neural recommender systems achieve strong predictive accuracy, but their interna
 
 The repository delivers a study-ready implementation of this idea: an EasyStudy-based platform, the SAE Steering plugin with multiple steering modalities (sliders, toggles, text, examples), a typed audit pipeline, a researcher dashboard, and CSV export. It supports controlled user studies on a MovieLens-derived catalog comparing baseline recommendations against steered variants.
 
-## Study Links
+## Demo
 
 
-| Link                                 | Description                                            |
-| ------------------------------------ | ------------------------------------------------------ |
-| [EasyStudy Admin Panel](https://...) | Administrator panel for creating and managing studies. |
-| [Concrete Study](https://...)        | Study join link as a participant.                      |
+| Link                                                                  | Role          | Description                                            |
+| --------------------------------------------------------------------- | ------------- | ------------------------------------------------------ |
+| [Administration](https://sae4easystudy.up.railway.app/) | Administrator | Administrator panel for creating and managing studies *(use login: `admin@admin.cz`, password: `Admin1!`)*. |
+| [Study](https://...)                                    | Participant   | Concrete study join link as a participant.                      |
 
 
 ## Repositories
@@ -27,7 +27,7 @@ The repository delivers a study-ready implementation of this idea: an EasyStudy-
 | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **[SAE4EasyStudy](https://github.com/vaclavstibor/SAE4EasyStudy)** (this) | Research framework: platform, SAE Steering plugin, runtime, and docs.                                 |
 | **[EasyStudy](https://github.com/pdokoupil/EasyStudy)**                   | Upstream framework for recommender-system user studies that this project extends.                     |
-| **[OfflineEasyStudy](https://...)**                                       | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details |
+| **[OfflineEasyStudy](TODO)**                                              | Offline data preprocessing, train, neuron labeling, studies results analysis, reproducibility details. This repository is private due to sensitive nature of the participants data. |
 
 
 ## Documentation
