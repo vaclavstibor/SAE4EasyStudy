@@ -42,3 +42,6 @@ notes.txt
 cover-letter.txt
 scripts/reconstruct_journey.py
 proposal-gaps.md
+
+# Anonymization map
+evaluation/data/anonymization_map.csv
