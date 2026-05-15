@@ -344,8 +344,12 @@ def parse_args():
     parser.add_argument(
         "--runtime-asset-name",
         dest="runtime_asset_name",
-        default=os.environ.get("SAE_RUNTIME_ASSET_NAME", DEFAULT_RUNTIME_FEATURES_FILENAME),
-        help="Exact runtime features asset name; defaults to item_sae_features_<model>.pt",
+        default=os.environ.get("SAE_RUNTIME_ASSET_NAME", ""),
+        help=(
+            "Exact runtime features asset name. Leave empty (default) to auto-select "
+            "from REMOTE_RUNTIME_ASSET_CANDIDATES — handles both plain .pt and "
+            "compressed .pt.xz / .pt.gz variants automatically."
+        ),
     )
     parser.add_argument(
         "--runtime-output",
