@@ -25,6 +25,7 @@ def _resolve_safe_cache_path(ml_variant: str) -> Path:
         raise ValueError(f"Invalid dataset variant: {ml_variant!r}")
     cache_root = Path(get_abs_project_root_path()).resolve() / "cache" / "utils"
     cache_root.mkdir(parents=True, exist_ok=True)
+    cache_root = cache_root.resolve()
     cache_dir = (cache_root / ml_variant).resolve()
     if cache_root not in cache_dir.parents and cache_dir != cache_root:
         raise ValueError(f"Variant directory escapes cache root: {cache_dir}")
