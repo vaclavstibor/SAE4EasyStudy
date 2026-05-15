@@ -5,7 +5,7 @@ This page is the math reference for the SAE Steering plugin. Each modality follo
 **Notation rules used throughout this page.**
 
 - Single-letter symbols ($w$, $\delta_c$, $\alpha$, $\beta$, $\gamma$, $\tau$, $\lambda$) are reserved for math.
-- Multi-letter names that refer to *functions or fields* are typeset with `\operatorname{...}` (e.g. $\operatorname{score}(s, c)$, $\operatorname{cf}(i)$). This keeps `direction(s)` from being rendered as $d \cdot i \cdot r \cdot e \cdot c \cdot t \cdot \dots$
+- Multi-letter names that refer to *functions or fields* are typeset with `\mathrm{...}` (e.g. $\mathrm{score}(s, c)$, $\mathrm{cf}(i)$). This keeps `direction(s)` from being rendered as $d \cdot i \cdot r \cdot e \cdot c \cdot t \cdot \dots$
 - Implementation identifiers — Python variable names, config keys, session keys, files — are rendered as `code`.
 - Every numeric constant in a formula is either a **config key** (researcher-tunable; see the Appendix) or **hardcoded**. Inline math sections only use the symbol; the Appendix is the single source of truth for values and scopes.
 
@@ -65,7 +65,7 @@ class SteeringModality:
 A `SteeringResult` is a triple `(features, adjustments, metadata)`. The `adjustments` field is a dictionary from cluster id to a real weight:
 
 $$
-\operatorname{adjustments} : c \mapsto w(c), \qquad w(c) \in [-1, 1].
+\mathrm{adjustments} : c \mapsto w(c), \qquad w(c) \in [-1, 1].
 $$
 
 Semantics: $w(c) > 0$ means **boost** items whose neurons fire in cluster $c$; $w(c) < 0$ means **suppress** them.
@@ -103,7 +103,7 @@ def expand_feature_adjustments(raw_adjustments: dict, cluster_map: dict = None) 
 Each item $i$ has a row $f_i \in \mathbb{R}^n$ of SAE activations (where $n$ is the SAE feature count, e.g. $1024$ for `TopKSAE-1024`). The recommender builds a sparse profile $a \in \mathbb{R}^n$ with $a_n = \Delta_n$ (after expansion), and computes the SAE score as the inner product:
 
 $$
-\operatorname{sae}(i) \;=\; f_i^\top a.
+\mathrm{sae}(i) \;=\; f_i^\top a.
 $$
 
 Implemented as a matrix-vector product over the whole catalogue:
@@ -122,7 +122,7 @@ The full final score (CF + genre + the strategy-specific SAE contribution + a sm
 
 #### Input
 
-The UI sends a dictionary $\operatorname{raw}: c \mapsto \delta_c \in [-1, 1]$, one slider per visible cluster.
+The UI sends a dictionary $\mathrm{raw}: c \mapsto \delta_c \in [-1, 1]$, one slider per visible cluster.
 
 #### Per-iteration weight
 
@@ -187,14 +187,14 @@ Switching between approaches always clears the per-approach state (`_do_advance_
 
 #### Input
 
-The UI sends $\operatorname{raw} : c \mapsto \delta_c \in \mathbb{R}$, where only the **sign** is meaningful: positive means boost, negative means suppress, and near-zero means unset.
+The UI sends $\mathrm{raw} : c \mapsto \delta_c \in \mathbb{R}$, where only the **sign** is meaningful: positive means boost, negative means suppress, and near-zero means unset.
 
 #### Per-iteration weight
 
 Each touched cluster gets a fixed-magnitude weight $\beta$ (`toggle_default_weight`; default `0.65`), signed by the user's choice:
 
 $$
-w_{\mathrm{toggle}}(c) \;=\; \operatorname{sign}(\delta_c) \cdot \beta, \qquad |\delta_c| > 10^{-3}.
+w_{\mathrm{toggle}}(c) \;=\; \mathrm{sign}(\delta_c) \cdot \beta, \qquad |\delta_c| > 10^{-3}.
 $$
 
 ```13:32:server/plugins/steering/modalities/toggles.py
@@ -225,7 +225,7 @@ Toggles share the slider accumulation path (the iteration controller treats ever
 
 #### Input
 
-A free-form participant query $Q$, with $|Q| \le \operatorname{max\_chars}$ (`text_steering.max_query_chars`, study-level; default `200`). The route returns HTTP 400 if $Q$ is longer.
+A free-form participant query $Q$, with $|Q| \le \mathrm{max\_chars}$ (`text_steering.max_query_chars`, study-level; default `200`). The route returns HTTP 400 if $Q$ is longer.
 
 ### 4.1 Segmentation
 
@@ -233,9 +233,9 @@ $Q$ is split on the regex `_SEGMENT_BOUNDARY_RE = [.;]|\bbut\b|\bhowever\b`. Eac
 
 | Quantity | Domain | Definition |
 | --- | --- | --- |
-| $\operatorname{direction}(s_i)$ | $\{+1, -1\}$ | $-1$ iff any marker in `_NEGATIVE_HINTS` (`not`, `no`, `never`, `don't`, `i hate`, …) appears in $s_i$; otherwise $+1$. |
-| $\operatorname{intensity}(s_i)$ | $\{0.65, 1.0, 1.35\}$ | $1.35$ for "much/way/a lot more|less", "strongly", "definitely"; $0.65$ for "slightly", "a bit", "somewhat", "kind of"; $1.0$ otherwise. |
-| $\operatorname{tokens}(s_i)$ | finite multiset of strings | Alphanumeric tokens of length $\ge 2$, lower-cased, with `_STOP_WORDS` removed. |
+| $\mathrm{direction}(s_i)$ | $\{+1, -1\}$ | $-1$ iff any marker in `_NEGATIVE_HINTS` (`not`, `no`, `never`, `don't`, `i hate`, …) appears in $s_i$; otherwise $+1$. |
+| $\mathrm{intensity}(s_i)$ | $\{0.65, 1.0, 1.35\}$ | $1.35$ for "much/way/a lot more|less", "strongly", "definitely"; $0.65$ for "slightly", "a bit", "somewhat", "kind of"; $1.0$ otherwise. |
+| $\mathrm{tokens}(s_i)$ | finite multiset of strings | Alphanumeric tokens of length $\ge 2$, lower-cased, with `_STOP_WORDS` removed. |
 
 The hint lists, segmentation regex, intensity ladder, and stop-word list are **hardcoded** in `modalities/text.py`.
 
@@ -264,7 +264,7 @@ def _split_query(query: str) -> List[Dict]:
 For each cluster $c$ with label $\ell_c$ and description $d_c$, and each segment $s_i$, define the haystack $h_c = \ell_c \cup d_c$ (whitespace-joined). The per-segment score is
 
 $$
-\operatorname{score}(s_i, c) \;=\; 3 \cdot \mathbb{1}[\operatorname{text}(s_i) \subseteq h_c] \;+\; \sum_{t \in \operatorname{tokens}(s_i)} w(t, c) \;+\; \frac{|\operatorname{tokens}(s_i) \cap \operatorname{tokens}(h_c)|}{|\operatorname{tokens}(s_i)|},
+\mathrm{score}(s_i, c) \;=\; 3 \cdot \mathbb{1}[\mathrm{text}(s_i) \subseteq h_c] \;+\; \sum_{t \in \mathrm{tokens}(s_i)} w(t, c) \;+\; \frac{|\mathrm{tokens}(s_i) \cap \mathrm{tokens}(h_c)|}{|\mathrm{tokens}(s_i)|},
 $$
 
 with per-token weight
@@ -272,8 +272,8 @@ with per-token weight
 $$
 w(t, c) \;=\;
 \begin{cases}
-2.5  & t \in \operatorname{tokens}(\ell_c), \\
-1.25 & t \in \operatorname{tokens}(d_c), \\
+2.5  & t \in \mathrm{tokens}(\ell_c), \\
+1.25 & t \in \mathrm{tokens}(d_c), \\
 0.75 & t \in h_c \text{ but no token match}, \\
 0    & \text{otherwise.}
 \end{cases}
@@ -309,20 +309,20 @@ def _score_cluster(segment: Dict, cluster: Dict) -> float:
 
 ### 4.3 Aggregation across segments
 
-Let $S_c = \{ i : \operatorname{score}(s_i, c) > 0 \}$ be the segments that contribute to cluster $c$. Then
+Let $S_c = \{ i : \mathrm{score}(s_i, c) > 0 \}$ be the segments that contribute to cluster $c$. Then
 
 $$
-\operatorname{total}(c) \;=\; \sum_{i \in S_c} \operatorname{score}(s_i, c),
+\mathrm{total}(c) \;=\; \sum_{i \in S_c} \mathrm{score}(s_i, c),
 $$
 
 $$
-\overline{\operatorname{dir}}(c) \;=\;
+\overline{\mathrm{dir}}(c) \;=\;
 \begin{cases}
-+1 & \text{if } \sum_{i \in S_c} \operatorname{direction}(s_i) \ge 0, \\
++1 & \text{if } \sum_{i \in S_c} \mathrm{direction}(s_i) \ge 0, \\
 -1 & \text{otherwise,}
 \end{cases}
 \qquad
-\overline{\operatorname{int}}(c) \;=\; \frac{1}{|S_c|} \sum_{i \in S_c} \operatorname{intensity}(s_i).
+\overline{\mathrm{int}}(c) \;=\; \frac{1}{|S_c|} \sum_{i \in S_c} \mathrm{intensity}(s_i).
 $$
 
 ### 4.4 Weight assignment
@@ -330,11 +330,11 @@ $$
 With baseline $w^\ast =$ `text_steering_weight` (default `0.55`), bounds $[0.25, 0.95]$ and $[0.1, 0.95]$ hardcoded:
 
 $$
-w_0(c) \;=\; \operatorname{clip}\!\left( w^\ast + \tfrac{\operatorname{total}(c)}{10},\; 0.25,\; 0.95 \right),
+w_0(c) \;=\; \mathrm{clip}\!\left( w^\ast + \tfrac{\mathrm{total}(c)}{10},\; 0.25,\; 0.95 \right),
 $$
 
 $$
-w(c) \;=\; \overline{\operatorname{dir}}(c) \cdot \operatorname{clip}\!\left( w_0(c) \cdot \overline{\operatorname{int}}(c),\; 0.1,\; 0.95 \right).
+w(c) \;=\; \overline{\mathrm{dir}}(c) \cdot \mathrm{clip}\!\left( w_0(c) \cdot \overline{\mathrm{int}}(c),\; 0.1,\; 0.95 \right).
 $$
 
 ```186:202:server/plugins/steering/modalities/text.py
@@ -381,7 +381,7 @@ Last prompt was *"more sci-fi, less romance"*; the new prompt is *"more romance"
 #### 4.5.2 `add`
 
 $$
-T_t^{\mathrm{eff}}(c) \;=\; \operatorname{clip}\!\bigl( T_{t-1}(c) + T_t(c),\; -0.95,\; +0.95 \bigr), \qquad T_{t-1}(c) = 0 \text{ for } c \notin T_{t-1}.
+T_t^{\mathrm{eff}}(c) \;=\; \mathrm{clip}\!\bigl( T_{t-1}(c) + T_t(c),\; -0.95,\; +0.95 \bigr), \qquad T_{t-1}(c) = 0 \text{ for } c \notin T_{t-1}.
 $$
 
 Per-cluster weights from the two iterations are summed. Clusters that appear in only one of $T_{t-1}, T_t$ carry through (treating the missing side as $0$). The sum is clipped per cluster to $[-0.95, +0.95]$ so repeated reinforcement cannot drive the weight unboundedly. Use this when prompts are *layered refinements* of an evolving query.
@@ -440,7 +440,7 @@ def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
 
 #### NFR-12 no-match
 
-If $\operatorname{total}(c) \le 0$ for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows *"We could not match your text to any feature, try different wording."*
+If $\mathrm{total}(c) \le 0$ for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows *"We could not match your text to any feature, try different wording."*
 
 #### Scope
 
@@ -457,26 +457,26 @@ A set of example movie ids $E = \{e_1, \dots, e_n\}$ (typically the participant'
 For the active SAE, look each $e_j$ up in `recommender.item_features` and take the element-wise mean across the matched rows (movies not present in the SAE matrix are silently skipped):
 
 $$
-\mu \;=\; \frac{1}{|E^\ast|} \sum_{e \in E^\ast} \operatorname{sae\_activation}(e),
+\mu \;=\; \frac{1}{|E^\ast|} \sum_{e \in E^\ast} \mathrm{sae\_activation}(e),
 $$
 
-where $E^\ast \subseteq E$ is the matched subset and $\operatorname{sae\_activation}(e) \in \mathbb{R}^n$.
+where $E^\ast \subseteq E$ is the matched subset and $\mathrm{sae\_activation}(e) \in \mathbb{R}^n$.
 
 ### 5.2 Per-cluster score and weight
 
 For each cluster $c$ with neuron set $M[c]$, define
 
 $$
-\operatorname{score}_e(c) \;=\; \frac{1}{|M[c]|} \sum_{n \in M[c]} \mu_n.
+\mathrm{score}_e(c) \;=\; \frac{1}{|M[c]|} \sum_{n \in M[c]} \mu_n.
 $$
 
-Only clusters with $\operatorname{score}_e(c) > 0$ survive. The weight is bounded with strength $s = $ `example_selection_weight` (default `0.65`) and a sub-linear score boost (factor `0.6`, upper bound `0.95` — both hardcoded):
+Only clusters with $\mathrm{score}_e(c) > 0$ survive. The weight is bounded with strength $s = $ `example_selection_weight` (default `0.65`) and a sub-linear score boost (factor `0.6`, upper bound `0.95` — both hardcoded):
 
 $$
-w_e(c) \;=\; \operatorname{clip}\!\bigl(\, s \cdot (1 + 0.6 \cdot \operatorname{score}_e(c)),\; 0,\; 0.95 \,\bigr).
+w_e(c) \;=\; \mathrm{clip}\!\bigl(\, s \cdot (1 + 0.6 \cdot \mathrm{score}_e(c)),\; 0,\; 0.95 \,\bigr).
 $$
 
-The top `example_selection_top_k` clusters (default `6`) by $\operatorname{score}_e(c)$ are written to `sae_example_steering` + children; the others are dropped.
+The top `example_selection_top_k` clusters (default `6`) by $\mathrm{score}_e(c)$ are written to `sae_example_steering` + children; the others are dropped.
 
 ```62:87:server/plugins/steering/modalities/examples.py
     mean_activation = np.mean(np.asarray(activations), axis=0)
@@ -559,7 +559,7 @@ $$
 *ELSA seed reverts to the elicitation mean.*
 
 $$
-\hat{s}^{(t+1)} \;=\; \frac{1}{|E_0|} \sum_{m \in E_0} \operatorname{emb}(m).
+\hat{s}^{(t+1)} \;=\; \frac{1}{|E_0|} \sum_{m \in E_0} \mathrm{emb}(m).
 $$
 
 The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed ([Section 7](#7-elsa-seed-re-weighting-from-likes)) reverts to the elicitation-only mean.
@@ -573,10 +573,10 @@ The single `SaeResetAction` row in the DB is the source of truth that the reset 
 The ELSA seed embedding $\hat{s} \in \mathbb{R}^d$ is a weighted mean of two pools: the original elicitation movies $E_0$ (weight `1` each, hardcoded) and the participant's current liked movies $L$, capped at the first $K$ ids (sorted ascending) and weighted by $\lambda$ per liked movie:
 
 $$
-\hat{s} \;=\; \frac{\sum_{m \in E_0} \operatorname{emb}(m) \;+\; \lambda \cdot \sum_{m \in L^{\le K}} \operatorname{emb}(m)}{|E_0| \;+\; \lambda \cdot |L^{\le K}|},
+\hat{s} \;=\; \frac{\sum_{m \in E_0} \mathrm{emb}(m) \;+\; \lambda \cdot \sum_{m \in L^{\le K}} \mathrm{emb}(m)}{|E_0| \;+\; \lambda \cdot |L^{\le K}|},
 $$
 
-where $L^{\le K} = \operatorname{sorted}(L)[\,:K]$ and the cardinalities count only ids that resolve in `recommender.item_ids`.
+where $L^{\le K} = \mathrm{sorted}(L)[\,:K]$ and the cardinalities count only ids that resolve in `recommender.item_ids`.
 
 | Symbol | Meaning | Source |
 | --- | --- | --- |
@@ -625,18 +625,18 @@ When `interaction_mode` is `reset` ([Section 2.1](#21-interaction-history-mode-c
 All three reranking strategies use the same three per-item building blocks:
 
 $$
-\operatorname{cf}(i) \;=\; \cos(e_i,\, \hat{s}) \cdot w_{\mathrm{cf}}, \qquad
-\operatorname{genre}(i) \;=\; j_i \cdot w_g, \qquad
-\operatorname{sae}(i) \;=\; f_i^\top a.
+\mathrm{cf}(i) \;=\; \cos(e_i,\, \hat{s}) \cdot w_{\mathrm{cf}}, \qquad
+\mathrm{genre}(i) \;=\; j_i \cdot w_g, \qquad
+\mathrm{sae}(i) \;=\; f_i^\top a.
 $$
 
 What changes is **how** the SAE signal enters the final score:
 
-| Strategy | Final score $\operatorname{score}(i)$ | Where SAE enters | Has $\gamma$ / clamp? |
+| Strategy | Final score $\mathrm{score}(i)$ | Where SAE enters | Has $\gamma$ / clamp? |
 | --- | --- | --- | --- |
-| `feature-conditioned` | $\operatorname{cf}(i) + \operatorname{genre}(i) + \operatorname{clip}(\gamma \cdot \operatorname{sae}(i), -c, +c) + w_{\mathrm{prior}} \cdot \tilde{\operatorname{base}}(i)$ | additive score term | yes (adaptive) |
-| `latent-perturbation` | $\cos(e_i,\, \hat{s}') \cdot w_{\mathrm{cf}} + \operatorname{genre}(i)$, with $\hat{s}'$ from the rotated seed | seed rotation, then CF | no (fixed $\alpha$) |
-| `constrained-subset` | $\operatorname{cf}(i) + \operatorname{genre}(i)$ on items where $\operatorname{sae}(i) \ge \tau^\ast$; $-\infty$ otherwise (fallback to base if mask is empty) | hard filter, then CF | no (fixed $\tau$) |
+| `feature-conditioned` | $\mathrm{cf}(i) + \mathrm{genre}(i) + \mathrm{clip}(\gamma \cdot \mathrm{sae}(i), -c, +c) + w_{\mathrm{prior}} \cdot \tilde{\mathrm{base}}(i)$ | additive score term | yes (adaptive) |
+| `latent-perturbation` | $\cos(e_i,\, \hat{s}') \cdot w_{\mathrm{cf}} + \mathrm{genre}(i)$, with $\hat{s}'$ from the rotated seed | seed rotation, then CF | no (fixed $\alpha$) |
+| `constrained-subset` | $\mathrm{cf}(i) + \mathrm{genre}(i)$ on items where $\mathrm{sae}(i) \ge \tau^\ast$; $-\infty$ otherwise (fallback to base if mask is empty) | hard filter, then CF | no (fixed $\tau$) |
 
 The full math for each strategy is in [Section 10](#10-reranking-strategies-rerankingstrategy-config-key); the rationale for the *set* of strategies is in [`design-decisions.md` Section 23](design-decisions.md#23-reranking-strategies-rerankingstrategy-config-key).
 
@@ -686,27 +686,27 @@ All three strategies share the per-item building blocks defined in [Section 8](#
 
 ### 10.1 `feature-conditioned` (default — additive blend)
 
-This is the production default; it is what every existing pilot has used and what the dashboard analytics have been validated against. The SAE signal is added to the base $\operatorname{cf} + \operatorname{genre}$ score with **adaptive** gain $\gamma$ and per-iteration clamp $c$:
+This is the production default; it is what every existing pilot has used and what the dashboard analytics have been validated against. The SAE signal is added to the base $\mathrm{cf} + \mathrm{genre}$ score with **adaptive** gain $\gamma$ and per-iteration clamp $c$:
 
 $$
-\operatorname{score}(i) \;=\;
-\underbrace{\operatorname{cf}(i) + \operatorname{genre}(i)}_{\operatorname{base}(i)}
-\;+\; \underbrace{\operatorname{clip}\!\bigl(\gamma \cdot \operatorname{sae}(i),\; -c,\; +c\bigr)}_{\text{steering}(i)}
-\;+\; \underbrace{w_{\mathrm{prior}} \cdot \tilde{\operatorname{base}}(i)}_{\text{tiebreak}},
+\mathrm{score}(i) \;=\;
+\underbrace{\mathrm{cf}(i) + \mathrm{genre}(i)}_{\mathrm{base}(i)}
+\;+\; \underbrace{\mathrm{clip}\!\bigl(\gamma \cdot \mathrm{sae}(i),\; -c,\; +c\bigr)}_{\text{steering}(i)}
+\;+\; \underbrace{w_{\mathrm{prior}} \cdot \tilde{\mathrm{base}}(i)}_{\text{tiebreak}},
 $$
 
-where $\tilde{\operatorname{base}}(i) \in [0, 1]$ is the min–max normalised $\operatorname{base}$ score over allowed items (zero when the span is too small).
+where $\tilde{\mathrm{base}}(i) \in [0, 1]$ is the min–max normalised $\mathrm{base}$ score over allowed items (zero when the span is too small).
 
 Three regimes for $(\gamma, c)$ — computed per iteration over the allowed candidate set $\mathcal{A}$:
 
 | Regime | When | $\gamma$ | $c$ |
 | --- | --- | --- | --- |
 | **No adjustments** | $\lVert a \rVert = 0$ | $0$ | $0$ |
-| **Steering primary** | blend plan is `steering_primary` (any $\lvert a_n \rvert > 10^{-6}$) | $1$ | $\max_{i \in \mathcal{A}} \lvert \operatorname{sae}(i) \rvert$ |
-| **Moderate, big pool** | otherwise and $\lvert \mathcal{A} \rvert \ge 10$ | $\operatorname{clip}\!\left(0.30 \cdot \frac{\operatorname{IQR}(\operatorname{base})}{\operatorname{IQR}(\operatorname{sae})},\; 0.03,\; 0.35\right)$ | $\max\!\bigl(0.35 \cdot \operatorname{span}(\operatorname{base}),\; 0.05 \cdot \operatorname{span}(\operatorname{sae})\bigr)$ |
+| **Steering primary** | blend plan is `steering_primary` (any $\lvert a_n \rvert > 10^{-6}$) | $1$ | $\max_{i \in \mathcal{A}} \lvert \mathrm{sae}(i) \rvert$ |
+| **Moderate, big pool** | otherwise and $\lvert \mathcal{A} \rvert \ge 10$ | $\mathrm{clip}\!\left(0.30 \cdot \frac{\mathrm{IQR}(\mathrm{base})}{\mathrm{IQR}(\mathrm{sae})},\; 0.03,\; 0.35\right)$ | $\max\!\bigl(0.35 \cdot \mathrm{span}(\mathrm{base}),\; 0.05 \cdot \mathrm{span}(\mathrm{sae})\bigr)$ |
 | **Moderate, small pool** | otherwise and $\lvert \mathcal{A} \rvert < 10$ | $0.15$ | $2.0$ |
 
-Here $\operatorname{IQR}$ is the inter-quartile range and $\operatorname{span}$ is the $p_{05} \to p_{95}$ range, both taken over $\mathcal{A}$. The adaptive $\gamma$ scales the SAE term to match the dispersion of the base score, so neither signal dominates by accident.
+Here $\mathrm{IQR}$ is the inter-quartile range and $\mathrm{span}$ is the $p_{05} \to p_{95}$ range, both taken over $\mathcal{A}$. The adaptive $\gamma$ scales the SAE term to match the dispersion of the base score, so neither signal dominates by accident.
 
 Source: `recommendation/sae_recommender.py`, the `feature-conditioned` branch in `get_recommendations`.
 
@@ -730,7 +730,7 @@ $$
 **Final score:**
 
 $$
-\operatorname{score}(i) \;=\; \cos(e_i,\; \hat{s}') \cdot w_{\mathrm{cf}} \;+\; \operatorname{genre}(i).
+\mathrm{score}(i) \;=\; \cos(e_i,\; \hat{s}') \cdot w_{\mathrm{cf}} \;+\; \mathrm{genre}(i).
 $$
 
 **No additive steering term.** The debug payload reports `steering_score = 0` for every item; the observable influence shows up as a change in `cf_score`.
@@ -741,9 +741,9 @@ Source: `recommendation/sae_recommender.py`, the `latent-perturbation` branch an
 
 ### 10.3 `constrained-subset` (hard $\tau$ filter, CF rank inside)
 
-This strategy enforces a **hard membership constraint**: an item only enters the recommendation list if its SAE score is at least a fraction $\tau$ of the strongest positive SAE score in the allowed candidate set. Within the surviving subset, ranking is by base $\operatorname{cf} + \operatorname{genre}$ (no additive SAE term).
+This strategy enforces a **hard membership constraint**: an item only enters the recommendation list if its SAE score is at least a fraction $\tau$ of the strongest positive SAE score in the allowed candidate set. Within the surviving subset, ranking is by base $\mathrm{cf} + \mathrm{genre}$ (no additive SAE term).
 
-Let $\mathcal{A}$ be the allowed candidate set, $S = \{\operatorname{sae}(i) : i \in \mathcal{A}\}$, and $S^+ = \{ s \in S : s > 0 \}$. Define the threshold
+Let $\mathcal{A}$ be the allowed candidate set, $S = \{\mathrm{sae}(i) : i \in \mathcal{A}\}$, and $S^+ = \{ s \in S : s > 0 \}$. Define the threshold
 
 $$
 \tau^\ast \;=\;
@@ -756,15 +756,15 @@ $$
 and the per-item mask
 
 $$
-m_i \;=\; \mathbb{1}\bigl[\,\operatorname{sae}(i) \ge \tau^\ast\,\bigr].
+m_i \;=\; \mathbb{1}\bigl[\,\mathrm{sae}(i) \ge \tau^\ast\,\bigr].
 $$
 
 **Final score:**
 
 $$
-\operatorname{score}(i) \;=\;
+\mathrm{score}(i) \;=\;
 \begin{cases}
-\operatorname{cf}(i) + \operatorname{genre}(i) & m_i = 1, \\
+\mathrm{cf}(i) + \mathrm{genre}(i) & m_i = 1, \\
 -\infty & \text{otherwise.}
 \end{cases}
 $$
@@ -781,7 +781,7 @@ Source: `recommendation/sae_recommender.py`, the `constrained-subset` branch.
 | --- | --- | --- | --- |
 | SAE enters as | additive score term | seed rotation, then CF | hard filter, then CF |
 | Has adaptive gain / clamp? | yes (adaptive $\gamma, c$) | no (single $\alpha$) | no (single $\tau$) |
-| Top-1 can be "off-target"? | yes — steering can fail to clear $\operatorname{base} + \operatorname{clamp}$ | yes — rotation is gentle | no when the filter has survivors (every returned item satisfies the SAE threshold by construction); on fallback the strategy is honest about it via `debug.constrained_subset_survivors` |
+| Top-1 can be "off-target"? | yes — steering can fail to clear $\mathrm{base} + \mathrm{clamp}$ | yes — rotation is gentle | no when the filter has survivors (every returned item satisfies the SAE threshold by construction); on fallback the strategy is honest about it via `debug.constrained_subset_survivors` |
 | Falls back when SAE signal is empty? | yes — steering term becomes $0$ | yes — no perturbation applied | yes — mask is dropped if no positive SAE score |
 | Suitable as | baseline | ablation: "is the SAE signal informative even without explicit boosting?" | upper bound of *guaranteed* steering, ignoring CF gradients |
 
@@ -800,7 +800,7 @@ Every numeric constant in the formulas above is either a **config key** (researc
 | $w^\ast$ (text baseline) | `text_steering_weight` | `0.55` | per-approach (study-level fallback) | `active_model` → `conf` |
 | `top-K` (text) | `text_steering_top_k` | `6` | per-approach (study-level fallback) | `active_model` → `conf` |
 | text composition | `text_composition_mode` ∈ {`replace`, `add`, `intersect`} | `replace` | per-approach (study-level fallback `text_steering.composition_mode`) | `active_model` → `conf["text_steering"]` |
-| $\operatorname{max\_chars}$ | `text_steering.max_query_chars` | `200` | study-level | `conf["text_steering"]` |
+| $\mathrm{max\_chars}$ | `text_steering.max_query_chars` | `200` | study-level | `conf["text_steering"]` |
 | $s$ (example strength) | `example_selection_weight` | `0.65` | per-approach (study-level fallback) | `active_model` → `conf` |
 | `top-K` (examples) | `example_selection_top_k` | `6` | per-approach (study-level fallback) | `active_model` → `conf` |
 | Examples merged with sliders? | `use_selected_movies_as_examples` | `false` | per-approach (study-level fallback) | `active_model` → `conf` |
