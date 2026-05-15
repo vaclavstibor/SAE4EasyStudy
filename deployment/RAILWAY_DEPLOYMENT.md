@@ -1,84 +1,90 @@
 # Railway Deployment
 
-Railway hosts this application as two services: one main web service that runs
-the Flask + gunicorn process, and one cron service that snapshots the database
-once per day. Both services share a persistent volume.
+Single service, one persistent volume. No Nginx, no separate database service —
+SQLite lives on the volume and survives redeploys.
 
-This document describes the deployment, but the Railway dashboard is the source
-of truth — there is no `railway.json`, `railway-cron.json`, or `nixpacks.toml`
-checked into the repository. All Railway-specific configuration lives in the
-project UI.
+---
 
-## Main web service
+## 1. Create the Railway project
 
-- **Builder:** Dockerfile.
-- **Dockerfile path:** `Dockerfile` (repository root).
-- **Healthcheck:** `GET /healthz` (matches the route defined in
-  [server/platform/app.py](../server/platform/app.py)).
-- **Restart policy:** `ON_FAILURE` with at most 10 retries.
-- **Start command:** none — the image's entrypoint
-  ([server/docker-entrypoint.sh](../server/docker-entrypoint.sh)) takes over and
-  starts gunicorn after validating assets and initialising the database.
+In Railway UI: **New Project → Deploy from GitHub repo** → select this repo.
 
-Environment variables expected by the runtime are listed in
-[app.env.example](app.env.example). At minimum, set `DATABASE_URL`,
-`APP_SECRET_KEY`, and the GitHub Releases configuration if you want the
-container to download its SAE assets on first boot
-(`SAE_BOOTSTRAP_MODEL=1`, `SAE_MODEL_GITHUB_REPO`, `SAE_MODEL_RELEASE_TAG`,
-optionally `GITHUB_TOKEN`).
+---
 
-## Cron service: daily database backup
+## 2. Add a Volume
 
-A separate Railway service in the same project runs the backup script on a
-schedule. Configure it as:
+In the service settings: **Volumes → Add Volume**.
 
-- **Builder:** Dockerfile (same `Dockerfile`).
-- **Schedule (cron):** `0 3 * * *`.
-- **Start command:** `python /app/server/scripts/backup_db.py`.
-- **Volume:** mount the same persistent volume as the main service (see below).
+| Setting    | Value |
+|------------|-------|
+| Mount path | `/data` |
 
-The backup script writes `*.dump` files under `/app/backups/`.
+Everything that must survive a redeploy (SQLite DB, SAE model, dataset, cache)
+is symlinked under `/data` by the entrypoint on startup.
 
-## Persistent state
+---
 
-Five application directories need to survive restarts:
+## 3. Set environment variables
 
-| Application path                          | Purpose                                      |
-| ----------------------------------------- | -------------------------------------------- |
-| `/app/server/instance/`                   | SQLite database (when `DATABASE_URL` is SQLite) |
-| `/app/server/cache/`                      | Plugin cache / TensorFlow recommender caches |
-| `/app/server/plugins/steering/data/`      | SAE runtime activations, label cache, semantic index |
-| `/app/server/plugins/steering/models/`    | SAE checkpoint                               |
-| `/app/backups/`                           | Daily DB dumps produced by the cron service  |
+Copy from [app.env.example](app.env.example) and fill in the blanks.
+Minimum required set for a first deploy:
 
-A previous version of this repository included a `server/railway-entrypoint.sh`
-that symlinked all five paths into a single Railway volume mounted at `/data`.
-That script has been removed; the equivalent pattern is now an operational
-choice rather than something the image enforces. Two practical options:
+| Variable | Value |
+|----------|-------|
+| `APP_SECRET_KEY` | any random string (e.g. `openssl rand -hex 32`) |
+| `DATABASE_URL` | `sqlite:////data/instance/db.sqlite` |
+| `DATA_ROOT` | `/data` |
+| `DATASET_BOOTSTRAP` | `1` |
+| `DATASET_GITHUB_REPO` | `vaclavstibor/SAE4EasyStudy` |
+| `DATASET_RELEASE_TAG` | `v2.0` |
+| `ML_LATEST_DATASET_ASSET` | `ml-32m-filtered.zip` |
+| `SAE_BOOTSTRAP_MODEL` | `1` |
+| `SAE_MODEL_GITHUB_REPO` | `vaclavstibor/SAE4EasyStudy` |
+| `SAE_MODEL_RELEASE_TAG` | `v2.0` |
+| `STUDY_AUTHOR_NAME` | your name |
+| `STUDY_AUTHOR_CONTACT` | your e-mail |
 
-1. Bake the static SAE assets into the image (or rely on the
-   `SAE_BOOTSTRAP_MODEL=1` flow) and only persist `server/instance/` and
-   `/app/backups/` on the Railway volume.
-2. Persist all five directories on the volume by adding a small startup hook
-   that symlinks them under the Railway mount point before
-   `server/docker-entrypoint.sh` runs.
+> For private releases add `GITHUB_TOKEN=<PAT>`.
 
-Whichever option you choose, the cron service must mount the same Railway
-volume so the backup script can write into `/app/backups/`.
+After the **first** successful deploy the assets are on the volume.
+Subsequent deploys skip the download (entrypoint detects existing files)
+and start in under a minute.
 
-## SAE asset bootstrap
+---
 
-If the steering plugin assets are not baked into the image or pre-seeded on the
-volume, set the following variables on the main service to download them from a
-GitHub Release on first boot:
+## 4. Builder settings
 
-- `SAE_BOOTSTRAP_MODEL=1`
-- `SAE_MODEL_GITHUB_REPO=<owner>/<repo>`
-- `SAE_MODEL_RELEASE_TAG=<tag>` (or `latest`)
-- `GITHUB_TOKEN=<token>` (only for private releases)
+| Setting | Value |
+|---------|-------|
+| Builder | Dockerfile |
+| Dockerfile path | `Dockerfile` (repository root) |
+| Start command | *(leave empty — entrypoint handles it)* |
 
-Optional overrides — `SAE_MODEL_ASSET_NAME`, `SAE_RUNTIME_ASSET_NAME`,
-`SAE_LABEL_ASSET_NAME` — let you pin specific asset filenames if release tag
-auto-detection is not desired. See
-[server/plugins/steering/bootstrap_model.py](../server/plugins/steering/bootstrap_model.py)
-for the full set of supported options.
+---
+
+## 5. First-boot sequence (what the entrypoint does)
+
+1. Symlinks `/data/{instance,cache,plugins/steering/models,plugins/steering/data,datasets}`
+   into the expected `/app/server/…` paths.
+2. Downloads `ml-32m-filtered.zip` from the GitHub Release and extracts it to
+   `/data/datasets/` (`DATASET_BOOTSTRAP=1`).
+3. Downloads SAE model checkpoint + runtime features to `/data/plugins/steering/models/`
+   and `/data/plugins/steering/data/` (`SAE_BOOTSTRAP_MODEL=1`).
+4. Validates all required files are present (exits with a clear error if not).
+5. Runs `init_db.py` to create/update the SQLite schema.
+6. Starts gunicorn.
+
+---
+
+## 6. Database backup (optional cron service)
+
+Add a second Railway service in the same project:
+
+| Setting | Value |
+|---------|-------|
+| Builder | Dockerfile (same repo) |
+| Schedule | `0 3 * * *` |
+| Start command | `python /app/server/scripts/backup_db.py` |
+| Volume | mount the same `/data` volume |
+
+Backup files land at `/data/backups/`.
