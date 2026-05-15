@@ -100,7 +100,7 @@ The steering plugin now writes only to typed audit tables described in Section 5
 
 1. **Recruits participants** for recommendation-system user studies (Prolific-compatible).
 2. **Elicits initial preferences** via a movie picker (`/preference-elicitation`).
-3. **Runs N iterations** of the steering loop per approach. Each iteration: show recommendations → participant likes/dislikes movies → participant steers (sliders / toggles / text / examples / reset) → recompute the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md`](equations.md) Section 2.1. The audit tables always record every iteration's actions regardless of the mode.
+3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
 4. **Cycles through approaches** if the study compares multiple steering configurations (sequential mode).
 5. **Collects questionnaires** between approaches and at the end.
 6. **Records every action** as a typed audit row.
@@ -147,7 +147,7 @@ The steering plugin now writes only to typed audit tables described in Section 5
 - `./scripts/init-db.sh` is the explicit, idempotent wrapper.
 - `./scripts/reset-db.sh` is the destructive `drop_all()` + `create_all()` wrapper.
 
-There is no migration framework. See [`design-decisions.md`](design-decisions.md) Section 3 for the rationale.
+There is no migration framework. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
 
 ---
 
@@ -201,7 +201,7 @@ Every plugin exposes a `StudyPluginContract` from its package via `get_plugin()`
 | `name` | `str` | required | Blueprint name and URL prefix (`/<name>/...`). |
 | `version` | `str` | required | Free-form version string surfaced to admins. |
 | `description` | `str` | required | One-line description shown on `/administration`. |
-| `hidden_from_admin` | `bool` | `False` | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see [`design-decisions.md`](design-decisions.md) Section 17. |
+| `hidden_from_admin` | `bool` | `False` | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see [`design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahiddenfromadmin). |
 
 Each plugin **must** implement five EasyStudy endpoints on its blueprint:
 
@@ -351,7 +351,7 @@ One row per approach per participant. Created lazily on the first per-approach a
 | `sae_model_id` | string | snapshot |
 | `base_model_id` | string | snapshot |
 | `composition_mode` | string | `replace` / `add` / `intersect` (FR-09) |
-| `reranking_strategy` | string | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See [`equations.md`](equations.md) Section 10. |
+| `reranking_strategy` | string | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key). |
 | `started_at` | datetime | |
 | `completed_at` | datetime nullable | |
 | `status` | string | `active` / `completed` |
@@ -381,7 +381,7 @@ Every user action writes one typed row **and** one envelope row. The typed row c
 | --- | --- | --- |
 | `sae_feature_adjustment` | sliders/toggles/text/example/reset | `feature_id`, `cluster_label`, `before_value`, `after_value`, `delta`, `applied_via`, `search_query` |
 | `sae_feature_search` (+ `_hit`) | `/search-features` | parent: `query_text`, `result_count`, `iteration`. Child: `feature_id`, `label`, `match_score`, `rank`. |
-| `sae_text_steering_query` (+ `_match`) | `/parse-text-steering` | parent: `query_text` (≤ 200), `composition_mode`, `length_chars`. Child: `cluster_id`, `label`, `weight`, `match_score`, `direction`. |
+| `sae_text_steering_query` (+ `_match`) | `/parse-text-steering` | parent: `query_text` (length $\le 200$), `composition_mode`, `length_chars`. Child: `cluster_id`, `label`, `weight`, `match_score`, `direction`. |
 | `sae_example_steering` (+ `_movie`) | `/apply-example-steering` | parent: `iteration`, `example_strength`, `example_top_k`. Child: `movie_id`, `title`, `rank`. |
 | `sae_reset_action` | `/reset` | `trigger`, `scope` (`all-features` / `single-feature:<id>`), `iteration` |
 | `sae_recommendation_set` (+ `_item`) | iteration controller, after refresh | parent: `approach_index`, `iteration`, `list_id`, `steering_mode`, `debug_payload`. Child: `movie_id`, `title`, `genres`, `rank`, `score`, `cf_score`, `genre_score`, `steering_score`, `raw_payload`. |
@@ -391,8 +391,8 @@ Every user action writes one typed row **and** one envelope row. The typed row c
 
 #### Cascades
 
-- Delete `UserStudy` → `Participation` rows are deleted → all `Sae*` rows linked to those participations are deleted via `ondelete=CASCADE` on `study_run_id` / `approach_run_id` / `participation_id`.
-- Delete `SaeRecommendationSet` → `SaeRecommendationItem` and the `SaeMovieFeedback` rows that reference it are deleted.
+- Delete `UserStudy`: `Participation` rows are deleted, and all `Sae*` rows linked to those participations are deleted via `ondelete=CASCADE` on `study_run_id` / `approach_run_id` / `participation_id`.
+- Delete `SaeRecommendationSet`: `SaeRecommendationItem` and the `SaeMovieFeedback` rows that reference it are deleted.
 
 ---
 
@@ -418,25 +418,25 @@ The four concrete modalities live under `server/plugins/steering/modalities/`:
 | --- | --- | --- |
 | `sliders` | `SliderSteering` | Continuous per-cluster weights from a slider grid. |
 | `toggles` | `ToggleSteering` | Discrete `+w / 0 / -w` per cluster, configurable `toggle_weight`. |
-| `text` | `TextSteering` | NL prompt → segment split → cluster scoring → top-K. See [`equations.md`](equations.md) Section 1. |
-| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies → cluster scoring → top-K. See [`equations.md`](equations.md) Section 5. |
+| `text` | `TextSteering` | NL prompt, segment split, cluster scoring, then `top-K`. See [`equations.md` Section 1](equations.md#1-common-framework). |
+| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies, cluster scoring, then `top-K`. See [`equations.md` Section 5](equations.md#5-example-based-steering-fr-08). |
 
-A registry (`modalities/registry.py`) maps `modality_id → class`. Adding a new modality is documented in [`formative-examples.md`](formative-examples.md) Section 2.
+A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a new modality is documented in [`formative-examples.md` Section 2](formative-examples.md#2-add-a-new-steering-modality).
 
 ### 6.2 Iteration controller
 
 `service/iteration_controller.py::apply_feature_adjustment_iteration(data)` drives one iteration end-to-end:
 
 1. **Resolve the active approach and study config.** Loads from session + `normalize_study_config`.
-2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See [`equations.md`](equations.md) Section 10 for the math of each strategy.
+2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math of each strategy.
 3. **Compose the cluster-level adjustments.** Combines slider/toggle inputs with the active text-steering map and the active example-steering map. Empty modalities contribute zero.
-4. **Expand clusters → neurons.** Each cluster's `δ_c` is broadcast to its member neurons; overlapping clusters sum additively. See [`equations.md`](equations.md) Section 2.
+4. **Expand clusters to neurons.** Each cluster's $\delta_c$ is broadcast to its member neurons; overlapping clusters sum additively. See [`equations.md` Section 2](equations.md#2-sliders-fr-0506).
 5. **Apply the SAE shift to the recommender.** Calls into `recommendation/sae_recommender.py` with the per-neuron shift map and the strategy choice. The recommender branches internally on the strategy:
-    - `feature-conditioned`: additive blend with adaptive γ and clamping.
-    - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by `α · direction`, then rank with pure CF (no additive SAE term).
-    - `constrained-subset`: hard-mask candidates whose SAE score is below `τ · max-positive-SAE`, then rank survivors by base CF + genre.
-6. **Refresh the candidate list.** Generates `4 * k` candidates, blends `cf_score` with the SAE-derived `f_i` using `α = selection_signal_weight`, keeps the top `k`.
-7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster delta becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions Section 22.
+    - `feature-conditioned`: additive blend with adaptive $\gamma$ and clamping.
+    - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by $\alpha \cdot direction$, then rank with pure CF (no additive SAE term).
+    - `constrained-subset`: hard-mask candidates whose SAE score is below $\tau \cdot max\text{-}positive\text{-}SAE$, then rank survivors by base CF + genre.
+6. **Refresh the candidate list.** Generates $4k$ candidates, blends `cf_score` with the SAE-derived $f_i$ using $\alpha = selection\_signal\_weight$, keeps the top $k$.
+7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster adjustment becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions Section 22.
 8. **Return** the new `recommendations`, `current_features`, `reranking_strategy` (so the UI can mirror it for debugging), and the iteration counter.
 
 #### Feature pool lifecycle across iterations
@@ -446,7 +446,7 @@ A subtle point that often surprises developers: the 16 cluster sliders the parti
 | Stage | Function | Trigger | Effect on the pool |
 |---|---|---|---|
 | First page load | `session_controller.build_steering_page_context` | After preference elicitation finishes | Calls `select_slider_features(...)` with `feature_selection_algorithm` (`personalized_grouped_topk` or `global_label_topk`), writes the result to `session["current_features"]`. |
-| "Get Recommendations" press (any iteration) | `iteration_controller.apply_feature_adjustment_iteration` → `modalities/sliders.py::compute_updated_sliders` | Every iteration | Looks at `session["current_features"]`, the per-approach `last_shown_movies_per_phase`, the participant's *touched* clusters, and the cumulative shown/steered bookkeeping. Produces a candidate `updated_features` list. |
+| "Get Recommendations" press (any iteration) | `iteration_controller.apply_feature_adjustment_iteration` then `modalities/sliders.py::compute_updated_sliders` | Every iteration | Looks at `session["current_features"]`, the per-approach `last_shown_movies_per_phase`, the participant's *touched* clusters, and the cumulative shown/steered bookkeeping. Produces a candidate `updated_features` list. |
 | Re-publish to the UI | Same call site | Only when `updated_features != session["current_features"]` | Rewrites `session["current_features"]`, ships `data.updated_features` in the response; the frontend calls `rebuildSliderGrid` which re-renders the DOM while preserving values for clusters that survive. |
 
 Crucially, `compute_updated_sliders` does **not** re-run `select_slider_features` between iterations — the initial choice of *algorithm* (personalised vs global) only affects how the first 16 clusters were picked. After that, the same 16 clusters stick around until `compute_updated_sliders` decides to swap one out, and that swap decision is driven by:
@@ -475,13 +475,13 @@ The preference-elicitation pool (`session["elicitation_selected_movies"]`) is in
 
 | Mode | Effect |
 | --- | --- |
-| `replace` (default) | Iteration N adjustments overwrite iteration N-1. |
-| `add` | Per-cluster sum, clipped to `[-0.95, 0.95]`. |
-| `intersect` | Keep only clusters present in both iterations; use iteration N's weight. |
+| `replace` (default) | Iteration $N$ adjustments overwrite iteration $N-1$. |
+| `add` | Per-cluster sum, clipped to $[-0.95, 0.95]$. |
+| `intersect` | Keep only clusters present in both iterations; use iteration $N$'s weight. |
 
 If the resolver matches zero clusters (NFR-12 ambiguous-input case), the endpoint returns HTTP 200 with `status="no-match"` and a friendly hint. A `SaeTextSteeringQuery` row is still written (zero matches), so this case is analyzable offline.
 
-See [`equations.md`](equations.md) Section 1 for the scoring math.
+See [`equations.md` Section 1](equations.md#1-common-framework) for the scoring math.
 
 ---
 
@@ -505,7 +505,7 @@ Analytics joins the typed tables. The envelope's `raw_payload` is never read by 
 | `ensure_study_run(participation_id)` | `SaeStudyRun` (lazy, idempotent). |
 | `ensure_approach_run(participation_id, approach_index)` | `SaeApproachRun` (lazy, idempotent). |
 | `record_event(event_type, ...)` | `SaeSteeringEvent` envelope only. Used for actions that have no fact row (e.g. `preferences-approved`). |
-| `record_feature_adjustment(...)` | One envelope + N `SaeFeatureAdjustment` rows (one per non-zero delta) + summary increment on `SaeApproachRun.total_slider_changes`. |
+| `record_feature_adjustment(...)` | One envelope + $N$ `SaeFeatureAdjustment` rows (one per non-zero adjustment) + summary increment on `SaeApproachRun.total_slider_changes`. |
 | `record_feature_search(...)` | One envelope + one `SaeFeatureSearch` + N `SaeFeatureSearchHit`. |
 | `record_text_steering(...)` | One envelope + one `SaeTextSteeringQuery` + N `SaeTextSteeringMatch`. |
 | `record_example_steering(...)` | One envelope + one `SaeExampleSteering` + N `SaeExampleSteeringMovie`. |
@@ -533,7 +533,7 @@ If a route would write a row that violates the contract (missing participation, 
 The dashboard is split into five tabs:
 
 1. **Overview** — per-approach behavioural metrics and a *Selected Movie Ranks* chart. Each approach gets one series; the x-axis is the recommendation list rank and the y-axis is the count of *like* events at that rank. Tighter-to-the-top distributions are the visible signal that steering pulled the participant's preferred movies higher.
-2. **Modalities** — per-approach observations, driven by `conf['models'][i]['enabled_modalities']`. The Overview "Modality usage by approach" cards summarize each approach's enabled modalities with raw counts (`adjustments`, `distinct_clusters`, `prompts`, `cluster_mappings`, `reset_count`, …). The Modalities tab renders one section per approach: a horizontal-bar feature-movement chart when `sliders` / `toggles` are enabled (placeholder cluster labels filtered out), a prompt→cluster table when `text` is enabled. The contract — which modalities are shown — is read from the study config, NOT inferred from audit-table contents (see [design-decisions.md Section 20](design-decisions.md#20-the-modalities-dashboard-is-driven-by-enabled_modalities-not-by-audit-table-contents)). Adding a new modality requires (a) one entry in `_MODALITY_LABELS`, (b) one `_<name>_metrics(run_ids)` helper in `_approach_modality_breakdown`, (c) optionally one chart-card branch in the frontend `renderModalitiesTab`.
+2. **Modalities** — per-approach observations, driven by `conf['models'][i]['enabled_modalities']`. The Overview "Modality usage by approach" cards summarize each approach's enabled modalities with raw counts (`adjustments`, `distinct_clusters`, `prompts`, `cluster_mappings`, `reset_count`, …). The Modalities tab renders one section per approach: a horizontal-bar feature-movement chart when `sliders` / `toggles` are enabled (placeholder cluster labels filtered out), a prompt-to-cluster table when `text` is enabled. The contract — which modalities are shown — is read from the study config, NOT inferred from audit-table contents (see [design-decisions.md Section 20](design-decisions.md#20-the-modalities-dashboard-is-driven-by-enabled_modalities-not-by-audit-table-contents)). Adding a new modality requires (a) one entry in `_MODALITY_LABELS`, (b) one `_<name>_metrics(run_ids)` helper in `_approach_modality_breakdown`, (c) optionally one chart-card branch in the frontend `renderModalitiesTab`.
 3. **Questionnaires** — see Section 8.2.
 4. **Participants** — Prolific PID + study/session ids, completion URL, approach order, questionnaire response count, link to the journey view.
 5. **Journey** — per-participant timeline reconstructed entirely from typed tables.
@@ -547,7 +547,7 @@ The dashboard is split into five tabs:
 | Mean slider changes per approach | `AVG(sae_approach_run.total_slider_changes)` |
 | Selected movie rank distribution | `sae_movie_feedback` where `action='like'`, joined to `sae_approach_run`, grouped by `approach_id, rank` |
 | Slider movement by cluster | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `cluster_label` |
-| Text prompt → cluster mapping | `sae_text_steering_query` joined with `sae_text_steering_match`, grouped by `(query_text, cluster_id)` |
+| Text prompt to cluster mapping | `sae_text_steering_query` joined with `sae_text_steering_match`, grouped by `(query_text, cluster_id)` |
 | Modality usage | `COUNT(sae_steering_event)` grouped by `modality` |
 | Reset count | `COUNT(sae_reset_action)` |
 | Text queries / example events / impressions | `COUNT(*)` on the corresponding typed table |
@@ -558,7 +558,7 @@ The Questionnaires tab is *modular*: it never hard-codes specific question ids. 
 
 - **likert** — integer values in 1..7
 - **numeric** — any other numeric values
-- **categorical** — short string values with a small unique set (≤ 12)
+- **categorical** — short string values with a small unique set ($\le 12$)
 - **text** — anything longer; the first 10 samples are surfaced
 
 Each kind drives a sensible aggregation (mean/min/max + count distribution for likert/numeric, frequency table for categorical, samples for text). Adding a new questionnaire is a no-code operation: drop an HTML file in `server/static/questionnairs/`, point an approach (or the final questionnaire) at it from the create UI, and the monitor will pick it up automatically. `server/static/questionnairs/sae_sample_questionnaire.html` is a copy-paste starting point that exercises every kind.
@@ -581,7 +581,7 @@ Three condition keys are supported per field: `expected` (exact string equality 
 
 ### 8.3 Per-participant journey
 
-`GET /sae_steering/journey/<participation_id>` (login required) renders a timeline where each row is built from a typed table. The renderer maps `event_type → typed_table` and reads the fact columns directly; the envelope row is shown only as a fold-out for provenance. The journey response also returns the participant's `questionnaire_responses` (full answers JSON) so reviewers can inspect every submission inline.
+`GET /sae_steering/journey/<participation_id>` (login required) renders a timeline where each row is built from a typed table. The renderer maps `event_type` to `typed_table` and reads the fact columns directly; the envelope row is shown only as a fold-out for provenance. The journey response also returns the participant's `questionnaire_responses` (full answers JSON) so reviewers can inspect every submission inline.
 
 ### 8.4 FR-17 CSV export
 
@@ -737,7 +737,7 @@ and starts gunicorn.
   provides it automatically; for other hosts use Caddy or nginx).
 - When a model changes in a way that requires reshaping existing tables, run
   `./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
-  Alembic baseline by design — see [`design-decisions.md`](design-decisions.md) Section 3.
+  Alembic baseline by design — see [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
 
 ### 9.7 Backups
 
@@ -771,9 +771,9 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 | `test_sae_audit.py` | Typed-write contracts. `ensure_study_run` / `ensure_approach_run` idempotency. `record_text_steering` writes typed query + matches. `enabled_modalities` is authoritative over `steering_mode`. Selection-signal-weight defaults. `record_event('feature-search', ...)` types `source` and `search_query` columns. `/finish-user-study` redirects to the configured final questionnaire. `/complete-study` records the final response and completes the run. Plus `record_questionnaire_response` stores `attention_check_passed` (see design-decisions Section 18). |
 | `test_approach_order_and_results.py` | Randomized approach order is persisted to `SaeStudyRun.effective_order` and replayed deterministically. Cross-participant analytics group by `approach_id`, never by `approach_index` (regression for the bug fixed in design-decisions Section 19). Modality breakdown is driven by `enabled_modalities` (design-decisions Section 20). |
 | `test_initialization.py` | `long_initialization` happy path: dataset caches + SAE clusters load without errors. Every entry in `CANONICAL_PLUGIN_MODULES` loads and registers at least one route. `emptytemplate` and `vae` are absent from `/loaded-plugins` (design-decisions Section 17). |
-| `test_blending.py` | Cluster→neuron expansion and overlap. Plus per-strategy regression: `feature-conditioned` is the default; `latent-perturbation` rotates the user seed by `α·decoded_direction` and drops the additive SAE term; `constrained-subset` filters items by `sae ≥ τ·max_positive_sae` then ranks by base CF + genre, and falls back to base ranking when no item satisfies the constraint (see equations.md Section 10 and design-decisions Section 23). |
+| `test_blending.py` | Cluster-to-neuron expansion and overlap. Plus per-strategy regression: `feature-conditioned` is the default; `latent-perturbation` rotates the user seed by $\alpha \cdot decoded\_direction$ and drops the additive SAE term; `constrained-subset` filters items by $sae \ge \tau \cdot max\_positive\_sae$ then ranks by base CF + genre, and falls back to base ranking when no item satisfies the constraint (see equations.md Section 10 and design-decisions Section 23). |
 | `test_attention_checks.py` | Evaluator semantics for `expected` / `expected_one_of` / `expected_range`, malformed JSON resilience, and the spec/answer contract of every bundled questionnaire (so editing one of those HTML files without re-running tests fails loudly). See design-decisions Section 18. |
-| `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the `[-0.95, +0.95]` clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. (6) Text-steering scope guard: payload is stamped with `<guid>:<phase>` and ignored if scope mismatches (other study / other phase); composition uses the previous payload only when scope matches (design-decisions Section 21). (7) Side-by-side audit semantics: `get_audit_approach_indices` fans out to `[0, 1]` for side-by-side, otherwise `[current_phase]`; `record_movie_feedback` re-maps `list_id="recs-model-b"` → `approach_index=1` (Bug B1 regression, design-decisions Section 22). |
+| `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the $[-0.95, +0.95]$ clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. (6) Text-steering scope guard: payload is stamped with `<guid>:<phase>` and ignored if scope mismatches (other study / other phase); composition uses the previous payload only when scope matches (design-decisions Section 21). (7) Side-by-side audit semantics: `get_audit_approach_indices` fans out to `[0, 1]` for side-by-side, otherwise `[current_phase]`; `record_movie_feedback` re-maps `list_id="recs-model-b"` to `approach_index=1` (Bug B1 regression, design-decisions Section 22). |
 
 ### 10.3 EasyStudy plugin tests (`tests/plugins/fastcompare/`)
 
@@ -785,11 +785,11 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ### 11.1 Limitations
 
-1. **Lexical text steering.** The text resolver is bag-of-words + intensity hints (see [`equations.md`](equations.md) Section 4). Full sentence-transformer text steering is research-track future work; the proposal's FR-09 reference to `sentence-transformers` is therefore documented but not exercised in this build.
-2. **Single dataset.** MovieLens-32M-Filtered (8328 movies) is the only supported dataset. Adding a dataset is documented in [`formative-examples.md`](formative-examples.md) Section 3.
+1. **Lexical text steering.** The text resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). Full sentence-transformer text steering is research-track future work; the proposal's FR-09 reference to `sentence-transformers` is therefore documented but not exercised in this build.
+2. **Single dataset.** MovieLens-32M-Filtered (8328 movies) is the only supported dataset. Adding a dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
 3. **No real-time presence.** The framework does not show which other participants are currently in the study. Out of scope for the thesis.
-4. **No Alembic migration baseline.** This is a deliberate trade-off: the cost of one Alembic noise step at every dev iteration outweighed the rare schema-evolution cost during the thesis. Production schema changes happen out of band. See [`design-decisions.md`](design-decisions.md) Section 3.
-5. **FR-16 sub-items not surfaced as standalone dashboard widgets.** The proposal's FR-16 list mentions "steering direction ratios (boost / suppress / neutral)" and "participant demographics breakdown" as separate cards. In this build the data is recorded (sign of `SaeFeatureAdjustment.delta` for direction, `Participation.age_group` / `gender` / `education` for demographics) and exposed verbatim in the CSV export (Section 8.4), but no dedicated dashboard card aggregates them — researchers can compute these in R / pandas from the CSV bundle. The Overview + Modalities cards focus on the behavioural signal that requires per-approach context (rank distributions, per-modality counts, prompt→cluster mappings), which is where the thesis contribution adds value over a generic study dashboard.
+4. **No Alembic migration baseline.** This is a deliberate trade-off: the cost of one Alembic noise step at every dev iteration outweighed the rare schema-evolution cost during the thesis. Production schema changes happen out of band. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
+5. **FR-16 sub-items not surfaced as standalone dashboard widgets.** The proposal's FR-16 list mentions "steering direction ratios (boost / suppress / neutral)" and "participant demographics breakdown" as separate cards. In this build the data is recorded (sign of `SaeFeatureAdjustment.delta` for direction, `Participation.age_group` / `gender` / `education` for demographics) and exposed verbatim in the CSV export (Section 8.4), but no dedicated dashboard card aggregates them — researchers can compute these in R / pandas from the CSV bundle. The Overview + Modalities cards focus on the behavioural signal that requires per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings), which is where the thesis contribution adds value over a generic study dashboard.
 6. **FR-13 iteration history is client-side and unbounded.** The proposal mentions a "last 10 iterations" cap. The actual UI panel (`renderActivityHistory` in `steering_interface.html`) renders one collapsible section per iteration the participant has lived through in the current session. The practical cap is `num_iterations` per approach (researcher-configured, typically 3); there is no hard "last-10" eviction because no piloted configuration approaches that bound. The audit tables retain the full history regardless.
 
 ### 11.2 Future work

@@ -67,6 +67,6 @@ A single final questionnaire is shown at the end. Typical content: comparative p
 
 ## Edge cases the UI handles
 
-- **Ambiguous text prompt** (NFR-12). When the parser cannot match any cluster, the UI shows "We could not match your text to any feature, try different wording" and the participant's existing adjustments are preserved. The query is still recorded for offline analysis. See [`design-decisions.md`](design-decisions.md) Section 7.
+- **Ambiguous text prompt** (NFR-12). When the parser cannot match any cluster, the UI shows "We could not match your text to any feature, try different wording" and the participant's existing adjustments are preserved. The query is still recorded for offline analysis. See [`design-decisions.md` Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully).
 - **Browser refresh mid-iteration.** Iteration state is autosaved on every meaningful interaction. A refresh resumes where the participant left off.
 - **Tab close mid-study.** The participation row stays open. The participant can resume from the join link as long as the study is still active.

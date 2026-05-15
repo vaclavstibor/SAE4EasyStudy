@@ -2,7 +2,7 @@
 
 This page records the binding architectural decisions and the reasoning behind them. It is a companion to [`tech-docs.md`](tech-docs.md): the tech doc tells you *what* the system looks like, this one tells you *why*.
 
-Each section follows the same shape: **Decision → Context → Alternatives considered → Consequences**.
+Each section follows the same shape: **Decision, Context, Alternatives considered, Consequences**.
 
 ---
 
@@ -20,7 +20,7 @@ Each section follows the same shape: **Decision → Context → Alternatives con
 **Consequences.**
 
 - `Interaction` and `Message` ORM tables stay even though the steering plugin does not use them. Upstream `fastcompare` and `utils` plugins still log to them. Removing them would break upstream parity.
-- The platform must not import from `server.plugins.*` at module top-level. Architectural rule #5 in [`tech-docs.md`](tech-docs.md) Section 4.4 enforces this.
+- The platform must not import from `server.plugins.*` at module top-level. Architectural rule #5 in [`tech-docs.md` Section 4.4](tech-docs.md#44-architectural-rules) enforces this.
 - New thesis code lives under `server/plugins/steering/`. Other plugins (`fastcompare`, `empty_template`, `utils`) are kept verbatim.
 
 ---
@@ -38,7 +38,7 @@ Each section follows the same shape: **Decision → Context → Alternatives con
 
 **Consequences.**
 
-- Adding a new fact requires three changes: a new model, a new `audit.record_*` function, a CSV writer in `routes/results/views.py`. Documented in [`formative-examples.md`](formative-examples.md) Section 4.
+- Adding a new fact requires three changes: a new model, a new `audit.record_*` function, a CSV writer in `routes/results/views.py`. Documented in [`formative-examples.md` Section 4](formative-examples.md#4-add-a-new-typed-audit-table).
 - The `raw_payload` column stays as a provenance escape hatch for journey rendering and manual debugging. It is intentionally not indexed and not in any dashboard query.
 - Per-table CSV export is trivial: each writer reads one typed table and emits one CSV.
 
@@ -84,7 +84,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 - The service is unit-testable without a request context.
 - The recursion is gone: `ensure_study_run` is called once per request, and `audit.record_*` callers pass `approach_index` explicitly so `ensure_approach_run` is idempotent.
-- Adding a new typed table is a one-place change ([`formative-examples.md`](formative-examples.md) Section 4).
+- Adding a new typed table is a one-place change ([`formative-examples.md` Section 4](formative-examples.md#4-add-a-new-typed-audit-table)).
 
 ---
 
@@ -111,7 +111,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** Each study chooses how successive NL prompts compose: `replace` (default), `add`, or `intersect`. The composed adjustments are returned by `/parse-text-steering` and persisted as `SaeApproachRun.composition_mode` snapshot.
 
-**Context.** Pilot feedback showed two patterns: participants who liked giving one description and being done (matches `replace`), and participants who built up intent iteratively ("I like Marvel" → "but only the comedies", matches `add` or `intersect`). The previous behaviour was implicit `replace`, which felt brittle for the iterative pattern.
+**Context.** Pilot feedback showed two patterns: participants who liked giving one description and being done (matches `replace`), and participants who built up intent iteratively ("I like Marvel", then "but only the comedies", matches `add` or `intersect`). The previous behaviour was implicit `replace`, which felt brittle for the iterative pattern.
 
 **Alternatives considered.**
 
@@ -123,7 +123,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - Three explicit modes, validated in `study_config.py::normalize_text_composition_mode`.
 - `add` mode clamps each cluster sum to `[-0.95, 0.95]` so weights stay in the recommender's effective range.
 - `intersect` mode keeps only clusters present in both iterations, using iteration N's weight. Useful for participants refining a stable intent.
-- See [`equations.md`](equations.md) Section 1.5 for the formal definition.
+- See [`equations.md` Section 4.5](equations.md#45-top-k-and-composition-across-iterations) for the formal definition.
 
 ---
 
@@ -211,16 +211,16 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 ## 13. The Results dashboard is generic — no hard-coded questionnaire ids
 
-**Decision.** The dashboard only knows about the typed audit columns (rank, delta, cluster_label, query_text, mood, …). It must **not** branch on question-level ids like `p_attention_check` or `f1_preference`. Per-questionnaire summaries are produced by the modular *Questionnaire Monitor*, which auto-discovers fields from `SaeQuestionnaireResponse.answers` and infers a kind per field.
+**Decision.** The dashboard only knows about the typed audit columns (`rank`, `delta`, `cluster_label`, `query_text`, `mood`, …). It must **not** branch on question-level ids like `p_attention_check` or `f1_preference`. Per-questionnaire summaries are produced by the modular *Questionnaire Monitor*, which auto-discovers fields from `SaeQuestionnaireResponse.answers` and infers a kind per field.
 
 **Context.** The first iteration of the dashboard wired the Likert deltas, attention-funnel, and preference distribution charts to specific question ids from the bundled `sae_*_questionnaire.html` files. Whenever a researcher uploaded a different questionnaire the charts broke silently — or worse, the analytics pretended a result existed by reading missing keys.
 
 **Consequences.**
 
 - `analytics._questionnaire_monitor` aggregates one section per `questionnaire_file`. Within each section, every key in the answers JSON becomes a row whose summary is chosen from the inferred kind (`likert` / `numeric` / `categorical` / `text`).
-- The Overview tab focuses on the *behavioural* signal of steering: selected-movie rank distribution by approach, slider movement by cluster, text-prompt → cluster mappings. None of these depend on a specific questionnaire.
-- Adding a new questionnaire is a no-code operation (drop a template in `server/static/questionnairs/`, point an approach at it). See [`formative-examples.md`](formative-examples.md) Section 9.
-- The legacy "attention-check funnel" / "Steered − Baseline" / "composite delta" charts are deleted. Researchers who want those specific statistics can compute them in R or pandas from the CSV bundle.
+- The Overview tab focuses on the *behavioural* signal of steering: selected-movie rank distribution by approach, slider movement by cluster, text-prompt-to-cluster mappings. None of these depend on a specific questionnaire.
+- Adding a new questionnaire is a no-code operation (drop a template in `server/static/questionnairs/`, point an approach at it). See [`formative-examples.md` Section 9](formative-examples.md#9-add-a-new-questionnaire).
+- The legacy "attention-check funnel" / "Steered minus Baseline" / "composite change" charts are deleted. Researchers who want those specific statistics can compute them in R or pandas from the CSV bundle.
 
 ---
 
@@ -228,7 +228,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 **Decision.** Every typed table that records a participant action has an `event_id` FK to `sae_steering_event`. The audit service always writes the envelope **first** and then attaches the typed row using `event.id`.
 
-**Context.** All typed tables (`SaeFeatureAdjustment`, `SaeTextSteeringQuery`, `SaeFeatureSearch`, `SaeResetAction`, `SaeExampleSteering`) followed this pattern from day one — except `SaeMovieFeedback`, which was the first table written and accidentally did the reverse (feedback row → envelope) with the feedback id stored in `event.raw_payload`. The journey view tried to use `feedback.event_id`, which didn't exist, and the page 500'd.
+**Context.** All typed tables (`SaeFeatureAdjustment`, `SaeTextSteeringQuery`, `SaeFeatureSearch`, `SaeResetAction`, `SaeExampleSteering`) followed this pattern from day one — except `SaeMovieFeedback`, which was the first table written and accidentally did the reverse (feedback row to envelope) with the feedback id stored in `event.raw_payload`. The journey view tried to use `feedback.event_id`, which didn't exist, and the page 500'd.
 
 **Consequences.**
 
@@ -287,7 +287,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 
 | Plugin | Reason to hide |
 | --- | --- |
-| `emptytemplate` (`server/plugins/empty_template`) | Developer scaffold. It is the copy-paste starter for new plugins (see [`formative-examples.md`](formative-examples.md) Section 1); listing it as a study type would invite researchers to "create studies" out of a placeholder. |
+| `emptytemplate` (`server/plugins/empty_template`) | Developer scaffold. It is the copy-paste starter for new plugins (see [`formative-examples.md` Section 1](formative-examples.md#1-add-a-new-plugin)); listing it as a study type would invite researchers to "create studies" out of a placeholder. |
 | `vae` (`server/plugins/vae`) | Algorithm wrapper. Provides VAE algorithm hooks consumed by `fastcompare`; there is no `/vae/create` because there is no VAE-only study type. |
 
 **Context.** Before the upstream-plugin re-wire (Section 16) the admin picker only listed the three plugins that happened to have a `/create` route AND were in `CANONICAL_PLUGIN_MODULES`. After Section 16 the picker would have surfaced `emptytemplate` as a fourth choice and (had `vae` declared `/create`) `vae` as a fifth — neither of which is a study type a researcher should pick. A hard-coded skip list in `get_loaded_plugins()` would have hidden the intent inside the platform; instead the plugin itself declares its intent through its own metadata.
@@ -303,7 +303,7 @@ We also discovered two `migrations/` directories existed (`migrations/` and a st
 - `PluginMetadata` gains one optional field (`hidden_from_admin: bool = False`). `get_loaded_plugins()` carries a docstring describing the filter contract.
 - New plugins default to **visible**. Internal plugins must explicitly set `hidden_from_admin=True`; future contributors learn this from the `emptytemplate` and `vae` contracts plus this decision.
 - A regression test (`test_admin_available_templates_excludes_hidden_plugins` in `tests/plugins/steering/test_initialization.py`) asserts that `emptytemplate` and `vae` are absent from `get_loaded_plugins()` while the three researcher-facing plugins are present.
-- The admin manual ([`admin-manual.md`](admin-manual.md) Section 2) and the new-plugin walk-through ([`formative-examples.md`](formative-examples.md) Section 1) point at this decision so authors of future plugins know how to control admin visibility.
+- The admin manual ([`admin-manual.md` Section 2](admin-manual.md#2-create-a-study)) and the new-plugin walk-through ([`formative-examples.md` Section 1](formative-examples.md#1-add-a-new-plugin)) point at this decision so authors of future plugins know how to control admin visibility.
 
 ---
 
@@ -331,7 +331,7 @@ The bundled questionnaires now ship the following specs (`server/static/question
 
 - **Compute pass/fail on every page load.** Rejected — couples the dashboard to the live HTML; editing a question wording without touching the spec would silently change historical verdicts.
 - **Add a runtime migration framework to backfill the column for old DBs.** Rejected (see Section 3). The column is additive and nullable; researchers who want the new column on an existing DB run `./scripts/reset-db.sh` and create a fresh study, which is the project's standing migration story.
-- **Bake the spec into Python config next to the questionnaire path.** Rejected — questionnaires are self-contained drop-in HTML files (see [`formative-examples.md`](formative-examples.md) Section 9). Forcing researchers to edit a Python config to add a check would split a single artefact across two files.
+- **Bake the spec into Python config next to the questionnaire path.** Rejected — questionnaires are self-contained drop-in HTML files (see [`formative-examples.md` Section 9](formative-examples.md#9-add-a-new-questionnaire)). Forcing researchers to edit a Python config to add a check would split a single artefact across two files.
 
 **Consequences.**
 
@@ -408,8 +408,8 @@ Five canonical modalities are wired today: `sliders`, `toggles`, `text`, `exampl
 
 1. *Overview tab.* `renderModalityBreakdownCards(data)` produces one `.card` per approach inside `.card-grid`. The card header carries the approach label and a `modality-mode-pill` showing `steering_mode`; the body lists one `.modality-block` per modality with a 2-column key/value grid for that modality's metrics. Zero-valued metrics are dimmed.
 2. *Modalities tab.* `renderModalitiesTab(data)` produces one `<section>` per approach. Each section's chart grid contains one card per modality that benefits from a chart/table:
-   - `sliders` / `toggles` → Chart.js horizontal bar of mean |Δ| on the top 15 named clusters (read from `approaches.slider_movement[approach_id]`).
-   - `text` → a per-approach prompt→cluster table (filtered from the global `modalities.text_prompt_mappings` array by `approach_id`).
+   - `sliders` / `toggles`: Chart.js horizontal bar of mean $|\Delta|$ on the top `15` named clusters (read from `approaches.slider_movement[approach_id]`).
+   - `text`: a per-approach prompt-to-cluster table (filtered from the global `modalities.text_prompt_mappings` array by `approach_id`).
    - Approaches with no chart-worthy modality (e.g. only `reset` enabled) get a single empty-state card explaining which modalities they declared. The whole tab gets a study-wide empty state if no approach declared any steerable modality.
 
 Both paths iterate over `Object.entries(modality_breakdown)`; they never branch on a hardcoded modality name. The Modalities tab no longer hardcodes `sliderApproachAChart` / `sliderApproachBChart` ids — canvases are minted per `approach_id` (`modSliderChart_<approach_id>`), so an N-approach study renders N chart cards automatically.
@@ -448,7 +448,7 @@ Both paths iterate over `Object.entries(modality_breakdown)`; they never branch 
 
 **Alternatives considered.**
 
-- *Store one entry per scope in a nested dict (`session["last_text_steering"][scope] = ...`).* Rejected — unbounded growth across N phases × M studies, and we never read past entries anyway. A single-slot store with a scope tag is strictly simpler.
+- *Store one entry per scope in a nested dict (`session["last_text_steering"][scope] = ...`).* Rejected — unbounded growth across $N$ phases and $M$ studies, and we never read past entries anyway. A single-slot store with a scope tag is strictly simpler.
 - *Clear `last_text_steering` on every iteration server-side.* Rejected — would break `add` / `intersect` composition modes, which by design accumulate cluster weights across the iterations of a single phase (FR-09).
 - *Clear the UI surface on iteration only when composition mode is `replace`.* Rejected — composition mode is a backend concern; the participant's mental model is that "Get Recommendations" closes one iteration and opens the next, regardless of the math under the hood.
 - *Move `last_text_steering` from the Flask session into the database.* Rejected — adds persistence overhead for a transient UI affordance that is already an opt-in convenience, not a contract.
@@ -490,7 +490,7 @@ A study with 3+ approaches *cannot* be side-by-side; the UI has no third column.
 
 **Invariant 2 — Movie feedback is routed by `list_id`, not by `current_phase`.**
 
-In sequential mode the participant always sees exactly one recommendation list with `list_id="recs-single"`, and `current_phase` advances 0 → 1 → 2 → … . Audit lookup keys on `(approach_index, list_id)` and the two consistently agree.
+In sequential mode the participant always sees exactly one recommendation list with `list_id="recs-single"`, and `current_phase` advances from `0` to `1` to `2`, and so on. Audit lookup keys on `(approach_index, list_id)` and the two consistently agree.
 
 In side-by-side mode the participant sees two lists with `list_id="recs-model-a"` and `list_id="recs-model-b"` simultaneously, and `current_phase` stays at 0 throughout. A naïve `approach_index = current_phase` (0 for both columns) breaks the audit:
 
@@ -524,7 +524,7 @@ Regression test: `test_record_movie_feedback_routes_column_b_to_approach_1`. Wit
 
 **Invariant 3 — Shared steering events fan out to both approaches.**
 
-A side-by-side study has *one* slider grid driving *two* recommendation lists. When the participant moves a slider, that motion is semantically a steering action against **both** approaches at once — the same delta is fed into both recommenders. For the per-approach analytics (Modalities dashboard, slider-movement charts) to show non-empty data for the second approach, the audit row must be written for **each** approach run.
+A side-by-side study has *one* slider grid driving *two* recommendation lists. When the participant moves a slider, that motion is semantically a steering action against **both** approaches at once — the same adjustment is fed into both recommenders. For the per-approach analytics (Modalities dashboard, slider-movement charts) to show non-empty data for the second approach, the audit row must be written for **each** approach run.
 
 This is handled by a small helper that the iteration controller and the steering routes consult:
 
@@ -545,13 +545,13 @@ Sites that fan out:
 
 | Audit call | File | What gets duplicated |
 |---|---|---|
-| `record_feature_adjustment` | `iteration_controller.py` | The slider/toggle delta map, once per approach. |
+| `record_feature_adjustment` | `iteration_controller.py` | The slider/toggle adjustment map, once per approach. |
 | `record_text_steering` | `actions.py::parse_text_steering` | The text prompt + matched clusters, once per approach. |
 | `record_example_steering` | `actions.py::apply_example_steering` | The example-movie ids, once per approach. |
 | `record_global_reset` | `actions.py::reset_steering` | The reset row, once per approach. |
 | `record_movie_feedback` | `actions.py::log_movie_feedback` (via the `list_id` remap in `audit.py`) | **NOT fanned out** — a like is intrinsically per-column. |
 
-Consequence: in side-by-side mode the steering-event count in the audit log is approximately 2× the count of user interactions. This is honest and expected: the participant's single slider-move did happen against both approaches. The Modalities dashboard then displays symmetric, non-empty data for each approach.
+Consequence: in side-by-side mode the steering-event count in the audit log is approximately $2\times$ the count of user interactions. This is honest and expected: the participant's single slider-move did happen against both approaches. The Modalities dashboard then displays symmetric, non-empty data for each approach.
 
 **About the "select-on-both-columns" UX hack.**
 
@@ -559,8 +559,8 @@ The frontend renders one shared `likedMovies` map; `syncCardSelectionUI(movieId)
 
 This is safe **because each click still fires exactly one `log_movie_feedback` request**, carrying the `list_id` of the actual DOM card that was clicked. The mirror update is purely a UI affordance. Data-wise:
 
-- Click on column-A card → one feedback row, `list_id="recs-model-a"`, `approach_index=0`.
-- Click on column-B card → one feedback row, `list_id="recs-model-b"`, `approach_index=1` (after the remap).
+- Click on column-A card: one feedback row, `list_id="recs-model-a"`, `approach_index=0`.
+- Click on column-B card: one feedback row, `list_id="recs-model-b"`, `approach_index=1` (after the remap).
 - Toggling off (un-liking) on either column also fires one event with the correct `list_id`.
 
 The mirror is therefore a visual sync, not an audit duplicate.
@@ -573,7 +573,7 @@ The mirror is therefore a visual sync, not an audit duplicate.
 
 **Consequences.**
 
-- The audit log size for side-by-side studies is roughly 2× compared to a same-iteration sequential study with one approach. Researchers should size storage accordingly. Side-by-side studies are also capped at two approaches, so 2× is the worst case.
+- The audit log size for side-by-side studies is roughly $2\times$ compared to a same-iteration sequential study with one approach. Researchers should size storage accordingly. Side-by-side studies are also capped at two approaches, so $2\times$ is the worst case.
 - Phase-questionnaire wiring uses `current_phase=0`, so only approach A's phase questionnaire would be shown if both approaches were configured with `phase_questionnaire_file`. Side-by-side studies should therefore put their comparison questionnaire on the study-level `questionnaire_file` (final questionnaire). Per-approach phase questionnaires for side-by-side are not supported.
 - Regression tests:
   - `test_get_audit_approach_indices_fans_out_side_by_side` — helper contract.
@@ -594,7 +594,7 @@ The mirror is therefore a visual sync, not an audit duplicate.
 **Trade-offs.**
 
 - `latent-perturbation` decodes through `W_{\text{dec}}^{\top}`, which assumes the SAE has been trained on the same ELSA embedding space the recommender uses. This invariant is guaranteed by the model loader (`recommender.sae_model` and `recommender.item_embeddings` come from the same paired snapshot in `model_store.py`), but it is worth flagging because swapping SAE checkpoints mid-study would silently break the assumption.
-- `constrained-subset` can return fewer items than `n_items` when the τ filter is strict; the fallback ("drop the mask if no item survives") preserves availability but quietly downgrades the guarantee. The debug payload (`debug.constrained_subset_survivors`) records the survivor count so analysts can detect when the fallback fired.
+- `constrained-subset` can return fewer items than `n_items` when the $\tau$ filter is strict; the fallback ("drop the mask if no item survives") preserves availability but quietly downgrades the guarantee. The debug payload (`debug.constrained_subset_survivors`) records the survivor count so analysts can detect when the fallback fired.
 - All three strategies share the same `cf_score`, `genre_score`, `steering_score` columns in the debug payload, which makes a head-to-head comparison straightforward in the dashboard.
 
 **Alternatives considered.**

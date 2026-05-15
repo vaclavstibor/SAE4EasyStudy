@@ -1,12 +1,12 @@
 # Equations and Scoring
 
-This page is the math reference for the SAE Steering plugin. Each modality has its own section with the same shape: **input → per-cluster weight → composition → contract surface**. Every formula is paired with a short code snippet so the math and the code can be checked against each other directly.
+This page is the math reference for the SAE Steering plugin. Each modality has its own section with the same shape: **input, per-cluster weight, composition, contract surface**. Every formula is paired with a short code snippet so the math and the code can be checked against each other directly.
 
 Cross-references:
 
-- [`tech-docs.md`](tech-docs.md) Section 6 — the iteration loop that consumes these weights.
-- [`design-decisions.md`](design-decisions.md) Section 6, Section 7, Section 8 — rationale for composition modes, the no-match fallback, and the reranking enum.
-- [`formative-examples.md`](formative-examples.md) Section 3, Section 5 — how to add a new modality / a new reranking strategy.
+- [`tech-docs.md` Section 6](tech-docs.md#6-steering-modalities-and-the-iteration-loop) — the iteration loop that consumes these weights.
+- [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09), [Section 7](design-decisions.md#7-nfr-12-text-steering-ambiguity-degrades-gracefully), [Section 8](design-decisions.md#8-reranking-strategy-as-a-typed-enum-fr-10-superseded-by-section-23) — rationale for composition modes, the no-match fallback, and the reranking enum.
+- [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset), [Section 5](formative-examples.md#5-add-a-new-reranking-strategy) — how to add a new modality / a new reranking strategy.
 
 ## 1. Common framework
 
@@ -22,11 +22,11 @@ class SteeringModality:
         raise NotImplementedError
 ```
 
-A `SteeringResult` is `(features, adjustments, metadata)` where `adjustments : cluster_id → weight w(c) ∈ [-1, 1]`. The semantics is "boost items that activate cluster `c`'s neurons" if `w(c) > 0`, "suppress" if `w(c) < 0`.
+A `SteeringResult` is `(features, adjustments, metadata)` where $adjustments: cluster\_id \to weight\ w(c) \in [-1, 1]$. The semantics is "boost items that activate cluster $c$'s neurons" if $w(c) > 0$, "suppress" if $w(c) < 0$.
 
-### 1.1 Cluster → neuron expansion
+### 1.1 Cluster-to-neuron expansion
 
-The recommender ranks items by an inner product against a per-**neuron** profile, not a per-cluster one. The bridge is `expand_feature_adjustments`: each cluster delta `δ_c` is fanned out to every neuron `n ∈ cluster_map[c]`, and overlapping clusters sum:
+The recommender ranks items by an inner product against a per-**neuron** profile, not a per-cluster one. The bridge is `expand_feature_adjustments`: each cluster-level value $\delta_c$ is fanned out to every neuron $n \in cluster\_map[c]$, and overlapping clusters sum:
 
 $$
 \Delta_n \;=\; \sum_{c\,:\,n \in c} \delta_c
@@ -52,7 +52,7 @@ def expand_feature_adjustments(raw_adjustments: dict, cluster_map: dict = None) 
 
 ### 1.2 How the expanded vector enters ranking
 
-Each item `i` has a row `f_i` of SAE activations of length `n_features`. The recommender builds a sparse profile `a` with `a_n = Δ_n` (after expansion) and computes the SAE term as the inner product `f_i · a`, implemented as a matrix–vector product:
+Each item $i$ has a row $f_i$ of SAE activations of length `n_features`. The recommender builds a sparse profile $a$ with $a_n = \Delta_n$ (after expansion) and computes the SAE term as the inner product $f_i \cdot a$, implemented as a matrix-vector product:
 
 ```381:396:server/plugins/steering/recommendation/sae_recommender.py
         # --- 3. SAE steering score (from sliders / like boosts) ---
@@ -73,13 +73,13 @@ Each item `i` has a row `f_i` of SAE activations of length `n_features`. The rec
             sae_scores = torch.matmul(self.item_features, sae_profile)
 ```
 
-The full final score `cf + genre + clamp(γ · sae) + tiebreak` is summarized in Section 8; the per-modality math below covers only how each modality produces its slice of `δ_c`.
+The full final score $cf + genre + clamp(\gamma \cdot sae) + tiebreak$ is summarized in Section 8; the per-modality math below covers only how each modality produces its slice of $\delta_c$.
 
 ## 2. Sliders (FR-05/06)
 
-**Input.** UI sends a dict `raw_adjustments[cluster_id] = δ_c ∈ [-1, 1]`, one slider per visible cluster.
+**Input.** UI sends a dict where $raw\_adjustments[cluster\_id] = \delta_c \in [-1, 1]$, one slider per visible cluster.
 
-**Per-iteration contribution.** `SliderSteering` multiplies each non-trivial delta by a fixed amplification factor `α = SLIDER_AMPLIFICATION = 2.0` (**hardcoded** in `modalities/sliders.py`; intentionally not exposed in the study config so that two studies remain directly comparable) so user-visible "small" moves still produce a non-trivial score gap:
+**Per-iteration contribution.** `SliderSteering` multiplies each non-trivial value by a fixed amplification factor $\alpha = 2.0$ (`SLIDER_AMPLIFICATION`, **hardcoded** in `modalities/sliders.py`; intentionally not exposed in the study config so that two studies remain directly comparable) so user-visible "small" moves still produce a non-trivial score gap:
 
 $$
 w_{\text{slider}}(c) \;=\; \alpha \cdot \delta_c \quad\text{for }|\delta_c| > 10^{-3}
@@ -100,7 +100,7 @@ class SliderSteering(SteeringModality):
         return SteeringResult(features=[], adjustments=adjustments, metadata={"raw_adjustments": raw_adjustments})
 ```
 
-**Composition across iterations.** Sliders **accumulate**, not replace. The iteration controller keeps `previous_adjustments : neuron_id → weight` in the session and, after expanding the cluster deltas to neurons, adds the amplified increment per neuron:
+**Composition across iterations.** Sliders **accumulate**, not replace. The iteration controller keeps a `previous_adjustments` map from `neuron_id` to `weight` in the session and, after expanding the cluster-level values to neurons, adds the amplified increment per neuron:
 
 $$
 \Delta_n^{(t)} \;=\; \Delta_n^{(t-1)} \,+\, \alpha \cdot \delta_n^{(t)}
@@ -131,9 +131,9 @@ Switching between approaches (`_do_advance_phase` in `routes/study.py`) wipes th
 
 ## 3. Toggles (FR-07)
 
-**Input.** UI sends `raw_adjustments[cluster_id] ∈ ℝ`, where only the **sign** is meaningful: positive → boost, negative → suppress, near-zero → unset.
+**Input.** UI sends $raw\_adjustments[cluster\_id] \in \mathbb{R}$, where only the **sign** is meaningful: positive means boost, negative means suppress, and near-zero means unset.
 
-**Per-iteration contribution.** Each touched cluster gets a **fixed-magnitude** weight `β = toggle_default_weight` (config key, per-approach with study-level fallback; default `0.65`), signed by the user's choice:
+**Per-iteration contribution.** Each touched cluster gets a **fixed-magnitude** weight $\beta$ (`toggle_default_weight`, config key, per-approach with study-level fallback; default `0.65`), signed by the user's choice:
 
 $$
 w_{\text{toggle}}(c) \;=\; \operatorname{sign}(\delta_c) \cdot \beta \quad\text{for }|\delta_c| > 10^{-3}
@@ -159,15 +159,15 @@ class ToggleSteering(SteeringModality):
 
 ## 4. Text steering (FR-09)
 
-**Input.** Free-form participant query `Q` (≤ `text_steering.max_query_chars`, study-level config; default `200`; the route returns 400 if longer). Length is enforced at the entry of `/parse-text-steering`.
+**Input.** Free-form participant query $Q$ (length $\le$ `text_steering.max_query_chars`, study-level config; default `200`; the route returns 400 if longer). Length is enforced at the entry of `/parse-text-steering`.
 
 ### 4.1 Segmentation
 
-`Q` is split on the regex `_SEGMENT_BOUNDARY_RE = [.;]|\bbut\b|\bhowever\b`. Each non-empty chunk becomes a segment `s_i` with three derived quantities:
+$Q$ is split on the regex `_SEGMENT_BOUNDARY_RE = [.;]|\bbut\b|\bhowever\b`. Each non-empty chunk becomes a segment $s_i$ with three derived quantities:
 
-- `direction(s_i) ∈ {+1, -1}` — `-1` iff any marker in `_NEGATIVE_HINTS` (`not`, `no`, `never`, `don't`, `i hate`, …) appears in `s_i`, else `+1`. *(hint list and segmentation regex are hardcoded.)*
-- `intensity(s_i) ∈ {0.65, 1.0, 1.35}` — `1.35` for "much/way/a lot more|less" or "strongly/definitely"; `0.65` for "slightly/a bit/somewhat/kind of"; `1.0` otherwise. *(ladder and triggers are hardcoded.)*
-- `tokens(s_i)` — alphanumeric tokens of length ≥ 2 with `_STOP_WORDS` removed. *(stop-list is hardcoded.)*
+- $direction(s_i) \in \{+1, -1\}$ — `-1` iff any marker in `_NEGATIVE_HINTS` (`not`, `no`, `never`, `don't`, `i hate`, …) appears in $s_i$, else `+1`. *(hint list and segmentation regex are hardcoded.)*
+- $intensity(s_i) \in \{0.65, 1.0, 1.35\}$ — `1.35` for "much/way/a lot more|less" or "strongly/definitely"; `0.65` for "slightly/a bit/somewhat/kind of"; `1.0` otherwise. *(ladder and triggers are hardcoded.)*
+- $tokens(s_i)$ — alphanumeric tokens of length $\ge 2$ with `_STOP_WORDS` removed. *(stop-list is hardcoded.)*
 
 ```103:119:server/plugins/steering/modalities/text.py
 def _split_query(query: str) -> List[Dict]:
@@ -289,7 +289,7 @@ $$
         )
 ```
 
-### 4.5 Top-K and composition across iterations
+### 4.5 `top-K` and composition across iterations
 
 The top `text_steering_top_k` clusters (config key, per-approach with study-level fallback; default `6`) by `|w(c)|` survive; the others are dropped. Their `(cluster_id, w(c))` map is the iteration's text adjustments — call it $T_t$ at iteration $t$.
 
@@ -366,7 +366,7 @@ def _compose_text_adjustments(mode: str, previous: dict, current: dict) -> dict:
     return merged
 ```
 
-**NFR-12 no-match.** If `total(c) ≤ 0` for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows "We could not match your text to any feature, try different wording."
+**NFR-12 no-match.** If $total(c) \le 0$ for **all** clusters, the route returns `status = no-match` with HTTP 200, a `SaeTextSteeringQuery` row is still written (empty matches), and the UI shows "We could not match your text to any feature, try different wording."
 
 **Scope.** The "previous prompt" $T_{t-1}$ is namespaced by `(study_guid, phase_index)`. A prompt that was issued in approach A's phase 0 cannot accidentally compose with a prompt issued later in approach B's phase 1, even though both share a Flask session. See design-decisions Section 21 for the leakage fix.
 
@@ -459,17 +459,17 @@ $$
 \Delta^{(t+1)}_n \;=\; 0 \quad \forall n,\qquad L^{(t+1)} \;=\; \varnothing,\qquad \hat{s}^{(t+1)} \;=\; \frac{1}{|E_0|}\sum_{m \in E_0} \text{emb}(m)
 $$
 
-The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed (Section 7) reverts to the elicitation-only mean. The frontend mirrors this: `resetAllControls()` zeroes every slider's `featureAdjustments`, drops the detected-tags container, empties `likedMovies` and `likedInIteration`, and re-syncs every previously-highlighted recommendation card so the heart selection visually disappears. The audit row in the DB is the single source of truth that the reset happened — individual per-movie unlikes are deliberately not re-logged (see [`design-decisions.md`](design-decisions.md) Section 6).
+The session keys explicitly emptied are: `cumulative_adjustments`, `feature_adjustments`, `user_touched_features`, `excluded_movies_from_text`, `last_text_steering`, `last_example_steering`, `boosted_liked_ids`, and the current phase's entry in `persistent_liked_by_phase`. `update_elsa_seed_with_likes(set(), …)` is then called so the ELSA seed (Section 7) reverts to the elicitation-only mean. The frontend mirrors this: `resetAllControls()` zeroes every slider's `featureAdjustments`, drops the detected-tags container, empties `likedMovies` and `likedInIteration`, and re-syncs every previously-highlighted recommendation card so the heart selection visually disappears. The audit row in the DB is the single source of truth that the reset happened — individual per-movie unlikes are deliberately not re-logged (see [`design-decisions.md` Section 6](design-decisions.md#6-text-steering-composition-is-a-configurable-mode-fr-09)).
 
 ## 7. ELSA seed re-weighting from likes
 
-The ELSA seed embedding `\hat{s}` is a weighted mean of two pools: the original elicitation movies `E_0` (weight 1 each, hardcoded) and the participant's current liked movies `L`, capped at the first `like_cap` ids (sorted ascending) and weighted by `λ = selection_signal_weight` per liked movie. `λ` is a config key (per-approach with study-level fallback; default `0.5`, or `0.25` if the approach uses sliders/toggles/hybrid — see `default_selection_signal_weight` in `study_config.py`). `like_cap` is **hardcoded** to `10` at the call site in `iteration_controller.py`.
+The ELSA seed embedding $\hat{s}$ is a weighted mean of two pools: the original elicitation movies $E_0$ (weight `1` each, hardcoded) and the participant's current liked movies $L$, capped at the first `like_cap` ids (sorted ascending) and weighted by $\lambda$ (`selection_signal_weight`) per liked movie. $\lambda$ is a config key (per-approach with study-level fallback; default `0.5`, or `0.25` if the approach uses sliders/toggles/hybrid — see `default_selection_signal_weight` in `study_config.py`). `like_cap` is **hardcoded** to `10` at the call site in `iteration_controller.py`.
 
 $$
 \hat{s} \;=\; \frac{\sum_{m \in E_0} \text{emb}(m)\;+\;\lambda \cdot \sum_{m \in L^{\le k}} \text{emb}(m)}{|E_0| \;+\; \lambda \cdot |L^{\le k}|}
 $$
 
-where `L^{≤k}` is `sorted(L)[:like_cap]` and `|·|` counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend `(1-λ)·\hat{s}_{old} + λ·…`. The seed is then consumed by the recommender as the query vector for the cosine-similarity CF term (see Section 1.2 and Section 8 below).
+where $L^{\le k}$ is `sorted(L)[:like_cap]` and $|\cdot|$ counts only ids that resolve in `recommender.item_ids`. The seed is recomputed from the elicitation pool every iteration — it is **not** a running blend $(1-\lambda)\cdot\hat{s}_{old} + \lambda\cdot\ldots$. The seed is then consumed by the recommender as the query vector for the CF term (see Section 1.2 and Section 8 below).
 
 When the study's `interaction_mode` (Section 2.1) is `reset`, the iteration controller calls `update_elsa_seed_with_likes(set(), …)` so `L` is forced empty and `\hat{s}` collapses to the pure elicitation mean — no like signal carries into the next iteration. `cumulative` mode passes the participant's actual liked set, which is the formula above.
 
@@ -513,16 +513,16 @@ This section is now superseded by Section 10 below, which documents the full set
 | Symbol | Shape | Meaning |
 |---|---|---|
 | $e_i$ | $\mathbb{R}^{d}$ | Row $i$ of `recommender.item_embeddings` — the ELSA dense embedding for item $i$. $d=$ CF embedding dim (typically 256). |
-| $\hat{s}$ | $\mathbb{R}^{d}$ | The user seed embedding (`session["elsa_seed"]`, see Section 7), L2-normalised. |
+| $\hat{s}$ | $\mathbb{R}^{d}$ | The user seed embedding (`session["elsa_seed"]`, see Section 7), $L_2$-normalised. |
 | $f_i$ | $\mathbb{R}^{n}$ | Row $i$ of `recommender.item_features` — the SAE feature activations for item $i$. $n=$ SAE feature count (1024 for `TopKSAE-1024`). |
-| $a$ | $\mathbb{R}^{n}$ | The per-neuron *sae_profile* built from `feature_adjustments` after cluster→neuron expansion (Section 1). Sparse. |
+| $a$ | $\mathbb{R}^{n}$ | The per-neuron *sae_profile* built from `feature_adjustments` after cluster-to-neuron expansion (Section 1). Sparse. |
 | $W_{\text{dec}}$ | $\mathbb{R}^{n \times d}$ | SAE decoder weight (`sae_model.decoder_w`), mapping feature space back to embedding space. |
 | $j_i$ | $\mathbb{R}_{\ge 0}$ | Genre Jaccard bonus for item $i$ (precomputed; Appendix C). |
 | $w_{cf}, w_g$ | scalars | Blend weights from `build_blend_plan(feature_adjustments)`. Two regimes: `profile_prior` (no explicit steering) and `steering_primary` (any non-zero $a$). |
 
 ## 10. Reranking strategies (`reranking_strategy` config key)
 
-The study-level config key `reranking_strategy` controls **how** the three building blocks (CF cosine, genre Jaccard, SAE matmul) are combined into the final per-item score. The constants module enumerates exactly three legal values:
+The study-level config key `reranking_strategy` controls **how** the three building blocks (`cf_score`, genre Jaccard, SAE matmul) are combined into the final per-item score. The constants module enumerates exactly three legal values:
 
 ```52:57:server/plugins/steering/constants.py
 DEFAULT_RERANKING_STRATEGY = "feature-conditioned"
@@ -572,13 +572,13 @@ with three regimes for $(\gamma, c)$:
 - **No adjustments** ($\lVert a \rVert = 0$): $\gamma = 0$, steering term vanishes, ranking is pure CF + genre.
 - **Strong adjustments** (blend plan returns `steering_primary`, i.e. any $|a_n| > 10^{-6}$ on any neuron): $\gamma = 1$, $c = \max_i |\text{sae}(i)|$ over allowed items, $w_{\text{prior}}$ small.
 - **Moderate adjustments**, candidate set $\ge 10$ items: $\gamma = \mathrm{clip}\bigl(0.30 \cdot \tfrac{\text{IQR}(\text{base})}{\text{IQR}(\text{sae})},\; 0.03,\; 0.35\bigr)$, $c = \max(0.35 \cdot \text{span}(\text{base}),\; 0.05 \cdot \text{span}(\text{sae}))$.
-- **Moderate, candidate set < 10**: fixed $\gamma = 0.15$, $c = 2.0$.
+- **Moderate, candidate set has fewer than `10` items**: fixed $\gamma = 0.15$, $c = 2.0$.
 
 The adaptive $\gamma$ scales the SAE term to match the **dispersion** of the base score, so neither signal dominates by accident. Code: `sae_recommender.py:467-540`.
 
 ### 10.2 `latent-perturbation` (rotate the seed; pure CF rank)
 
-Instead of *adding* an SAE-score term after the cosine, this strategy **moves the user-seed embedding** by an SAE-derived direction and then ranks with pure CF on the moved seed. Conceptually: "the user's steering is a refinement of *who they are*, not a post-hoc bump of *what they see*".
+Instead of *adding* an SAE-score term after the CF term, this strategy **moves the user-seed embedding** by an SAE-derived direction and then ranks with pure CF on the moved seed. Conceptually: "the user's steering is a refinement of *who they are*, not a post-hoc bump of *what they see*".
 
 Direction decoding:
 
@@ -587,7 +587,7 @@ d \;=\; W_{\text{dec}}^{\top} \cdot a \;\in\; \mathbb{R}^{d}, \qquad
 \hat{d} \;=\; d / \lVert d \rVert
 $$
 
-Perturbed seed (with the original seed $\hat{s}$ already L2-normalised):
+Perturbed seed (with the original seed $\hat{s}$ already $L_2$-normalised):
 
 $$
 \hat{s}' \;=\; \frac{\hat{s} + \alpha \cdot \hat{d}}{\bigl\lVert \hat{s} + \alpha \cdot \hat{d} \bigr\rVert}
@@ -605,9 +605,9 @@ Parameter: $\alpha \in [0, 1]$ (`latent_perturbation_alpha`, default `0.30`). La
 
 Code: `sae_recommender.py:434-449` (perturbation) and `_decode_sae_profile_to_embedding_space` helper.
 
-### 10.3 `constrained-subset` (hard τ-filter, CF rank inside)
+### 10.3 `constrained-subset` (hard $\tau$ filter, CF rank inside)
 
-This strategy enforces a **hard membership constraint**: an item only enters the recommendation list if its SAE score is at least a fraction τ of the strongest positive SAE score in the candidate set. Within the surviving subset, ranking is by base CF + genre (no additive SAE term).
+This strategy enforces a **hard membership constraint**: an item only enters the recommendation list if its SAE score is at least a fraction $\tau$ of the strongest positive SAE score in the candidate set. Within the surviving subset, ranking is by base CF + genre (no additive SAE term).
 
 Let $S = \{\text{sae}(i) : i \text{ allowed}\}$ and let $S^+ = \{s \in S : s > 0\}$. Define:
 
@@ -643,7 +643,7 @@ Code: `sae_recommender.py:466-479` and `sae_recommender.py:576-585`.
 | Steering enters as | additive score term | seed rotation, then CF | hard filter, then CF |
 | Has $\gamma$ / clamp magic? | yes (adaptive) | no (single $\alpha$) | no (single $\tau$) |
 | Top-1 can be "off-target" | yes (steering can fail to clear base+clamp) | yes (rotation is gentle) | **no** — every returned item is on-target by construction |
-| Falls back when SAE signal is empty | yes (steering term → 0) | yes (no perturbation applied) | yes (mask is dropped if no positive SAE score) |
+| Falls back when SAE signal is empty | yes (steering term becomes $0$) | yes (no perturbation applied) | yes (mask is dropped if no positive SAE score) |
 | Suitable for ablation | baseline | "is the SAE signal information useful even without explicit boosting?" | "what is the upper bound of *guaranteed* steering, ignoring CF gradients?" |
 
 The production system stays on `feature-conditioned` because that is what has been piloted. The other two are available as research toggles and are persisted on every `SaeApproachRun` row so retrospective analysis can match strategy to outcome.
@@ -656,22 +656,22 @@ Every numeric constant that appears in a formula below is either a **config key*
 
 | Symbol in formulas | Code name | Default | Scope | Read from |
 | --- | --- | --- | --- | --- |
-| `α` (slider amplification) | `SLIDER_AMPLIFICATION` | `2.0` | **hardcoded** | `modalities/sliders.py` |
-| `β` (toggle magnitude) | `toggle_default_weight` | `0.65` | per-approach (study-level fallback) | `active_model` → `conf` |
-| `w*` (text baseline) | `text_steering_weight` | `0.55` | per-approach (study-level fallback) | `active_model` → `conf` |
-| top-K (text) | `text_steering_top_k` | `6` | per-approach (study-level fallback) | `active_model` → `conf` |
-| text composition | `text_composition_mode` ∈ {`replace`, `add`, `intersect`} | `replace` | per-approach (study-level fallback `text_steering.composition_mode`) | `active_model` → `conf["text_steering"]` |
+| $\alpha$ (slider amplification) | `SLIDER_AMPLIFICATION` | `2.0` | **hardcoded** | `modalities/sliders.py` |
+| $\beta$ (toggle magnitude) | `toggle_default_weight` | `0.65` | per-approach (study-level fallback) | `active_model` to `conf` |
+| $w^\*$ (text baseline) | `text_steering_weight` | `0.55` | per-approach (study-level fallback) | `active_model` to `conf` |
+| `top-K` (text) | `text_steering_top_k` | `6` | per-approach (study-level fallback) | `active_model` to `conf` |
+| text composition | `text_composition_mode` $\in$ {`replace`, `add`, `intersect`} | `replace` | per-approach (study-level fallback `text_steering.composition_mode`) | `active_model` to `conf["text_steering"]` |
 | max query length | `text_steering.max_query_chars` | `200` | study-level | `conf["text_steering"]` |
-| `s` (example strength) | `example_selection_weight` | `0.65` | per-approach (study-level fallback) | `active_model` → `conf` |
-| top-K (examples) | `example_selection_top_k` | `6` | per-approach (study-level fallback) | `active_model` → `conf` |
-| examples merged with sliders? | `use_selected_movies_as_examples` | `false` | per-approach (study-level fallback) | `active_model` → `conf` |
-| `λ` (like weight for seed) | `selection_signal_weight` | `0.5` (or `0.25` with sliders/toggles/hybrid) | per-approach (study-level fallback) | `active_model` → `conf` |
+| $s$ (example strength) | `example_selection_weight` | `0.65` | per-approach (study-level fallback) | `active_model` to `conf` |
+| `top-K` (examples) | `example_selection_top_k` | `6` | per-approach (study-level fallback) | `active_model` to `conf` |
+| examples merged with sliders? | `use_selected_movies_as_examples` | `false` | per-approach (study-level fallback) | `active_model` to `conf` |
+| $\lambda$ (like weight for seed) | `selection_signal_weight` | `0.5` (or `0.25` with sliders/toggles/hybrid) | per-approach (study-level fallback) | `active_model` to `conf` |
 | `like_cap` | — | `10` | **hardcoded** at the call site | `iteration_controller.py` |
 | SAE checkpoint | `sae` | `DEFAULT_TOPK_SAE_MODEL_ID` | per-approach | `active_model` |
 | reranking strategy | `reranking_strategy` ∈ {`feature-conditioned`, `latent-perturbation`, `constrained-subset`} | `feature-conditioned` | study-level (per-approach override planned, not exposed in UI yet) | `conf` |
-| `α` (latent perturbation gain) | `latent_perturbation_alpha` | `0.30` | study-level (or per-approach via `models[*].latent_perturbation_alpha`) | `conf` |
+| $\alpha$ (latent perturbation gain) | `latent_perturbation_alpha` | `0.30` | study-level (or per-approach via `models[*].latent_perturbation_alpha`) | `conf` |
 | `τ` (constrained subset threshold) | `constrained_subset_tau` | `0.25` | study-level (or per-approach via `models[*].constrained_subset_tau`) | `conf` |
-| `γ`, `c` (clamp; `feature-conditioned` only) | adaptive | computed per iteration from candidate-set quantiles | **hardcoded** | `recommendation/sae_recommender.py` |
+| $\gamma$, $c$ (clamp; `feature-conditioned` only) | adaptive | computed per iteration from candidate-set quantiles | **hardcoded** | `recommendation/sae_recommender.py` |
 | token-match weights `2.5 / 1.25 / 0.75`, phrase bonus `3.0`, coverage term | — | as shown | **hardcoded** | `modalities/text.py` |
 | intensity ladder `{0.65, 1.0, 1.35}`, `_NEGATIVE_HINTS`, `_INTENSITY_*`, `_STOP_WORDS` | — | as shown | **hardcoded** | `modalities/text.py` |
 | weight bounds `[0.25, 0.95]`, `[0.1, 0.95]` (text); `[0, 0.95]` (examples); `[-0.95, 0.95]` (text `add` mode) | — | as shown | **hardcoded** | `modalities/text.py`, `modalities/examples.py`, `routes/steering/actions.py` |
