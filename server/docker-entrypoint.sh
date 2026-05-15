@@ -23,9 +23,17 @@ if [ -d "${DATA_ROOT}" ] && [ "${DATA_ROOT}" != "/" ]; then
     rm -rf "/app/server/static/datasets"
     ln -s "${DATA_ROOT}/datasets" "/app/server/static/datasets"
   fi
+  # DB backups (admin download endpoint + scripts/backup_db.py both default
+  # to <repo_root>/backups, which is /app/backups inside the image; symlink
+  # it onto the persistent volume so backups survive redeploys).
+  mkdir -p "${DATA_ROOT}/backups"
+  if [ ! -L "/app/backups" ]; then
+    rm -rf "/app/backups"
+    ln -s "${DATA_ROOT}/backups" "/app/backups"
+  fi
 fi
 
-mkdir -p /app/server/instance /app/server/cache /app/server/plugins/steering/models /app/server/plugins/steering/data
+mkdir -p /app/server/instance /app/server/cache /app/server/plugins/steering/models /app/server/plugins/steering/data /app/backups
 
 DATASET_DIR="/app/server/static/datasets/ml-32m-filtered"
 MODEL_DIR="/app/server/plugins/steering/models"

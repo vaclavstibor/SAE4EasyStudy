@@ -18,6 +18,9 @@ server/instance/
 # cache
 server/cache/
 
+# DB backups (admin download endpoint / scripts/backup_db.py output)
+backups/
+
 # macOS noise
 .DS_Store
 **/.DS_Store
@@ -35,13 +38,9 @@ OfflineEasyStudies
 
 # Other
 .cursor/
-proposal.tex
-proposal_instruction.txt
-notes.txt
-
+notes.md
 cover-letter.txt
-scripts/reconstruct_journey.py
-proposal-gaps.md
+proposal.tex
 
 # Anonymization map
 evaluation/data/anonymization_map.csv

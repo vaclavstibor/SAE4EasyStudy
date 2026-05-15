@@ -2,9 +2,7 @@
 
 import datetime
 import json
-import os
 import secrets
-from pathlib import Path
 
 import flask
 import sqlalchemy
@@ -13,6 +11,7 @@ from flask_login import current_user, login_required
 from server.platform.persistence.base_models import Participation, UserStudy
 from server.platform.persistence.db import db
 from server.platform.shared.common import gen_url_prefix
+from server.scripts.backup_db import BackupError, create_backup_now
 
 main = flask.Blueprint("main", __name__)
 
@@ -26,20 +25,31 @@ def administration():
 
 @main.route("/administration/db-backup", methods=["GET"])
 def administration_db_backup():
+    """Create a fresh DB snapshot on demand and stream it back.
+
+    Works in both local dev (SQLite copy) and any deployment with a Postgres
+    ``DATABASE_URL`` (``pg_dump`` in the image). The handler reuses
+    :func:`server.scripts.backup_db.create_backup_now`, so the on-disk
+    snapshot is preserved (subject to ``KEEP_LAST`` rolling retention) and
+    available for the CLI / external schedulers that prefer to call the
+    script directly.
+    """
     if not current_user.is_authenticated:
         return flask.redirect(flask.url_for("auth.login"))
 
-    backup_dir = Path(os.environ.get("BACKUP_DIR", "/app/backups"))
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    candidates = sorted(
-        [path for path in backup_dir.glob("db_*.gz") if path.is_file()],
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
-    )
-    if not candidates:
-        return flask.jsonify({"error": "No DB backup available."}), 404
+    try:
+        latest = create_backup_now()
+    except BackupError as exc:
+        return (
+            flask.jsonify(
+                {
+                    "error": "Failed to create DB backup.",
+                    "detail": str(exc),
+                }
+            ),
+            500,
+        )
 
-    latest = candidates[0]
     return flask.send_file(
         str(latest),
         as_attachment=True,

@@ -16,6 +16,28 @@ def get_abs_project_root_path():
     return Path(__file__).resolve().parents[2]
 
 
+def resolve_backup_dir() -> Path:
+    """Return the directory used for database backups (read and write).
+
+    Priority (highest first):
+
+    1. ``BACKUP_DIR`` env var — explicit operator override.
+    2. ``<repo_root>/backups`` — works for both local dev and the Docker
+       WORKDIR (``/app/backups``). On Railway, the entrypoint symlinks
+       ``/app/backups`` to ``${DATA_ROOT}/backups`` so the directory lives
+       on the persistent volume and survives redeploys.
+
+    The directory is **not** created here so callers stay explicit about
+    write semantics (``backup_db.py`` calls ``mkdir(parents=True, exist_ok=True)``
+    inside ``create_backup_now()``; admin/CLI flows then write into it).
+    """
+    explicit = os.environ.get("BACKUP_DIR", "").strip()
+    if explicit:
+        return Path(explicit)
+    repo_root = Path(__file__).resolve().parents[3]
+    return repo_root / "backups"
+
+
 def gen_url_prefix():
     parsed = urlparse(request.url, ".")
     return f"{parsed.scheme}://{parsed.netloc}"
