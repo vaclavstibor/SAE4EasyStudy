@@ -98,19 +98,18 @@ blueprint can serve recommendations:
 | `server/plugins/steering/data/`           | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
 
 
-The dataset directory must always be supplied manually. For the SAE plugin
-assets (checkpoint + the four data files) there are two supported flows:
+Both the dataset and the SAE plugin assets support two flows:
 
-- **GitHub Releases bootstrap.** Set `SAE_BOOTSTRAP_MODEL=1` and
-`SAE_MODEL_GITHUB_REPO=<owner>/<repo>`, plus `SAE_MODEL_RELEASE_TAG` (defaults
-to `latest`) and `GITHUB_TOKEN` for private releases. The container entrypoint
-invokes `[server/plugins/steering/bootstrap_model.py](server/plugins/steering/bootstrap_model.py)`
-on startup and downloads every asset into the correct location. Optional
-overrides — `SAE_MODEL_ASSET_NAME`, `SAE_RUNTIME_ASSET_NAME`,
-`SAE_LABEL_ASSET_NAME` — let you pin specific asset filenames.
-- **Manual placement.** Place the files yourself under the paths in the table
-above. The entrypoint validates their presence on startup and refuses to
-launch if any are missing.
+- **GitHub Releases bootstrap (recommended for Docker / Railway).** Set
+  `DATASET_BOOTSTRAP=1` + `DATASET_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` +
+  `DATASET_RELEASE_TAG=v2.0` for the dataset, and `SAE_BOOTSTRAP_MODEL=1` +
+  `SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` + `SAE_MODEL_RELEASE_TAG=v2.0`
+  for the SAE assets. The entrypoint downloads everything on first boot and
+  skips re-download on subsequent starts if the files are already present.
+  Add `GITHUB_TOKEN` for private releases.
+- **Manual placement.** Place the files under the paths in the table above
+  (or under `$DATA_ROOT` when using a persistent volume). The entrypoint
+  validates their presence and refuses to start if any are missing.
 
 See [server/plugins/steering/data/README.md](server/plugins/steering/data/README.md)
 for the per-file inventory.

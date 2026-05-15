@@ -655,39 +655,52 @@ The reset script requires `--yes` (set by the wrapper) so it cannot run by accid
 docker compose up --build
 ```
 
-The compose file mounts:
-
-- `server/instance/` for the SQLite dev DB,
-- `server/cache/` for dataset pickles and SAE models,
-- `static/datasets/` for raw MovieLens CSVs.
-
-The image entrypoint runs `scripts/init-db.sh` then starts gunicorn.
+The compose file mounts a single named volume `app-data` at `/data`. The
+entrypoint symlinks all persistent state directories under `/data` so they
+survive container restarts. The entrypoint then runs `server/scripts/init_db.py`
+and starts gunicorn.
 
 ### 9.4 Environment variables
 
 | Var | Default | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `sqlite:///db.sqlite` | SQLAlchemy URI. Relative SQLite paths are resolved under `server/instance/`. |
 | `APP_SECRET_KEY` | random per run | Flask secret. **Set this in production.** |
-| `SESSION_TYPE` | `sqlalchemy` | Flask-Session backend. Swap to `redis` and provide `SESSION_REDIS` for NFR-02. |
-| `BACKUP_DIR` | `/app/backups` | Where `/administration/db-backup` looks for `db_*.gz`. |
-| `LOG_LEVEL` | `INFO` | Standard log level. |
-| `PROLIFIC_BASE_URL` | `https://app.prolific.com/submissions/complete` | Used to build the completion redirect. |
+| `DATABASE_URL` | `sqlite:////data/instance/db.sqlite` | SQLAlchemy URI. Points into the persistent volume. |
+| `DATA_ROOT` | `/data` | Root of the persistent volume. The entrypoint symlinks all state dirs under this path. |
+| `DATASET_BOOTSTRAP` | `0` | Set to `1` to download the dataset from GitHub Releases on first boot. Skips if already present. |
+| `DATASET_GITHUB_REPO` | — | `owner/repo` for the dataset release (e.g. `vaclavstibor/SAE4EasyStudy`). |
+| `DATASET_RELEASE_TAG` | `latest` | GitHub Release tag for the dataset asset. |
+| `ML_LATEST_DATASET_ASSET` | `ml-32m-filtered.zip` | Asset filename inside the dataset release. |
+| `SAE_BOOTSTRAP_MODEL` | `0` | Set to `1` to download SAE checkpoint + data from GitHub Releases on first boot. Skips if already present. |
+| `SAE_MODEL_GITHUB_REPO` | — | `owner/repo` for the SAE model release. |
+| `SAE_MODEL_RELEASE_TAG` | `latest` | GitHub Release tag for the SAE model assets. |
+| `GITHUB_TOKEN` | — | Bearer token for private GitHub Releases. |
+| `STUDY_AUTHOR_NAME` | — | Author name shown in participant UI and admin panel. |
+| `STUDY_AUTHOR_CONTACT` | — | Contact e-mail shown in footer and admin hero. |
+| `GUNICORN_WORKERS` | `1` | Number of gunicorn worker processes. |
+| `PROLIFIC_BASE_URL` | `https://app.prolific.com/submissions/complete` | Completion redirect base URL. |
 
 ### 9.5 Production checklist
 
 - Set `APP_SECRET_KEY` to a strong, persistent value.
-- Set `DATABASE_URL` to a managed Postgres.
-- Set `SESSION_TYPE=redis` and `SESSION_REDIS=...` if you expect >100 concurrent participants (NFR-02).
-- Mount `BACKUP_DIR` to durable storage. Wire `pg_dump` / `litestream` to write `db_*.gz` snapshots there.
-- Mount `cache/` to durable storage (rebuilds are expensive).
-- Configure HTTPS upstream (Caddy / nginx). The Flask app does not terminate TLS.
-- Run `./scripts/init-db.sh` on every release before starting gunicorn. It is a no-op if the schema is already current.
-- When a model changes in a way that requires reshaping existing tables, run `./scripts/reset-db.sh` (destructive) or perform an out-of-band SQL change. There is no Alembic baseline by design — see [`design-decisions.md`](design-decisions.md) §3.
+- Mount a persistent volume at `DATA_ROOT` (`/data`). The SQLite DB, SAE model,
+  dataset and cache all live there and survive redeploys.
+- Set `DATASET_BOOTSTRAP=1` and `SAE_BOOTSTRAP_MODEL=1` with the correct
+  `*_GITHUB_REPO` and `*_RELEASE_TAG` values on first deploy. Both are no-ops
+  on subsequent deploys if the files are already on the volume.
+- For >100 concurrent participants: swap Flask-Session to Redis-backed storage
+  (NFR-02). The app config in `server/platform/app.py` already reads
+  `SESSION_TYPE` and `SESSION_REDIS` env vars — only the ops wiring is missing.
+- Configure HTTPS upstream. The Flask app does not terminate TLS (Railway
+  provides it automatically; for other hosts use Caddy or nginx).
+- When a model changes in a way that requires reshaping existing tables, run
+  `./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
+  Alembic baseline by design — see [`design-decisions.md`](design-decisions.md) §3.
 
 ### 9.6 Backups
 
-The platform expects a sidecar process to periodically write `db_<timestamp>.gz` snapshots into `BACKUP_DIR`. `/administration/db-backup` serves the most recent snapshot to admins.
+`server/scripts/backup_db.py` writes a timestamped `.dump` file to `/data/backups/`.
+Run it as a cron service (Railway cron: `0 3 * * *`) pointing at the same volume.
 
 ### 9.7 Logs and observability
 
