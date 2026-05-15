@@ -8,7 +8,7 @@ try:
 except Exception:
     QuantileTransformer = None
 
-from server.plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance, prepare_tf_model
+from server.plugins.utils.preference_elicitation import recommend_2_3, rlprop, weighted_average, result_layout_variants, get_objective_importance
 from server.plugins.utils.data_loading import load_ml_dataset
 from server.plugins.utils.interaction_logging import log_interaction, study_ended
 
@@ -668,16 +668,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 def long_initialization(guid):
-    # Activate the user study once the initialization is done
-    # We have to use SQLAlchemy directly because we are outside of the Flask context (since we are running on a daemon thread)
-    engine = create_engine('sqlite:///instance/db.sqlite')
+    import os
+    db_url = os.environ.get("DATABASE_URL", "sqlite:///instance/db.sqlite")
+    if db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    engine = create_engine(db_url)
     session = Session(engine)
     q = session.query(UserStudy).filter(UserStudy.guid == guid).first()
-    
-    # Do a single call to load_ml_dataset and prepare_tf_data to force cache population
-    loader = load_ml_dataset()
-    prepare_tf_model(loader)
-    
+
+    load_ml_dataset()
+
     q.initialized = True
     q.active = True
     session.commit()

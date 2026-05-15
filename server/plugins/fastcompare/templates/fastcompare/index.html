@@ -3,14 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ payload.title }}</title>
+    <title>Create FastCompare Study</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
-    <main>
-        <h1>{{ payload.title }}</h1>
-        <p>{{ payload.summary }}</p>
-        <p>Status: {{ payload.status }}</p>
-        <p>Modes: {{ payload.supported_modes | join(", ") }}</p>
-    </main>
+<body class="bg-light">
+<div class="container py-5" style="max-width:520px">
+    <h2 class="mb-1">FastCompare</h2>
+    <p class="text-muted mb-4">{{ payload.summary }}</p>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Study name <span class="text-muted fw-normal">(optional)</span></label>
+                <input type="text" id="study-name" class="form-control" placeholder="e.g. Pairwise comparison spring 2026">
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Comparison mode</label>
+                <select id="comparison-mode" class="form-select">
+                    {% for mode in payload.supported_modes %}
+                    <option value="{{ mode }}">{{ mode }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button id="create-btn" class="btn btn-primary w-100">Create study</button>
+            <div id="error-msg" class="text-danger mt-2 d-none"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('create-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('create-btn');
+    btn.disabled = true;
+    btn.textContent = 'Creating…';
+
+    const config = {
+        name: document.getElementById('study-name').value.trim() || 'FastCompare study',
+        comparison_mode: document.getElementById('comparison-mode').value,
+    };
+
+    try {
+        const resp = await fetch('/create-user-study', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({parent_plugin: 'fastcompare', config}),
+            redirect: 'follow',
+        });
+        if (resp.redirected) { window.location.href = resp.url; return; }
+        if (resp.ok) { window.location.href = '/administration'; }
+        else {
+            const msg = document.getElementById('error-msg');
+            msg.textContent = 'Error: ' + await resp.text();
+            msg.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = 'Create study';
+        }
+    } catch (e) {
+        console.error(e);
+        btn.disabled = false;
+        btn.textContent = 'Create study';
+    }
+});
+</script>
 </body>
 </html>
