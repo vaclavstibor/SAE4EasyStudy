@@ -38,3 +38,5 @@ OfflineEasyStudies
 proposal.tex
 proposal_instruction.txt
 notes.txt
+
+scripts/reconstruct_journey.py

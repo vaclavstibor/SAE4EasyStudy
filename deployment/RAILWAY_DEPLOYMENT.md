@@ -3,13 +3,9 @@
 Single service, one persistent volume. No Nginx, no separate database service —
 SQLite lives on the volume and survives redeploys.
 
----
-
 ## 1. Create the Railway project
 
 In Railway UI: **New Project → Deploy from GitHub repo** → select this repo.
-
----
 
 ## 2. Add a Volume
 
@@ -21,8 +17,6 @@ In the service settings: **Volumes → Add Volume**.
 
 Everything that must survive a redeploy (SQLite DB, SAE model, dataset, cache)
 is symlinked under `/data` by the entrypoint on startup.
-
----
 
 ## 3. Set environment variables
 
@@ -50,8 +44,6 @@ After the **first** successful deploy the assets are on the volume.
 Subsequent deploys skip the download (entrypoint detects existing files)
 and start in under a minute.
 
----
-
 ## 4. Builder settings
 
 | Setting | Value |
@@ -59,8 +51,6 @@ and start in under a minute.
 | Builder | Dockerfile |
 | Dockerfile path | `Dockerfile` (repository root) |
 | Start command | *(leave empty — entrypoint handles it)* |
-
----
 
 ## 5. First-boot sequence (what the entrypoint does)
 
@@ -73,8 +63,6 @@ and start in under a minute.
 4. Validates all required files are present (exits with a clear error if not).
 5. Runs `init_db.py` to create/update the SQLite schema.
 6. Starts gunicorn.
-
----
 
 ## 6. Database backup (optional cron service)
 
