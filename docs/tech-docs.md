@@ -4,42 +4,42 @@
 
 ### Orientation
 
-1. [Abstract](#1-abstract)  
-   What the system is and what it adds to EasyStudy.
-2. [Introduction](#2-introduction)  
-   Purpose, scope, and lineage against upstream EasyStudy.
-3. [System Overview](#3-system-overview)  
-   End-to-end participant flow and feature map.
+1. [Abstract](#1-abstract)
+  What the system is and what it adds to EasyStudy.
+2. [Introduction](#2-introduction)
+  Purpose, scope, and lineage against upstream EasyStudy.
+3. [System Overview](#3-system-overview)
+  End-to-end participant flow and feature map.
 
 ### Architecture and data model
 
-4. [Architecture](#4-architecture)  
-   Module map, plugin contract, and architectural rules.
-5. [Database Schema](#5-database-schema)  
-   Platform tables vs steering plugin typed audit tables.
+1. [Architecture](#4-architecture)
+  Module map, plugin contract, and architectural rules.
+2. [Database Schema](#5-database-schema)
+  Platform tables vs steering plugin typed audit tables.
 
 ### Core mechanics
 
-6. [Steering Modalities and the Iteration Loop](#6-steering-modalities-and-the-iteration-loop)  
-   How the steering loop composes inputs and refreshes recommendations.
-7. [Audit Pipeline](#7-audit-pipeline)  
-   Single-writer audit service and typed write contracts.
-8. [Analytics and Exports](#8-analytics-and-exports)  
-   Dashboard payload, journey view, CSV/JSON exports.
+1. [Steering Modalities and the Iteration Loop](#6-steering-modalities-and-the-iteration-loop)
+  How the steering loop composes inputs and refreshes recommendations.
+2. [Audit Pipeline](#7-audit-pipeline)
+  Single-writer audit service and typed write contracts.
+3. [Analytics and Exports](#8-analytics-and-exports)
+  Dashboard payload, journey view, CSV/JSON exports.
 
 ### Operations
 
-9. [Runtime and Deployment](#9-runtime-and-deployment)  
-   Assets, Docker/Railway, env vars, backups.
-10. [Testing Strategy](#10-testing-strategy)  
-   What tests exist and what they guard.
+1. [Runtime and Deployment](#9-runtime-and-deployment)
+  Assets, Docker/Railway, env vars, backups.
+2. [Testing Strategy](#10-testing-strategy)
+  What tests exist and what they guard.
 
 ### Closing
 
-11. [Limitations and Future Work](#11-limitations-and-future-work)  
-   Research-scoped decisions and next steps.
-12. [Appendix: where to find things](#appendix-where-to-find-things)  
-   Quick index of code locations.
+1. [Limitations and Future Work](#11-limitations-and-future-work)
+  Research-scoped decisions and next steps.
+2. [Appendix: where to find things](#appendix-where-to-find-things)
+  Quick index of code locations.
 
 ## 1. Abstract
 
@@ -48,7 +48,6 @@ This application is a plugin-first study framework for measuring **interpretable
 The project's research contribution is the **SAE Steering plugin** plus a structured audit pipeline that records every participant action as a typed database row. This enables column-driven analytics (per-approach mean-absolute adjustment, search-then-adjust funnels, reset frequency, text-steering match rates) and additional post-hoc analysis on stored data. The application is delivered with a researcher dashboard, a per-table CSV export, and a complete admin/participant UI.
 
 The framework preserves EasyStudy compatibility: existing EasyStudy plugins (`fastcompare`, `empty_template`, `utils`) run unchanged, and the platform half of this repository is a thin reshuffle of upstream EasyStudy with the same Flask blueprints and the same ORM models.
-
 
 ## 2. Introduction
 
@@ -77,24 +76,28 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 **What stayed from EasyStudy:**
 
-| Upstream file | Where it lives here | Treatment |
-| --- | --- | --- |
-| `server/app.py` | `server/platform/app.py` | Renamed; same role (Flask app factory, login manager, plugin bootstrap). |
-| `server/auth.py` | `server/platform/auth/` | Same role. |
-| `server/main.py` | `server/platform/admin/routes.py` + `server/platform/participant_flow/routes.py` | Admin routes plus the EasyStudy plugin contract endpoints (`create`/`initialize`/`dispose`/`join`/`results`). |
-| `server/models.py` | `server/platform/persistence/base_models.py` | Holds `User`, `UserStudy`, `Participation`, `Interaction`, `Message`. **Preserved verbatim.** |
-| `server/common.py` | `server/platform/shared/common.py` | Same role. |
-| `server/static/` | `server/static/` | Unchanged. |
-| `server/plugins/{fastcompare, empty_template, utils}` | Same paths | **Kept verbatim** so future upstream upgrades drop in. |
+
+| Upstream file                                         | Where it lives here                                                              | Treatment                                                                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `server/app.py`                                       | `server/platform/app.py`                                                         | Renamed; same role (Flask app factory, login manager, plugin bootstrap).                                      |
+| `server/auth.py`                                      | `server/platform/auth/`                                                          | Same role.                                                                                                    |
+| `server/main.py`                                      | `server/platform/admin/routes.py` + `server/platform/participant_flow/routes.py` | Admin routes plus the EasyStudy plugin contract endpoints (`create`/`initialize`/`dispose`/`join`/`results`). |
+| `server/models.py`                                    | `server/platform/persistence/base_models.py`                                     | Holds `User`, `UserStudy`, `Participation`, `Interaction`, `Message`. **Preserved verbatim.**                 |
+| `server/common.py`                                    | `server/platform/shared/common.py`                                               | Same role.                                                                                                    |
+| `server/static/`                                      | `server/static/`                                                                 | Unchanged.                                                                                                    |
+| `server/plugins/{fastcompare, empty_template, utils}` | Same paths                                                                       | **Kept verbatim** so future upstream upgrades drop in.                                                        |
+
 
 **What we added:**
 
-| Module | Purpose |
-| --- | --- |
-| `server/plugins/steering/` | The SAE-based interpretable steering plugin. Owns its blueprint, modalities, persistence models, analytics. |
-| `server/platform/participant_flow/` | EasyStudy's participant-side pages pulled out of upstream `main.py` so the admin surface stays narrow. |
-| `server/platform/runtime/` | `PluginMetadata`, `StudyPluginContract`, `load_canonical_plugin_contracts`, session-state helpers. |
-| `server/platform/shared/questionnaire_cache.py` | Cross-plugin helper that caches questionnaire JSON per study. |
+
+| Module                                          | Purpose                                                                                                     |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `server/plugins/steering/`                      | The SAE-based interpretable steering plugin. Owns its blueprint, modalities, persistence models, analytics. |
+| `server/platform/participant_flow/`             | EasyStudy's participant-side pages pulled out of upstream `main.py` so the admin surface stays narrow.      |
+| `server/platform/runtime/`                      | `PluginMetadata`, `StudyPluginContract`, `load_canonical_plugin_contracts`, session-state helpers.          |
+| `server/platform/shared/questionnaire_cache.py` | Cross-plugin helper that caches questionnaire JSON per study.                                               |
+
 
 **What we deliberately did not touch:**
 
@@ -109,7 +112,7 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 1. **Recruits participants** for recommendation-system user studies (Prolific-compatible).
 2. **Elicits initial preferences** via a preference elicitation page (`/preference-elicitation`).
-3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see [`equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
+3. **Runs $N$ iterations** of the steering loop per approach. Each iteration shows recommendations, records participant likes/dislikes, applies participant steering (sliders / toggles / text / examples / reset), and recomputes the next iteration. Whether the slider/toggle/text adjustments and the like-derived ELSA seed weighting persist from one iteration into the next is controlled by the per-study `interaction_mode` config key (`cumulative` default, or `reset` for fully independent iterations) — see `[equations.md` Section 2.1](equations.md#21-interaction-history-mode-cumulative-vs-reset). The audit tables always record every iteration's actions regardless of the mode.
 4. **Cycles through approaches** if the study compares multiple steering configurations (sequential mode).
 5. **Collects questionnaires** between approaches and at the end.
 6. **Records every action** as a typed audit row.
@@ -119,41 +122,45 @@ The application is a derivative of [pdokoupil/EasyStudy](https://github.com/pdok
 
 (*Based on the `specification.pdf` requirements list*)
 
-| Feature | Backing FR | Module |
-| --- | --- | --- |
-| Slider steering (continuous boost/suppress per feature) | FR-05 | `modalities/sliders.py` |
-| Toggle steering (binary boost / suppress / off) | FR-06, FR-07 | `modalities/toggles.py` |
-| Natural-language steering with composition modes | FR-09 | `modalities/text.py` + `routes/steering/actions.py::parse_text_steering` |
-| Example-based steering (use liked movies as steering seed) | FR-08 | `modalities/examples.py` |
-| Dedicated `/reset` endpoint | FR-12 | `routes/steering/actions.py::reset_steering` |
-| Configurable reranking strategy (three strategies) | FR-10 | `service/iteration_controller.py`, `recommendation/sae_recommender.py` |
-| Per-session iteration history panel | FR-13 | `templates/steering_interface.html::renderActivityHistory` (client-side, scoped to one session) |
-| Feature search inside the steering UI | project-added | `routes/steering/actions.py::search_features` |
-| Researcher dashboard per approach | FR-16 | `results/analytics.py` |
-| ZIP CSV export of every typed table | FR-17 | `routes/results/views.py::export_csv_data` |
-| Per-participant journey timeline | FR-15 | `routes/results/journey.py` |
-| Graceful "no-match" when text steering fails to map | NFR-12 | `routes/steering/actions.py::parse_text_steering` |
+
+| Feature                                                    | Backing FR    | Module                                                                                          |
+| ---------------------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------- |
+| Slider steering (continuous boost/suppress per feature)    | FR-05         | `modalities/sliders.py`                                                                         |
+| Toggle steering (binary boost / suppress / off)            | FR-06, FR-07  | `modalities/toggles.py`                                                                         |
+| Natural-language steering with composition modes           | FR-09         | `modalities/text.py` + `routes/steering/actions.py::parse_text_steering`                        |
+| Example-based steering (use liked movies as steering seed) | FR-08         | `modalities/examples.py`                                                                        |
+| Dedicated `/reset` endpoint                                | FR-12         | `routes/steering/actions.py::reset_steering`                                                    |
+| Configurable reranking strategy (three strategies)         | FR-10         | `service/iteration_controller.py`, `recommendation/sae_recommender.py`                          |
+| Per-session iteration history panel                        | FR-13         | `templates/steering_interface.html::renderActivityHistory` (client-side, scoped to one session) |
+| Feature search inside the steering UI                      | project-added | `routes/steering/actions.py::search_features`                                                   |
+| Researcher dashboard per approach                          | FR-16         | `results/analytics.py`                                                                          |
+| ZIP CSV export of every typed table                        | FR-17         | `routes/results/views.py::export_csv_data`                                                      |
+| Per-participant journey timeline                           | FR-15         | `routes/results/journey.py`                                                                     |
+| Graceful "no-match" when text steering fails to map        | NFR-12        | `routes/steering/actions.py::parse_text_steering`                                               |
+
 
 ### 3.3 Technology stack
 
-| Layer | Choice |
-| --- | --- |
-| Web framework | Flask 2.x |
-| ORM | SQLAlchemy 2.x via Flask-SQLAlchemy |
-| DB engine (dev) | SQLite |
-| DB engine (prod) | PostgreSQL |
-| Sessions | Flask-Session, SQLAlchemy-backed (swappable to Redis) |
-| Auth | Flask-Login + Flask-WTF (CSRF) |
-| Templates | Jinja2 |
-| Frontend | Bootstrap-Vue, Chart.js, vanilla JS |
-| App server | Gunicorn (`--preload` worker) |
-| Test runner | pytest |
-| Linter / formatter | ruff |
-| ML stack | PyTorch + custom SAE / ELSA, MovieLens-32M-Filtered |
+
+| Layer              | Choice                                                |
+| ------------------ | ----------------------------------------------------- |
+| Web framework      | Flask 2.x                                             |
+| ORM                | SQLAlchemy 2.x via Flask-SQLAlchemy                   |
+| DB engine (dev)    | SQLite                                                |
+| DB engine (prod)   | PostgreSQL                                            |
+| Sessions           | Flask-Session, SQLAlchemy-backed (swappable to Redis) |
+| Auth               | Flask-Login + Flask-WTF (CSRF)                        |
+| Templates          | Jinja2                                                |
+| Frontend           | Bootstrap-Vue, Chart.js, vanilla JS                   |
+| App server         | Gunicorn (`--preload` worker)                         |
+| Test runner        | pytest                                                |
+| Linter / formatter | ruff                                                  |
+| ML stack           | PyTorch + custom SAE / ELSA, MovieLens-32M-Filtered   |
+
 
 ### 3.4 FR-03: Dataset selection and offline pipeline note
 
-FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
+FR-03 in the proposal calls for dataset selection (MovieLens and GoodBooks) and an abstraction layer that supports future datasets. This build ships with one bundled dataset option (`ml-32m-filtered`) because the public runtime assets (SAE checkpoints, semantic clusters, labels) are pinned to that domain. **The framework is multi-dataset extensible**: the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`, and adding a new dataset is documented in `[formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset).
 
 There is also an internal offline preprocessing / training / labeling pipeline (dataset preprocessing, SAE training, semantic merge, labeling) used by (us) the research group. It is maintained in a private [OfflineEasyStudy](https://github.com/vaclavstibor/OfflineEasyStudy) repository for data; this public repository only contains the **runtime artefacts** it consumes (downloaded via GitHub Releases bootstrap or manual placement).
 
@@ -164,7 +171,7 @@ There is also an internal offline preprocessing / training / labeling pipeline (
 - `./scripts/init-db.sh` is the explicit, idempotent wrapper.
 - `./scripts/reset-db.sh` is the destructive `drop_all()` + `create_all()` wrapper.
 
-There is no migration framework. See [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
+There is no migration framework. See `[design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework) for the rationale.
 
 ### 3.6 System view (C4 level 1 + 2)
 
@@ -239,7 +246,7 @@ flowchart TB
 
 - The **entrypoint** (`server/docker-entrypoint.sh`) is a one-shot boot step. It symlinks the volume's `instance/`, `cache/`, `plugins/steering/models/`, `plugins/steering/data/`, `datasets/`, and `backups/` subdirectories into the app tree, runs `server/scripts/init_db.py` (`db.create_all()`, idempotent), optionally fetches the dataset and SAE assets from GitHub Releases (`DATASET_BOOTSTRAP=1` / `SAE_BOOTSTRAP_MODEL=1`), and finally `exec`s gunicorn. Subsequent boots skip the downloads if the files are already on the volume.
 - The **Flask app** runs as a single gunicorn process (default `GUNICORN_WORKERS=1`) with `--preload`. It loads the platform blueprints (`admin`, `auth`, `participant_flow`) and every plugin registered through `load_canonical_plugin_contracts`. The SAE Steering plugin owns its own blueprint, persistence models, modalities, analytics, and templates inside `server/plugins/steering/`.
-- The **database** holds the platform tables (`User`, `UserStudy`, `Participation`, `Interaction`, `Message`), the plugin's typed audit tables (`Sae*`), and the Flask-Session `sessions` table. Postgres is recommended for production; SQLite is the local default.
+- The **database** holds the platform tables (`User`, `UserStudy`, `Participation`, `Interaction`, `Message`), the plugin's typed audit tables (`Sae`*), and the Flask-Session `sessions` table. Postgres is recommended for production; SQLite is the local default.
 - The **persistent volume** (`/data`) survives container restarts and Railway redeploys. SAE model weights, dataset CSVs, semantic clusters and LLM labels, the SQLite instance DB (when used), and per-process cache pickles all live there. The entrypoint links those locations into the in-image paths so the running app reads `/app/server/cache`, `/app/server/instance`, etc.
 - The **backup helper** (`server/scripts/backup_db.py`) is invoked on demand. Admins trigger it via the `/administration/db-backup` endpoint (the route reuses `create_backup_now()` and streams the freshly-created file back), and operators can also run it manually as a CLI (`python server/scripts/backup_db.py`). It writes timestamped dumps to `/app/backups/db_<UTC>.{sql,sqlite}.gz` (the entrypoint symlinks `/app/backups` → `${DATA_ROOT}/backups`, so on Railway the files land at `/data/backups/` on the persistent volume), keeping the most recent `KEEP_LAST` (default 14) archives.
 - The **OfflineEasyStudy** repository is **not part of the runtime**. It is the private offline pipeline (dataset preprocessing, SAE training, LLM labeling, post-hoc analytics) that produces the artefacts uploaded to GitHub Releases as published releases. The runtime sees only those published artefacts.
@@ -290,22 +297,26 @@ Every plugin exposes a `StudyPluginContract` from its package via `get_plugin()`
 
 `PluginMetadata` fields:
 
-| Field | Type | Default | Purpose |
-| --- | --- | --- | --- |
-| `name` | `str` | required | Blueprint name and URL prefix (`/<name>/...`). |
-| `version` | `str` | required | Free-form version string surfaced to admins. |
-| `description` | `str` | required | One-line description shown on `/administration`. |
-| `hidden_from_admin` | `bool` | `False` | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see [`design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahiddenfromadmin). |
+
+| Field               | Type   | Default  | Purpose                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------- | ------ | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`              | `str`  | required | Blueprint name and URL prefix (`/<name>/...`).                                                                                                                                                                                                                                                                                                                                                     |
+| `version`           | `str`  | required | Free-form version string surfaced to admins.                                                                                                                                                                                                                                                                                                                                                       |
+| `description`       | `str`  | required | One-line description shown on `/administration`.                                                                                                                                                                                                                                                                                                                                                   |
+| `hidden_from_admin` | `bool` | `False`  | When `True`, the plugin is loaded and its routes register, but it does **not** appear in `/loaded-plugins` (and therefore in the admin "Available templates" picker). Used by developer scaffolds (`empty_template`) and algorithm-wrapper plugins (`vae`); see `[design-decisions.md` Section 17](design-decisions.md#17-admin-available-templates-is-filtered-by-pluginmetadatahiddenfromadmin). |
+
 
 Each plugin **must** implement five EasyStudy endpoints on its blueprint:
 
-| Endpoint | Method | Purpose |
-| --- | --- | --- |
-| `/<plugin>/create` | GET | Researcher-facing page to configure a new study. |
-| `/<plugin>/initialize` | GET | Long-running first-time setup hook (cache loading, SAE bootstrap). |
-| `/<plugin>/dispose` | DELETE | Tear-down hook, called by `/user-study/<id>` DELETE. |
-| `/<plugin>/join` | GET | Participant entry point (assigns participation, sets up session). |
-| `/<plugin>/results` | GET | Researcher-facing results page (admin-only). |
+
+| Endpoint               | Method | Purpose                                                            |
+| ---------------------- | ------ | ------------------------------------------------------------------ |
+| `/<plugin>/create`     | GET    | Researcher-facing page to configure a new study.                   |
+| `/<plugin>/initialize` | GET    | Long-running first-time setup hook (cache loading, SAE bootstrap). |
+| `/<plugin>/dispose`    | DELETE | Tear-down hook, called by `/user-study/<id>` DELETE.               |
+| `/<plugin>/join`       | GET    | Participant entry point (assigns participation, sets up session).  |
+| `/<plugin>/results`    | GET    | Researcher-facing results page (admin-only).                       |
+
 
 The base EasyStudy `/results/<parent_plugin>/<guid>` redirect resolves to `<plugin>.results`. The SAE Steering plugin satisfies this and adds further endpoints documented in Section 8.2.
 
@@ -328,12 +339,12 @@ flowchart LR
 
 ### 4.4 Architectural rules
 
-1. **One writer per fact.** Only `service/audit.record_*` writes to typed audit tables.
+1. **One writer per fact.** Only `service/audit.record_`* writes to typed audit tables.
 2. **Routes own `flask.session`.** Service modules accept identifiers as arguments; they do not read the session.
 3. **Reads never parse JSON.** Analytics joins typed tables. `SaeSteeringEvent.raw_payload` is provenance only.
 4. **Each plugin owns its tables.** The platform owns `User`, `UserStudy`, `Participation`, `Interaction`, `Message`.
 5. **Platform may not import from `server.plugins.steering` at module top-level.** The platform reaches study plugins only through the `StudyPluginContract` registry. The one carve-out is `server.plugins.utils`, which the upstream EasyStudy treats as a cross-plugin primitives package: `server/platform/participant_flow/routes.py` top-level-imports `study_ended` and `register_interaction_routes` from `server.plugins.utils` (the EasyStudy logging API), and lazy-imports `search_for_movie` inside the `movie_search` handler.
-6. **Plugins may import from `server.platform.*` freely.** That is the dependency direction.
+6. **Plugins may import from `server.platform.`* freely.** That is the dependency direction.
 
 ---
 
@@ -414,78 +425,86 @@ erDiagram
 
 One row per participant per study. Created lazily on the first audit write.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | int PK | |
-| `participation_id` | int FK -> participation.id, **UNIQUE** | one run per participant |
-| `user_study_id` | int FK -> userstudy.id | |
-| `study_guid` | string | study GUID snapshot |
-| `schema_version` | int | bump when refactor changes columns |
-| `config_snapshot` | json | full normalized study config at run start |
-| `approach_order` | json int[] | randomized indices over the canonical model list |
-| `effective_order` | json string[] | approach names in actual presentation order |
-| `started_at` | datetime | |
-| `finished_at` | datetime nullable | set on `/finish` |
-| `status` | string | `active` / `completed` |
+
+| Column             | Type                                   | Notes                                            |
+| ------------------ | -------------------------------------- | ------------------------------------------------ |
+| `id`               | int PK                                 |                                                  |
+| `participation_id` | int FK -> participation.id, **UNIQUE** | one run per participant                          |
+| `user_study_id`    | int FK -> userstudy.id                 |                                                  |
+| `study_guid`       | string                                 | study GUID snapshot                              |
+| `schema_version`   | int                                    | bump when refactor changes columns               |
+| `config_snapshot`  | json                                   | full normalized study config at run start        |
+| `approach_order`   | json int[]                             | randomized indices over the canonical model list |
+| `effective_order`  | json string[]                          | approach names in actual presentation order      |
+| `started_at`       | datetime                               |                                                  |
+| `finished_at`      | datetime nullable                      | set on `/finish`                                 |
+| `status`           | string                                 | `active` / `completed`                           |
+
 
 #### `sae_approach_run`
 
 One row per approach per participant. Created lazily on the first per-approach audit write.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `id` | int PK | |
-| `study_run_id` | int FK -> sae_study_run.id | |
-| `participation_id` | int FK -> participation.id | duplicated for query convenience |
-| `approach_index` | int | 0-based, **unique with `study_run_id`** |
-| `approach_id` | string | from study config |
-| `approach_name` | string | from study config |
-| `steering_mode` | string | snapshot |
-| `enabled_modalities` | json string[] | snapshot |
-| `sae_model_id` | string | snapshot |
-| `base_model_id` | string | snapshot |
-| `composition_mode` | string | `replace` / `add` / `intersect` (FR-09) |
-| `reranking_strategy` | string | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key). |
-| `started_at` | datetime | |
-| `completed_at` | datetime nullable | |
-| `status` | string | `active` / `completed` |
-| `final_liked_count` | int | summary fact |
-| `iterations_used` | int | summary fact |
-| `total_slider_changes` | int | counter, incremented per non-zero `SaeFeatureAdjustment` |
-| `summary` | json | free-form per-approach summary at completion |
+
+| Column                 | Type                       | Notes                                                                                                                                                                                            |
+| ---------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                   | int PK                     |                                                                                                                                                                                                  |
+| `study_run_id`         | int FK -> sae_study_run.id |                                                                                                                                                                                                  |
+| `participation_id`     | int FK -> participation.id | duplicated for query convenience                                                                                                                                                                 |
+| `approach_index`       | int                        | 0-based, **unique with `study_run_id`**                                                                                                                                                          |
+| `approach_id`          | string                     | from study config                                                                                                                                                                                |
+| `approach_name`        | string                     | from study config                                                                                                                                                                                |
+| `steering_mode`        | string                     | snapshot                                                                                                                                                                                         |
+| `enabled_modalities`   | json string[]              | snapshot                                                                                                                                                                                         |
+| `sae_model_id`         | string                     | snapshot                                                                                                                                                                                         |
+| `base_model_id`        | string                     | snapshot                                                                                                                                                                                         |
+| `composition_mode`     | string                     | `replace` / `add` / `intersect` (FR-09)                                                                                                                                                          |
+| `reranking_strategy`   | string                     | one of `feature-conditioned` (default), `latent-perturbation`, `constrained-subset` (FR-10). See `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key). |
+| `started_at`           | datetime                   |                                                                                                                                                                                                  |
+| `completed_at`         | datetime nullable          |                                                                                                                                                                                                  |
+| `status`               | string                     | `active` / `completed`                                                                                                                                                                           |
+| `final_liked_count`    | int                        | summary fact                                                                                                                                                                                     |
+| `iterations_used`      | int                        | summary fact                                                                                                                                                                                     |
+| `total_slider_changes` | int                        | counter, incremented per non-zero `SaeFeatureAdjustment`                                                                                                                                         |
+| `summary`              | json                       | free-form per-approach summary at completion                                                                                                                                                     |
+
 
 #### `sae_steering_event` (envelope)
 
 One row per user action. Holds ids + timestamps + a thin `raw_payload` for provenance only. **Analytics never reads `raw_payload`.**
 
-| Column | Notes |
-| --- | --- |
-| `id` PK | |
-| `study_run_id`, `approach_run_id`, `participation_id` | FKs |
-| `event_type` | e.g. `feature-adjustment`, `text-steering-parsed`, `global-reset` |
-| `approach_index`, `approach_name`, `iteration`, `modality`, `steering_mode`, `source`, `search_query` | typed columns for filtering |
-| `raw_payload` | JSON blob, provenance only |
-| `created_at` | datetime |
+
+| Column                                                                                                | Notes                                                             |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `id` PK                                                                                               |                                                                   |
+| `study_run_id`, `approach_run_id`, `participation_id`                                                 | FKs                                                               |
+| `event_type`                                                                                          | e.g. `feature-adjustment`, `text-steering-parsed`, `global-reset` |
+| `approach_index`, `approach_name`, `iteration`, `modality`, `steering_mode`, `source`, `search_query` | typed columns for filtering                                       |
+| `raw_payload`                                                                                         | JSON blob, provenance only                                        |
+| `created_at`                                                                                          | datetime                                                          |
+
 
 #### Typed action tables (the facts)
 
 Every user action writes one typed row **and** one envelope row. The typed row carries an `event_id` FK back to the envelope.
 
-| Table | Written by | Key columns |
-| --- | --- | --- |
-| `sae_feature_adjustment` | sliders/toggles/text/example/reset | `feature_id`, `cluster_label`, `before_value`, `after_value`, `delta`, `applied_via`, `search_query` |
-| `sae_feature_search` (+ `_hit`) | `/search-features` | parent: `query_text`, `result_count`, `iteration`. Child: `feature_id`, `label`, `match_score`, `rank`. |
-| `sae_text_steering_query` (+ `_match`) | `/parse-text-steering` | parent: `query_text` (length $\le 200$), `composition_mode`, `length_chars`. Child: `cluster_id`, `label`, `weight`, `match_score`, `direction`. |
-| `sae_example_steering` (+ `_movie`) | `/apply-example-steering` | parent: `iteration`, `example_strength`, `example_top_k`. Child: `movie_id`, `title`, `rank`. |
-| `sae_reset_action` | `/reset` | `trigger`, `scope` (`all-features` / `single-feature:<id>`), `iteration` |
-| `sae_recommendation_set` (+ `_item`) | iteration controller, after refresh | parent: `approach_index`, `iteration`, `list_id`, `steering_mode`, `debug_payload`. Child: `movie_id`, `title`, `genres`, `rank`, `score`, `cf_score`, `genre_score`, `steering_score`, `raw_payload`. |
-| `sae_movie_feedback` | `/log-movie-feedback` | `movie_id`, `title`, `genres`, `action` (`like`/`dislike`/`neutral`), `event_id` (FK to `sae_steering_event`, NOT NULL, CASCADE), `recommendation_set_id` (NOT NULL, CASCADE), `rank`, `list_id`, `iteration` |
-| `sae_questionnaire_response` | `/_advance-phase` (per-approach questionnaire submit), `/_complete-study` (final questionnaire submit) | `response_type` (`approach` / `final` — the envelope `event_type` is `approach-questionnaire` / `final-questionnaire`), `questionnaire_file`, `answers` (JSON), `attention_check_passed` (Boolean, NULL when the questionnaire declares no spec — see Section 5.4 and [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) |
-| `sae_elicitation_pick` | `/preference-elicitation` | `movie_id`, `action` (`select`/`deselect`), `participation_id`, `user_study_id` |
+
+| Table                                  | Written by                                                                                             | Key columns                                                                                                                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sae_feature_adjustment`               | sliders/toggles/text/example/reset                                                                     | `feature_id`, `cluster_label`, `before_value`, `after_value`, `delta`, `applied_via`, `search_query`                                                                                                                                                                                                                                                                                                                 |
+| `sae_feature_search` (+ `_hit`)        | `/search-features`                                                                                     | parent: `query_text`, `result_count`, `iteration`. Child: `feature_id`, `label`, `match_score`, `rank`.                                                                                                                                                                                                                                                                                                              |
+| `sae_text_steering_query` (+ `_match`) | `/parse-text-steering`                                                                                 | parent: `query_text` (length $\le 200$), `composition_mode`, `length_chars`. Child: `cluster_id`, `label`, `weight`, `match_score`, `direction`.                                                                                                                                                                                                                                                                     |
+| `sae_example_steering` (+ `_movie`)    | `/apply-example-steering`                                                                              | parent: `iteration`, `example_strength`, `example_top_k`. Child: `movie_id`, `title`, `rank`.                                                                                                                                                                                                                                                                                                                        |
+| `sae_reset_action`                     | `/reset`                                                                                               | `trigger`, `scope` (`all-features` / `single-feature:<id>`), `iteration`                                                                                                                                                                                                                                                                                                                                             |
+| `sae_recommendation_set` (+ `_item`)   | iteration controller, after refresh                                                                    | parent: `approach_index`, `iteration`, `list_id`, `steering_mode`, `debug_payload`. Child: `movie_id`, `title`, `genres`, `rank`, `score`, `cf_score`, `genre_score`, `steering_score`, `raw_payload`.                                                                                                                                                                                                               |
+| `sae_movie_feedback`                   | `/log-movie-feedback`                                                                                  | `movie_id`, `title`, `genres`, `action` (`like`/`dislike`/`neutral`), `event_id` (FK to `sae_steering_event`, NOT NULL, CASCADE), `recommendation_set_id` (NOT NULL, CASCADE), `rank`, `list_id`, `iteration`                                                                                                                                                                                                        |
+| `sae_questionnaire_response`           | `/_advance-phase` (per-approach questionnaire submit), `/_complete-study` (final questionnaire submit) | `response_type` (`approach` / `final` — the envelope `event_type` is `approach-questionnaire` / `final-questionnaire`), `questionnaire_file`, `answers` (JSON), `attention_check_passed` (Boolean, NULL when the questionnaire declares no spec — see Section 5.4 and [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)) |
+| `sae_elicitation_pick`                 | `/preference-elicitation`                                                                              | `movie_id`, `action` (`select`/`deselect`), `participation_id`, `user_study_id`                                                                                                                                                                                                                                                                                                                                      |
+
 
 #### Cascades
 
-- Delete `UserStudy`: `Participation` rows are deleted, and all `Sae*` rows linked to those participations are deleted via `ondelete=CASCADE` on `study_run_id` / `approach_run_id` / `participation_id`.
+- Delete `UserStudy`: `Participation` rows are deleted, and all `Sae`* rows linked to those participations are deleted via `ondelete=CASCADE` on `study_run_id` / `approach_run_id` / `participation_id`.
 - Delete `SaeRecommendationSet`: `SaeRecommendationItem` and the `SaeMovieFeedback` rows that reference it are deleted.
 
 ---
@@ -508,28 +527,30 @@ class SteeringModality:
 
 The four concrete modalities live under `server/plugins/steering/modalities/`:
 
-| Modality | Class | Behaviour |
-| --- | --- | --- |
-| `sliders` | `SliderSteering` | Continuous per-cluster weights from a slider grid. |
-| `toggles` | `ToggleSteering` | Discrete `+w / 0 / -w` per cluster, configurable `toggle_weight`. |
-| `text` | `TextSteering` | NL prompt, segment split, cluster scoring, then `top-K`. See [`equations.md` Section 1](equations.md#1-common-framework). |
-| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies, cluster scoring, then `top-K`. See [`equations.md` Section 5](equations.md#5-example-based-steering-fr-08). |
 
-A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a new modality is documented in [`formative-examples.md` Section 2](formative-examples.md#2-add-a-new-steering-modality).
+| Modality   | Class             | Behaviour                                                                                                                                                    |
+| ---------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `sliders`  | `SliderSteering`  | Continuous per-cluster weights from a slider grid.                                                                                                           |
+| `toggles`  | `ToggleSteering`  | Discrete `+w / 0 / -w` per cluster, configurable `toggle_weight`.                                                                                            |
+| `text`     | `TextSteering`    | NL prompt, segment split, cluster scoring, then `top-K`. See `[equations.md` Section 1](equations.md#1-common-framework).                                    |
+| `examples` | `ExampleSteering` | Mean SAE activation across liked example movies, cluster scoring, then `top-K`. See `[equations.md` Section 5](equations.md#5-example-based-steering-fr-08). |
+
+
+A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a new modality is documented in `[formative-examples.md` Section 2](formative-examples.md#2-add-a-new-steering-modality).
 
 ### 6.2 Iteration controller
 
 `service/iteration_controller.py::apply_feature_adjustment_iteration(data)` drives one iteration end-to-end:
 
 1. **Resolve the active approach and study config.** Loads from session + `normalize_study_config`.
-2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See [`equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math of each strategy.
+2. **Pick the reranking strategy.** Reads `conf["reranking_strategy"]` (FR-10 enum). Three values are implemented in this build: `feature-conditioned` (default), `latent-perturbation`, and `constrained-subset`. See `[equations.md` Section 10](equations.md#10-reranking-strategies-rerankingstrategy-config-key) for the math of each strategy.
 3. **Compose the cluster-level adjustments.** Combines slider/toggle inputs with the active text-steering map and the active example-steering map. Empty modalities contribute zero.
-4. **Expand clusters to neurons.** Each cluster's $\delta_c$ is broadcast to its member neurons; overlapping clusters sum additively. See [`equations.md` Section 2](equations.md#2-sliders-fr-0506).
+4. **Expand clusters to neurons.** Each cluster's $\delta_c$ is broadcast to its member neurons; overlapping clusters sum additively. See `[equations.md` Section 2](equations.md#2-sliders-fr-0506).
 5. **Apply the SAE shift to the recommender.** Calls into `recommendation/sae_recommender.py` with the per-neuron shift map and the strategy choice. The recommender branches internally on the strategy:
-    - `feature-conditioned`: additive blend with adaptive $\gamma$ and clamping.
+  - `feature-conditioned`: additive blend with adaptive $\gamma$ and clamping.
     - `latent-perturbation`: decode the SAE adjustment vector via `W_dec`, rotate the user seed by $\alpha \cdot direction$, then rank with pure CF (no additive SAE term).
     - `constrained-subset`: hard-mask candidates whose SAE score is below $\tau \cdot max\text{-}positive\text{-}SAE$, then rank survivors by base CF + genre.
-6. **Refresh the candidate list.** Calls `recommender.get_recommendations(..., n_items=max(k \cdot 15, 300), ...)` so the recommender ranks a wide candidate pool, blends `cf_score` with the SAE-derived $f_i$ using an *adaptive* gain $\gamma$ and clamp $c$ (see [`equations.md` Section 10.1](equations.md#101-feature-conditioned-default--additive-blend) for the formulas), then trims to the top $k$ requested by the iteration controller. The `selection_signal_weight` config key is unrelated to this blending: it weights liked movies inside the ELSA seed update (see [`equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes)).
+6. **Refresh the candidate list.** Calls `recommender.get_recommendations(..., n_items=max(k \cdot 15, 300), ...)` so the recommender ranks a wide candidate pool, blends `cf_score` with the SAE-derived $f_i$ using an *adaptive* gain $\gamma$ and clamp $c$ (see `[equations.md` Section 10.1](equations.md#101-feature-conditioned-default--additive-blend) for the formulas), then trims to the top $k$ requested by the iteration controller. The `selection_signal_weight` config key is unrelated to this blending: it weights liked movies inside the ELSA seed update (see `[equations.md` Section 7](equations.md#7-elsa-seed-re-weighting-from-likes)).
 7. **Audit.** Calls `audit.record_feature_adjustment(...)` and `audit.record_recommendation_set(...)`. Each non-zero per-cluster adjustment becomes a `SaeFeatureAdjustment` row; each rec list becomes a `SaeRecommendationSet` + items. **Side-by-side studies fan out every steering-event audit call across both approaches** (one slider grid drives both columns, so each approach run gets its own copy of the row); see design-decisions Section 22.
 8. **Return** the new `recommendations`, `current_features`, `reranking_strategy` (so the UI can mirror it for debugging), and the iteration counter.
 
@@ -537,11 +558,13 @@ A registry (`modalities/registry.py`) maps `modality_id` to `class`. Adding a ne
 
 A subtle point that often surprises developers: the 16 cluster sliders the participant sees on iteration 1 are **not** automatically replaced by `select_slider_features` on iteration 2. The slider feature pool follows a deliberate persistence + refresh cycle:
 
-| Stage | Function | Trigger | Effect on the pool |
-|---|---|---|---|
-| First page load | `session_controller.build_steering_page_context` | After preference elicitation finishes | Calls `select_slider_features(...)` with `feature_selection_algorithm` (`personalized_grouped_topk` or `global_label_topk`), writes the result to `session["current_features"]`. |
-| "Get Recommendations" press (any iteration) | `iteration_controller.apply_feature_adjustment_iteration` then `modalities/sliders.py::compute_updated_sliders` | Every iteration | Looks at `session["current_features"]`, the per-approach `last_shown_movies_per_phase`, the participant's *touched* clusters, and the cumulative shown/steered bookkeeping. Produces a candidate `updated_features` list. |
-| Re-publish to the UI | Same call site | Only when `updated_features != session["current_features"]` | Rewrites `session["current_features"]`, ships `data.updated_features` in the response; the frontend calls `rebuildSliderGrid` which re-renders the DOM while preserving values for clusters that survive. |
+
+| Stage                                       | Function                                                                                                        | Trigger                                                     | Effect on the pool                                                                                                                                                                                                        |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First page load                             | `session_controller.build_steering_page_context`                                                                | After preference elicitation finishes                       | Calls `select_slider_features(...)` with `feature_selection_algorithm` (`personalized_grouped_topk` or `global_label_topk`), writes the result to `session["current_features"]`.                                          |
+| "Get Recommendations" press (any iteration) | `iteration_controller.apply_feature_adjustment_iteration` then `modalities/sliders.py::compute_updated_sliders` | Every iteration                                             | Looks at `session["current_features"]`, the per-approach `last_shown_movies_per_phase`, the participant's *touched* clusters, and the cumulative shown/steered bookkeeping. Produces a candidate `updated_features` list. |
+| Re-publish to the UI                        | Same call site                                                                                                  | Only when `updated_features != session["current_features"]` | Rewrites `session["current_features"]`, ships `data.updated_features` in the response; the frontend calls `rebuildSliderGrid` which re-renders the DOM while preserving values for clusters that survive.                 |
+
 
 Crucially, `compute_updated_sliders` does **not** re-run `select_slider_features` between iterations — the initial choice of *algorithm* (personalised vs global) only affects how the first 16 clusters were picked. After that, the same 16 clusters stick around until `compute_updated_sliders` decides to swap one out, and that swap decision is driven by:
 
@@ -567,15 +590,17 @@ The preference-elicitation pool (`session["elicitation_selected_movies"]`) is in
 
 `POST /sae_steering/parse-text-steering` enforces the configured `max_query_chars` (default 200, returns 400 on overflow), calls `TextSteering.apply`, and composes the result with the previous iteration's adjustments. The mode is **per-approach** (`models[i].text_composition_mode`) so two arms in the same study can use different stacking rules; if a model omits it, the study-level `text_steering.composition_mode` is used as fallback:
 
-| Mode | Effect |
-| --- | --- |
-| `replace` (default) | Iteration $N$ adjustments overwrite iteration $N-1$. |
-| `add` | Per-cluster sum, clipped to $[-0.95, 0.95]$. |
-| `intersect` | Keep only clusters present in both iterations; use iteration $N$'s weight. |
+
+| Mode                | Effect                                                                     |
+| ------------------- | -------------------------------------------------------------------------- |
+| `replace` (default) | Iteration $N$ adjustments overwrite iteration $N-1$.                       |
+| `add`               | Per-cluster sum, clipped to $[-0.95, 0.95]$.                               |
+| `intersect`         | Keep only clusters present in both iterations; use iteration $N$'s weight. |
+
 
 If the resolver matches zero clusters (NFR-12 ambiguous-input case), the endpoint returns HTTP 200 with `status="no-match"` and a friendly hint. A `SaeTextSteeringQuery` row is still written (zero matches), so this case is analyzable offline.
 
-See [`equations.md` Section 1](equations.md#1-common-framework) for the scoring math.
+See `[equations.md` Section 1](equations.md#1-common-framework) for the scoring math.
 
 ---
 
@@ -594,21 +619,23 @@ Analytics joins the typed tables. The envelope's `raw_payload` is provenance onl
 
 `server/plugins/steering/service/audit.py` is the only module that writes typed rows. Public functions:
 
-| Function | Writes |
-| --- | --- |
-| `ensure_study_run(participation_id)` | `SaeStudyRun` (lazy, idempotent). |
-| `ensure_approach_run(participation_id, approach_index)` | `SaeApproachRun` (lazy, idempotent). |
-| `record_event(event_type, ...)` | `SaeSteeringEvent` envelope only. Used for actions that have no fact row (e.g. `preferences-approved`). |
-| `record_feature_adjustment(...)` | One envelope + $N$ `SaeFeatureAdjustment` rows (one per non-zero adjustment) + summary increment on `SaeApproachRun.total_slider_changes`. |
-| `record_feature_search(...)` | One envelope + one `SaeFeatureSearch` + N `SaeFeatureSearchHit`. |
-| `record_text_steering(...)` | One envelope + one `SaeTextSteeringQuery` + N `SaeTextSteeringMatch`. |
-| `record_example_steering(...)` | One envelope + one `SaeExampleSteering` + N `SaeExampleSteeringMovie`. |
-| `record_global_reset(...)` | One envelope + one `SaeResetAction`. |
-| `record_recommendation_set(...)` | One envelope + one `SaeRecommendationSet` + N `SaeRecommendationItem`. |
-| `record_movie_feedback(...)` | One envelope + one `SaeMovieFeedback`. |
-| `record_questionnaire_response(...)` | One envelope + one `SaeQuestionnaireResponse` (including the `attention_check_passed` verdict, see [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)). |
-| `record_elicitation_pick(...)` | One envelope + one `SaeElicitationPick`. |
-| `record_autosave_snapshot(...)` | One envelope only (`autosave`, kept thin to avoid log spam). |
+
+| Function                                                | Writes                                                                                                                                                                                                                                             |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ensure_study_run(participation_id)`                    | `SaeStudyRun` (lazy, idempotent).                                                                                                                                                                                                                  |
+| `ensure_approach_run(participation_id, approach_index)` | `SaeApproachRun` (lazy, idempotent).                                                                                                                                                                                                               |
+| `record_event(event_type, ...)`                         | `SaeSteeringEvent` envelope only. Used for actions that have no fact row (e.g. `preferences-approved`).                                                                                                                                            |
+| `record_feature_adjustment(...)`                        | One envelope + $N$ `SaeFeatureAdjustment` rows (one per non-zero adjustment) + summary increment on `SaeApproachRun.total_slider_changes`.                                                                                                         |
+| `record_feature_search(...)`                            | One envelope + one `SaeFeatureSearch` + N `SaeFeatureSearchHit`.                                                                                                                                                                                   |
+| `record_text_steering(...)`                             | One envelope + one `SaeTextSteeringQuery` + N `SaeTextSteeringMatch`.                                                                                                                                                                              |
+| `record_example_steering(...)`                          | One envelope + one `SaeExampleSteering` + N `SaeExampleSteeringMovie`.                                                                                                                                                                             |
+| `record_global_reset(...)`                              | One envelope + one `SaeResetAction`.                                                                                                                                                                                                               |
+| `record_recommendation_set(...)`                        | One envelope + one `SaeRecommendationSet` + N `SaeRecommendationItem`.                                                                                                                                                                             |
+| `record_movie_feedback(...)`                            | One envelope + one `SaeMovieFeedback`.                                                                                                                                                                                                             |
+| `record_questionnaire_response(...)`                    | One envelope + one `SaeQuestionnaireResponse` (including the `attention_check_passed` verdict, see [design-decisions.md Section 18](design-decisions.md#18-attention-checks-are-declared-in-the-questionnaire-html-and-evaluated-at-submit-time)). |
+| `record_elicitation_pick(...)`                          | One envelope + one `SaeElicitationPick`.                                                                                                                                                                                                           |
+| `record_autosave_snapshot(...)`                         | One envelope only (`autosave`, kept thin to avoid log spam).                                                                                                                                                                                       |
+
 
 All public functions take `participation_id` and `approach_index` as keyword-only arguments — the service does **not** read `flask.session`. Routes pass session values in explicitly.
 
@@ -632,19 +659,21 @@ The dashboard is split into five tabs:
 4. **Participants** — Prolific PID + study/session ids, completion URL, approach order, questionnaire response count, link to the journey view.
 5. **Journey** — per-participant timeline reconstructed entirely from typed tables.
 
-| Card | Source query |
-| --- | --- |
-| Participants total / completed / in progress | `participation` rows filtered by `user_study_id` |
-| Mean iterations used per approach | `AVG(sae_approach_run.iterations_used)` grouped by `approach_id` (see [design-decisions.md Section 19](design-decisions.md#19-cross-participant-analytics-group-by-approach_id-never-by-approach_index)) |
-| Mean abs adjustment per approach | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `approach_run_id` |
-| Mean non-zero adjustments per approach | `COUNT(sae_feature_adjustment) / COUNT(sae_approach_run)` |
-| Mean slider changes per approach | `AVG(sae_approach_run.total_slider_changes)` |
-| Selected movie rank distribution | `sae_movie_feedback` where `action='like'`, joined to `sae_approach_run`, grouped by `approach_id, rank` |
-| Slider movement by cluster | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `cluster_label` |
-| Text prompt to cluster mapping | `sae_text_steering_query` joined with `sae_text_steering_match`, grouped by `(query_text, cluster_id)` |
-| Modality usage | `COUNT(sae_steering_event)` grouped by `modality` |
-| Reset count | `COUNT(sae_reset_action)` |
-| Text queries / example events / impressions | `COUNT(*)` on the corresponding typed table |
+
+| Card                                         | Source query                                                                                                                                                                                             |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Participants total / completed / in progress | `participation` rows filtered by `user_study_id`                                                                                                                                                         |
+| Mean iterations used per approach            | `AVG(sae_approach_run.iterations_used)` grouped by `approach_id` (see [design-decisions.md Section 19](design-decisions.md#19-cross-participant-analytics-group-by-approach_id-never-by-approach_index)) |
+| Mean abs adjustment per approach             | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `approach_run_id`                                                                                                                                    |
+| Mean non-zero adjustments per approach       | `COUNT(sae_feature_adjustment) / COUNT(sae_approach_run)`                                                                                                                                                |
+| Mean slider changes per approach             | `AVG(sae_approach_run.total_slider_changes)`                                                                                                                                                             |
+| Selected movie rank distribution             | `sae_movie_feedback` where `action='like'`, joined to `sae_approach_run`, grouped by `approach_id, rank`                                                                                                 |
+| Slider movement by cluster                   | `AVG(ABS(sae_feature_adjustment.delta))` grouped by `cluster_label`                                                                                                                                      |
+| Text prompt to cluster mapping               | `sae_text_steering_query` joined with `sae_text_steering_match`, grouped by `(query_text, cluster_id)`                                                                                                   |
+| Modality usage                               | `COUNT(sae_steering_event)` grouped by `modality`                                                                                                                                                        |
+| Reset count                                  | `COUNT(sae_reset_action)`                                                                                                                                                                                |
+| Text queries / example events / impressions  | `COUNT(*)` on the corresponding typed table                                                                                                                                                              |
+
 
 ### 8.2 Questionnaire monitor
 
@@ -763,26 +792,28 @@ just lint
 The application expects two groups of assets to exist before the steering
 blueprint can serve recommendations:
 
+
 | Location                                  | Files                                                                                                                              |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `server/static/datasets/ml-32m-filtered/` | `ratings.csv`, `movies.csv`, `tags.csv`, `links.csv`, `plots.csv`; optional `img/*.jpg`                                            |
 | `server/plugins/steering/models/`         | `TopKSAE-1024.ckpt` (or `.pt`)                                                                                                     |
 | `server/plugins/steering/data/`           | `item_embeddings.pt`, `item_sae_features_TopKSAE-1024.pt`, `llm_labels_TopKSAE-1024_llm.json`, `semantic_merged_TopKSAE-1024.json` |
 
+
 Both the dataset and the SAE plugin assets support two flows:
 
 - **GitHub Releases bootstrap (recommended for Docker / Railway).** Set
-  `DATASET_BOOTSTRAP=1` + `DATASET_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` +
-  `DATASET_RELEASE_TAG=v2.0` for the dataset, and `SAE_BOOTSTRAP_MODEL=1` +
-  `SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` + `SAE_MODEL_RELEASE_TAG=v2.0`
-  for the SAE assets. The entrypoint downloads everything on first boot and
-  skips re-download on subsequent starts if the files are already present.
-  Add `GITHUB_TOKEN` for private releases.
+`DATASET_BOOTSTRAP=1` + `DATASET_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` +
+`DATASET_RELEASE_TAG=v2.0` for the dataset, and `SAE_BOOTSTRAP_MODEL=1` +
+`SAE_MODEL_GITHUB_REPO=vaclavstibor/SAE4EasyStudy` + `SAE_MODEL_RELEASE_TAG=v2.0`
+for the SAE assets. The entrypoint downloads everything on first boot and
+skips re-download on subsequent starts if the files are already present.
+Add `GITHUB_TOKEN` for private releases.
 - **Manual placement.** Place the files under the paths in the table above
-  (or under `$DATA_ROOT` when using a persistent volume). The entrypoint
-  validates their presence and refuses to start if any are missing.
+(or under `$DATA_ROOT` when using a persistent volume). The entrypoint
+validates their presence and refuses to start if any are missing.
 
-See [`server/plugins/steering/data/README.md`](../server/plugins/steering/data/README.md)
+See `[server/plugins/steering/data/README.md](../server/plugins/steering/data/README.md)`
 for the per-file inventory.
 
 ### 9.4 Docker
@@ -798,42 +829,44 @@ and starts gunicorn.
 
 ### 9.5 Environment variables
 
-| Var | Default | Purpose |
-| --- | --- | --- |
-| `APP_SECRET_KEY` | random per run | Flask secret. **Set this in production.** |
-| `DATABASE_URL` | `sqlite:////data/instance/db.sqlite` | SQLAlchemy URI. Points into the persistent volume. |
-| `DATA_ROOT` | `/data` | Root of the persistent volume. The entrypoint symlinks all state dirs under this path. |
-| `DATASET_BOOTSTRAP` | `0` | Set to `1` to download the dataset from GitHub Releases on first boot. Skips if already present. |
-| `DATASET_GITHUB_REPO` | — | `owner/repo` for the dataset release (e.g. `vaclavstibor/SAE4EasyStudy`). |
-| `DATASET_RELEASE_TAG` | `latest` | GitHub Release tag for the dataset asset. |
-| `ML_LATEST_DATASET_ASSET` | `ml-32m-filtered.zip` | Asset filename inside the dataset release. |
-| `SAE_BOOTSTRAP_MODEL` | `0` | Set to `1` to download SAE checkpoint + data from GitHub Releases on first boot. Skips if already present. |
-| `SAE_MODEL_GITHUB_REPO` | — | `owner/repo` for the SAE model release. |
-| `SAE_MODEL_RELEASE_TAG` | `latest` | GitHub Release tag for the SAE model assets. |
-| `GITHUB_TOKEN` | — | Bearer token for private GitHub Releases. |
-| `STUDY_AUTHOR_NAME` | — | Author name shown in participant UI and admin panel. |
-| `STUDY_AUTHOR_CONTACT` | — | Contact e-mail shown in footer and admin hero. |
-| `GUNICORN_WORKERS` | `1` | Number of gunicorn worker processes. |
-| `PROLIFIC_BASE_URL` | `https://app.prolific.com/submissions/complete` | Completion redirect base URL. |
+
+| Var                       | Default                                         | Purpose                                                                                                    |
+| ------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `APP_SECRET_KEY`          | random per run                                  | Flask secret. **Set this in production.**                                                                  |
+| `DATABASE_URL`            | `sqlite:////data/instance/db.sqlite`            | SQLAlchemy URI. Points into the persistent volume.                                                         |
+| `DATA_ROOT`               | `/data`                                         | Root of the persistent volume. The entrypoint symlinks all state dirs under this path.                     |
+| `DATASET_BOOTSTRAP`       | `0`                                             | Set to `1` to download the dataset from GitHub Releases on first boot. Skips if already present.           |
+| `DATASET_GITHUB_REPO`     | —                                               | `owner/repo` for the dataset release (e.g. `vaclavstibor/SAE4EasyStudy`).                                  |
+| `DATASET_RELEASE_TAG`     | `latest`                                        | GitHub Release tag for the dataset asset.                                                                  |
+| `ML_LATEST_DATASET_ASSET` | `ml-32m-filtered.zip`                           | Asset filename inside the dataset release.                                                                 |
+| `SAE_BOOTSTRAP_MODEL`     | `0`                                             | Set to `1` to download SAE checkpoint + data from GitHub Releases on first boot. Skips if already present. |
+| `SAE_MODEL_GITHUB_REPO`   | —                                               | `owner/repo` for the SAE model release.                                                                    |
+| `SAE_MODEL_RELEASE_TAG`   | `latest`                                        | GitHub Release tag for the SAE model assets.                                                               |
+| `GITHUB_TOKEN`            | —                                               | Bearer token for private GitHub Releases.                                                                  |
+| `STUDY_AUTHOR_NAME`       | —                                               | Author name shown in participant UI and admin panel.                                                       |
+| `STUDY_AUTHOR_CONTACT`    | —                                               | Contact e-mail shown in footer and admin hero.                                                             |
+| `GUNICORN_WORKERS`        | `1`                                             | Number of gunicorn worker processes.                                                                       |
+| `PROLIFIC_BASE_URL`       | `https://app.prolific.com/submissions/complete` | Completion redirect base URL.                                                                              |
+
 
 ### 9.6 Production checklist
 
 - Set `APP_SECRET_KEY` to a strong, persistent value.
 - Mount a persistent volume at `DATA_ROOT` (`/data`). The SQLite DB, SAE model,
-  dataset and cache all live there and survive redeploys.
+dataset and cache all live there and survive redeploys.
 - Set `DATASET_BOOTSTRAP=1` and `SAE_BOOTSTRAP_MODEL=1` with the correct
-  `*_GITHUB_REPO` and `*_RELEASE_TAG` values on first deploy. Both are no-ops
-  on subsequent deploys if the files are already on the volume.
+`*_GITHUB_REPO` and `*_RELEASE_TAG` values on first deploy. Both are no-ops
+on subsequent deploys if the files are already on the volume.
 - For >100 concurrent participants: swap Flask-Session to Redis-backed storage
-  (NFR-02). The current `create_app()` hardcodes `SESSION_TYPE = "sqlalchemy"`
-  in `server/platform/app.py`; redoing this as a Redis backend requires (a)
-  changing those two lines to read from env, (b) adding `Flask-Session[redis]`
-  to `pip_requirements.txt`, and (c) provisioning a Redis instance.
+(NFR-02). The current `create_app()` hardcodes `SESSION_TYPE = "sqlalchemy"`
+in `server/platform/app.py`; redoing this as a Redis backend requires (a)
+changing those two lines to read from env, (b) adding `Flask-Session[redis]`
+to `pip_requirements.txt`, and (c) provisioning a Redis instance.
 - Configure HTTPS upstream. The Flask app does not terminate TLS (Railway
-  provides it automatically; for other hosts use Caddy or nginx).
+provides it automatically; for other hosts use Caddy or nginx).
 - When a model changes in a way that requires reshaping existing tables, run
-  `./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
-  Alembic baseline by design — see [`design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
+`./scripts/reset-db.sh` (destructive: drop_all + create_all). There is no
+Alembic baseline by design — see `[design-decisions.md` Section 3](design-decisions.md#3-models-are-the-single-source-of-truth-no-migration-framework).
 
 ### 9.7 Backups
 
@@ -859,29 +892,35 @@ There is no dedicated observability blueprint in this build. Add one behind a fe
 
 ### 10.1 Platform tests (`tests/platform/`)
 
-| File | Coverage |
-| --- | --- |
-| `test_database_resolution.py` | Relative-SQLite paths resolve under `server/instance/`. Guards `resolve_database_url`. |
-| `test_healthz.py` | `/healthz` returns 200. |
-| `test_shared_flow.py` | Shared participant-flow helpers (model effective resolution, questionnaire path resolution). |
+
+| File                          | Coverage                                                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `test_database_resolution.py` | Relative-SQLite paths resolve under `server/instance/`. Guards `resolve_database_url`.       |
+| `test_healthz.py`             | `/healthz` returns 200.                                                                      |
+| `test_shared_flow.py`         | Shared participant-flow helpers (model effective resolution, questionnaire path resolution). |
+
 
 ### 10.2 SAE Steering tests (`tests/plugins/steering/`)
 
-| File | Coverage |
-| --- | --- |
-| `test_sae_audit.py` | Typed-write contracts. `ensure_study_run` / `ensure_approach_run` idempotency. `record_text_steering` writes typed query + matches. `enabled_modalities` is authoritative over `steering_mode`. Selection-signal-weight defaults. `record_event('feature-search', ...)` types `source` and `search_query` columns. `/finish-user-study` redirects to the configured final questionnaire. `/complete-study` records the final response and completes the run. Plus `record_questionnaire_response` stores `attention_check_passed` (see design-decisions Section 18). |
-| `test_approach_order_and_results.py` | Randomized approach order is persisted to `SaeStudyRun.effective_order` and replayed deterministically. Cross-participant analytics group by `approach_id`, never by `approach_index` (regression for the bug fixed in design-decisions Section 19). Modality breakdown is driven by `enabled_modalities` (design-decisions Section 20). |
-| `test_initialization.py` | `long_initialization` happy path: dataset caches + SAE clusters load without errors. Every entry in `CANONICAL_PLUGIN_MODULES` loads and registers at least one route. `emptytemplate` and `vae` are absent from `/loaded-plugins` (design-decisions Section 17). |
-| `test_blending.py` | Cluster-to-neuron expansion and overlap. Plus per-strategy regression: `feature-conditioned` is the default; `latent-perturbation` rotates the user seed by $\alpha \cdot decoded\_direction$ and drops the additive SAE term; `constrained-subset` filters items by $sae \ge \tau \cdot max\_positive\_sae$ then ranks by base CF + genre, and falls back to base ranking when no item satisfies the constraint (see equations.md Section 10 and design-decisions Section 23). |
-| `test_attention_checks.py` | Evaluator semantics for `expected` / `expected_one_of` / `expected_range`, malformed JSON resilience, and the spec/answer contract of every bundled questionnaire (so editing one of those HTML files without re-running tests fails loudly). See design-decisions Section 18. |
+
+| File                                    | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test_sae_audit.py`                     | Typed-write contracts. `ensure_study_run` / `ensure_approach_run` idempotency. `record_text_steering` writes typed query + matches. `enabled_modalities` is authoritative over `steering_mode`. Selection-signal-weight defaults. `record_event('feature-search', ...)` types `source` and `search_query` columns. `/finish-user-study` redirects to the configured final questionnaire. `/complete-study` records the final response and completes the run. Plus `record_questionnaire_response` stores `attention_check_passed` (see design-decisions Section 18).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `test_approach_order_and_results.py`    | Randomized approach order is persisted to `SaeStudyRun.effective_order` and replayed deterministically. Cross-participant analytics group by `approach_id`, never by `approach_index` (regression for the bug fixed in design-decisions Section 19). Modality breakdown is driven by `enabled_modalities` (design-decisions Section 20).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `test_initialization.py`                | `long_initialization` happy path: dataset caches + SAE clusters load without errors. Every entry in `CANONICAL_PLUGIN_MODULES` loads and registers at least one route. `emptytemplate` and `vae` are absent from `/loaded-plugins` (design-decisions Section 17).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `test_blending.py`                      | Cluster-to-neuron expansion and overlap. Plus per-strategy regression: `feature-conditioned` is the default; `latent-perturbation` rotates the user seed by $\alpha \cdot decodeddirection$ and drops the additive SAE term; `constrained-subset` filters items by $sae \ge \tau \cdot maxpositivesae$ then ranks by base CF + genre, and falls back to base ranking when no item satisfies the constraint (see equations.md Section 10 and design-decisions Section 23).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `test_attention_checks.py`              | Evaluator semantics for `expected` / `expected_one_of` / `expected_range`, malformed JSON resilience, and the spec/answer contract of every bundled questionnaire (so editing one of those HTML files without re-running tests fails loudly). See design-decisions Section 18.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `test_steering_actions_and_security.py` | (1) text composition modes `replace` / `add` / `intersect` (with the $[-0.95, +0.95]$ clamp on `add`). (2) `/reset` writes exactly one `SaeResetAction` + one envelope, clears session state. (3) `/parse-text-steering` returns HTTP 400 over 200 chars; returns `status="no-match"` for zero matches (NFR-12). (4) `/export-csv` requires login, returns a ZIP with all 16 expected CSV files each with a non-empty header row, returns 404 for unknown GUIDs. (5) Parametrized regression for `/loaded-plugins`, `/existing-user-studies`, `/user-study`, `/user-study-participants`, `/user-participated-user-studies`, `/results/<plugin>/<guid>` — unauth callers always get 302/401. (6) Text-steering scope guard: payload is stamped with `<guid>:<phase>` and ignored if scope mismatches (other study / other phase); composition uses the previous payload only when scope matches (design-decisions Section 21). (7) Side-by-side audit semantics: `get_audit_approach_indices` fans out to `[0, 1]` for side-by-side, otherwise `[current_phase]`; `record_movie_feedback` re-maps `list_id="recs-model-b"` to `approach_index=1` (Bug B1 regression, design-decisions Section 22). |
+
 
 ### 10.3 EasyStudy plugin smoke tests
 
-| File | Coverage |
-| --- | --- |
-| `tests/plugins/fastcompare/test_plugin.py` | Plugin contract metadata, `/health` route, lifecycle (`/create` → `/initialize` → `/join`) reaches a renderable page without DB errors. |
-| `tests/plugins/layoutshuffling/test_plugin.py` | Plugin contract metadata, synchronous `/initialize` activates the `UserStudy` row, `/join` renders the demo template. |
+
+| File                                           | Coverage                                                                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/plugins/fastcompare/test_plugin.py`     | Plugin contract metadata, `/health` route, lifecycle (`/create` → `/initialize` → `/join`) reaches a renderable page without DB errors. |
+| `tests/plugins/layoutshuffling/test_plugin.py` | Plugin contract metadata, synchronous `/initialize` activates the `UserStudy` row, `/join` renders the demo template.                   |
+
 
 These smoke tests guard the upstream parity: both plugins are part of `CANONICAL_PLUGIN_MODULES`, so a future plugin-registry refactor cannot silently drop them.
 
@@ -891,8 +930,8 @@ These smoke tests guard the upstream parity: both plugins are part of `CANONICAL
 
 ### 11.1 Limitations
 
-1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see [`equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. We are actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol for another paper.
-2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in [`formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
+1. **Text steering uses a deterministic lexical resolver.** The current resolver is bag-of-words + intensity hints (see `[equations.md` Section 4](equations.md#4-text-steering-fr-09)). This is a deliberate research choice: it is fully auditable, stable across deployments, and supports controlled investigation of what participants actually type and which concepts get mapped. We are actively investigating the right semantics for text steering; a sentence-transformer-based resolver is the planned next step once we converge on the evaluation protocol for another paper.
+2. **The build ships with one dataset, but the framework is multi-dataset extensible.** MovieLens-32M-Filtered (8328 movies) is the only bundled dataset because it matches the available SAE assets and the current research focus. Adding another dataset is supported and documented in `[formative-examples.md` Section 3](formative-examples.md#3-add-a-new-dataset); the dataset dropdown is driven by `SUPPORTED_DATASET_VARIANTS`.
 3. **FR-16 dashboard focuses on per-approach behavioural signal; remaining aggregates are computed from exports.** The dashboard is intentionally scoped to metrics that require per-approach context (rank distributions, per-modality counts, prompt-to-cluster mappings). Other aggregates (e.g. a sign histogram over `SaeFeatureAdjustment.delta`) are straightforward to compute from the FR-17 CSV bundle and are typically handled in the paper / analysis notebook rather than in the deployment UI. Participant demographics are treated as optional: in Prolific-based runs, demographics are typically available from Prolific and do not need to be re-collected in the app.
 4. **FR-13 iteration history is bounded by study configuration.** The history panel is client-side and shows one section per iteration the participant went through in the current session. In practice the bound is the configured `num_iterations` per approach (typically 3); there is no additional hard “last 10” eviction because the study config already constrains the count and the audit tables keep the full record regardless.
 
@@ -907,16 +946,17 @@ These smoke tests guard the upstream parity: both plugins are part of `CANONICAL
 
 ## Appendix: where to find things
 
-| Need | File |
-| --- | --- |
-| Flask app factory | `server/platform/app.py::create_app` |
-| Schema definitions | `server/platform/persistence/base_models.py` + `server/plugins/steering/persistence/models.py` |
-| Audit service (the single writer) | `server/plugins/steering/service/audit.py` |
-| Iteration controller | `server/plugins/steering/service/iteration_controller.py` |
-| Modalities | `server/plugins/steering/modalities/{sliders,toggles,text,examples}.py` |
-| Reset endpoint | `server/plugins/steering/routes/steering/actions.py::reset_steering` |
-| Text steering endpoint | `server/plugins/steering/routes/steering/actions.py::parse_text_steering` |
-| CSV export endpoint | `server/plugins/steering/routes/results/views.py::export_csv_data` |
-| Dashboard payload builder | `server/plugins/steering/results/analytics.py::build_results_payload` |
-| Journey builder | `server/plugins/steering/routes/results/journey.py` |
-| Schema bootstrap | `server/scripts/init_db.py` (+ `server/scripts/reset_db.py`) |
+
+| Need                              | File                                                                                           |
+| --------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Flask app factory                 | `server/platform/app.py::create_app`                                                           |
+| Schema definitions                | `server/platform/persistence/base_models.py` + `server/plugins/steering/persistence/models.py` |
+| Audit service (the single writer) | `server/plugins/steering/service/audit.py`                                                     |
+| Iteration controller              | `server/plugins/steering/service/iteration_controller.py`                                      |
+| Modalities                        | `server/plugins/steering/modalities/{sliders,toggles,text,examples}.py`                        |
+| Reset endpoint                    | `server/plugins/steering/routes/steering/actions.py::reset_steering`                           |
+| Text steering endpoint            | `server/plugins/steering/routes/steering/actions.py::parse_text_steering`                      |
+| CSV export endpoint               | `server/plugins/steering/routes/results/views.py::export_csv_data`                             |
+| Dashboard payload builder         | `server/plugins/steering/results/analytics.py::build_results_payload`                          |
+| Journey builder                   | `server/plugins/steering/routes/results/journey.py`                                            |
+| Schema bootstrap                  | `server/scripts/init_db.py` (+ `server/scripts/reset_db.py`)                                   |
